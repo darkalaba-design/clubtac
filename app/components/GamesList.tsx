@@ -98,7 +98,7 @@ export default function GamesList() {
                                     display: 'grid',
                                     gridTemplateColumns: '1fr auto 1fr',
                                     alignItems: 'center',
-                                    gap: '24px',
+                                    gap: '12px',
                                 }}
                             >
                                 {/* Левая команда */}
@@ -133,7 +133,7 @@ export default function GamesList() {
                                 <div
                                     className="text-center"
                                     style={{
-                                        fontSize: '48px',
+                                        fontSize: '40px',
                                         fontWeight: 'bold',
                                         lineHeight: '1',
                                     }}

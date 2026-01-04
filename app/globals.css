@@ -39,6 +39,10 @@ div.border {
   gap: 12px;
 }
 
-div.mb-2 {
+.mb-2 {
   margin: 0;
+}
+
+.mx-2 {
+  margin-inline: calc(var(--spacing) * 1);
 }
