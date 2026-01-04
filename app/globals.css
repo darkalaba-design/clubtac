@@ -34,3 +34,16 @@ h1 {
   font-size: 24px;
   margin-bottom: 16px;
 }
+
+li.border,
+div.border {
+  margin-bottom: 4px;
+  background-color: #eeeeee;
+  border-color: #cccccc;
+  padding: 12px;
+  gap: 12px;
+}
+
+div.mb-2 {
+  margin: 0;
+}
