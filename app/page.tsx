@@ -1,25 +1,21 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
 
-export default async function Home() {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('players_hall_of_fame_ranked')
-    .select('*')
-    .order('place')
+import { useState } from 'react'
+import Tabs from './components/Tabs'
+import HallOfFame from './components/HallOfFame'
+import TeamsRanking from './components/TeamsRanking'
+
+export default function HomePage() {
+  const [tab, setTab] = useState<'players' | 'teams'>('players')
 
   return (
-    <main className="p-6">
-      <h1 className="text-2xl font-bold mb-4">🏆 Hall of Fame</h1>
+    <main style={{ padding: 24 }}>
+      <h1>ClubTac Rating</h1>
 
-      <ul className="space-y-2">
-        {data?.map(player => (
-          <li key={player.user_id} className="border p-3 rounded">
-            #{player.place} — {player.username}
-            <br />
-            Games: {player.games_played} | Wins: {player.wins} | Winrate: {player.win_rate}%
-          </li>
-        ))}
-      </ul>
+      <Tabs active={tab} onChange={setTab} />
+
+      {tab === 'players' && <HallOfFame />}
+      {tab === 'teams' && <TeamsRanking />}
     </main>
   )
 }
