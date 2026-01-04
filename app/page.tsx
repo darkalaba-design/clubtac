@@ -4,9 +4,10 @@ import { useState } from 'react'
 import Tabs from './components/Tabs'
 import HallOfFame from './components/HallOfFame'
 import TeamsRanking from './components/TeamsRanking'
+import GamesList from './components/GamesList'
 
 export default function HomePage() {
-  const [tab, setTab] = useState<'players' | 'teams'>('players')
+  const [tab, setTab] = useState<'players' | 'teams' | 'games'>('players')
 
   return (
     <main style={{ padding: 24 }}>
@@ -16,6 +17,7 @@ export default function HomePage() {
 
       {tab === 'players' && <HallOfFame />}
       {tab === 'teams' && <TeamsRanking />}
+      {tab === 'games' && <GamesList />}
     </main>
   )
 }
