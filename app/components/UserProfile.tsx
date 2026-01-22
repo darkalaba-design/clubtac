@@ -18,8 +18,23 @@ export default function UserProfile() {
 
     if (!user) {
         return (
-            <div style={{ padding: '12px', textAlign: 'center' }}>
-                <p>Пользователь не найден</p>
+            <div style={{ padding: '12px' }}>
+                <div
+                    style={{
+                        backgroundColor: '#fff3cd',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        border: '1px solid #ffc107',
+                    }}
+                >
+                    <p style={{ margin: 0, marginBottom: '8px', fontWeight: 'bold' }}>
+                        ⚠️ Пользователь не найден
+                    </p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
+                        Убедитесь, что вы открыли приложение через Telegram Mini App.
+                        Проверьте консоль браузера для получения дополнительной информации.
+                    </p>
+                </div>
             </div>
         )
     }
