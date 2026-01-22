@@ -3,6 +3,30 @@
 import { useUser } from '../contexts/UserContext'
 
 /**
+ * ВРЕМЕННЫЙ компонент для отладки Telegram данных
+ */
+function DebugTelegram() {
+    if (typeof window === 'undefined') return null
+
+    const tg = (window as any).Telegram?.WebApp
+
+    return (
+        <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '8px' }}>🔍 Debug: Telegram WebApp данные</h3>
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, overflow: 'auto', maxHeight: '400px' }}>
+                {JSON.stringify(tg?.initDataUnsafe, null, 2)}
+            </pre>
+            <div style={{ marginTop: '12px', fontSize: '12px', color: '#666' }}>
+                <p><strong>Has Telegram:</strong> {typeof window !== 'undefined' && !!(window as any).Telegram ? 'Да' : 'Нет'}</p>
+                <p><strong>Has WebApp:</strong> {!!tg ? 'Да' : 'Нет'}</p>
+                <p><strong>Has initDataUnsafe:</strong> {!!tg?.initDataUnsafe ? 'Да' : 'Нет'}</p>
+                <p><strong>Has user:</strong> {!!tg?.initDataUnsafe?.user ? 'Да' : 'Нет'}</p>
+            </div>
+        </div>
+    )
+}
+
+/**
  * Компонент для отображения профиля залогиненного пользователя
  */
 export default function UserProfile() {
@@ -61,6 +85,8 @@ export default function UserProfile() {
 
     return (
         <div style={{ padding: '12px' }}>
+            <DebugTelegram />
+
             <div
                 style={{
                     backgroundColor: '#f5f5f5',
