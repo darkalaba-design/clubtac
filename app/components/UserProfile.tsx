@@ -1,0 +1,144 @@
+'use client'
+
+import { useUser } from '../contexts/UserContext'
+
+/**
+ * Компонент для отображения профиля залогиненного пользователя
+ */
+export default function UserProfile() {
+    const { user, loading } = useUser()
+
+    if (loading) {
+        return (
+            <div style={{ padding: '12px', textAlign: 'center' }}>
+                <p>Загрузка...</p>
+            </div>
+        )
+    }
+
+    if (!user) {
+        return (
+            <div style={{ padding: '12px', textAlign: 'center' }}>
+                <p>Пользователь не найден</p>
+            </div>
+        )
+    }
+
+    // Форматирование даты регистрации
+    const formatDate = (dateString?: string) => {
+        if (!dateString) return 'Не указано'
+        try {
+            const date = new Date(dateString)
+            return date.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+            })
+        } catch {
+            return dateString
+        }
+    }
+
+    const displayName = user.username || user.first_name || 'Пользователь'
+    const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || displayName
+
+    return (
+        <div style={{ padding: '12px' }}>
+            <div
+                style={{
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    marginBottom: '16px',
+                }}
+            >
+                <h2 style={{ marginTop: 0, marginBottom: '16px', fontSize: '20px' }}>
+                    👤 Профиль пользователя
+                </h2>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                        <strong style={{ display: 'block', marginBottom: '4px', color: '#666' }}>
+                            Имя пользователя:
+                        </strong>
+                        <span style={{ fontSize: '16px' }}>{displayName}</span>
+                    </div>
+
+                    {user.first_name && (
+                        <div>
+                            <strong style={{ display: 'block', marginBottom: '4px', color: '#666' }}>
+                                Полное имя:
+                            </strong>
+                            <span style={{ fontSize: '16px' }}>{fullName}</span>
+                        </div>
+                    )}
+
+                    {user.username && (
+                        <div>
+                            <strong style={{ display: 'block', marginBottom: '4px', color: '#666' }}>
+                                Username:
+                            </strong>
+                            <span style={{ fontSize: '16px' }}>@{user.username}</span>
+                        </div>
+                    )}
+
+                    <div>
+                        <strong style={{ display: 'block', marginBottom: '4px', color: '#666' }}>
+                            Telegram ID:
+                        </strong>
+                        <span style={{ fontSize: '16px', fontFamily: 'monospace' }}>
+                            {user.telegram_id}
+                        </span>
+                    </div>
+
+                    {user.id && (
+                        <div>
+                            <strong style={{ display: 'block', marginBottom: '4px', color: '#666' }}>
+                                ID в системе:
+                            </strong>
+                            <span style={{ fontSize: '16px', fontFamily: 'monospace' }}>
+                                {user.id}
+                            </span>
+                        </div>
+                    )}
+
+                    {user.created_at && (
+                        <div>
+                            <strong style={{ display: 'block', marginBottom: '4px', color: '#666' }}>
+                                Дата регистрации:
+                            </strong>
+                            <span style={{ fontSize: '16px' }}>{formatDate(user.created_at)}</span>
+                        </div>
+                    )}
+
+                    {user.updated_at && user.updated_at !== user.created_at && (
+                        <div>
+                            <strong style={{ display: 'block', marginBottom: '4px', color: '#666' }}>
+                                Последнее обновление:
+                            </strong>
+                            <span style={{ fontSize: '16px' }}>{formatDate(user.updated_at)}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div
+                style={{
+                    backgroundColor: '#e8f4f8',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    fontSize: '14px',
+                    color: '#555',
+                }}
+            >
+                <p style={{ margin: 0 }}>
+                    💡 Это ваш профиль в системе ClubTac Rating. Здесь отображается информация,
+                    полученная из Telegram.
+                </p>
+            </div>
+        </div>
+    )
+}
+

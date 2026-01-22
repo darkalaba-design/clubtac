@@ -1,4 +1,4 @@
-type Tab = 'players' | 'teams' | 'games'
+type Tab = 'players' | 'teams' | 'games' | 'profile'
 
 export default function Tabs({
     active,
@@ -34,6 +34,15 @@ export default function Tabs({
                 }}
             >
                 🎮 Games
+            </button>
+
+            <button
+                onClick={() => onChange('profile')}
+                style={{
+                    fontWeight: active === 'profile' ? 'bold' : 'normal',
+                }}
+            >
+                👤 Profile
             </button>
         </div>
     )
