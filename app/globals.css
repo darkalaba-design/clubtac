@@ -3,9 +3,7 @@
 :root {
   --background: #dddddd;
   --foreground: #171717;
-}
-
-@theme inline {
+  /* Tailwind CSS 4 theme variables */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
