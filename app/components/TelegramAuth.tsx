@@ -15,14 +15,44 @@ export default function TelegramAuth() {
     useEffect(() => {
         const authenticate = async () => {
             try {
-                // Проверяем наличие Telegram WebApp API
+                // Ждём загрузки Telegram SDK с несколькими попытками
+                let attempts = 0
+                const maxAttempts = 10
+                const checkInterval = 100 // 100ms между попытками
+
+                const waitForTelegram = (): Promise<void> => {
+                    return new Promise((resolve, reject) => {
+                        const check = () => {
+                            attempts++
+                            if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+                                resolve()
+                            } else if (attempts >= maxAttempts) {
+                                console.warn('Telegram WebApp SDK не загрузился после', maxAttempts, 'попыток')
+                                reject(new Error('Telegram SDK not loaded'))
+                            } else {
+                                setTimeout(check, checkInterval)
+                            }
+                        }
+                        check()
+                    })
+                }
+
+                // Ждём загрузки SDK
+                await waitForTelegram()
+
+                // Проверяем ещё раз после ожидания
                 if (typeof window === 'undefined' || !window.Telegram?.WebApp) {
-                    console.warn('Telegram WebApp API не доступен. Приложение запущено не в Telegram Mini App.')
+                    console.error('Telegram WebApp API не доступен после ожидания')
                     setLoading(false)
                     return
                 }
 
                 const webApp = window.Telegram.WebApp
+
+                // Расширяем WebApp на весь экран
+                webApp.expand()
+                webApp.ready()
+
                 const telegramUser = webApp.initDataUnsafe?.user
 
                 console.log('Telegram WebApp данные:', {
@@ -30,10 +60,12 @@ export default function TelegramAuth() {
                     hasInitData: !!webApp.initDataUnsafe,
                     hasUser: !!telegramUser,
                     user: telegramUser,
+                    initDataUnsafe: webApp.initDataUnsafe,
                 })
 
                 if (!telegramUser) {
                     console.warn('Данные пользователя Telegram не найдены в initDataUnsafe.user')
+                    console.warn('initDataUnsafe содержимое:', webApp.initDataUnsafe)
                     setLoading(false)
                     return
                 }
@@ -79,10 +111,6 @@ export default function TelegramAuth() {
                 } else {
                     console.error('Пользователь не найден в ответе API:', responseData)
                 }
-
-                // Инициализируем Telegram WebApp
-                webApp.ready()
-                webApp.expand()
             } catch (error) {
                 console.error('Ошибка при аутентификации:', error)
                 if (error instanceof Error) {
