@@ -1,27 +1,56 @@
 'use client'
 
+import React from 'react'
 import { useUser } from '../contexts/UserContext'
 
 /**
  * ВРЕМЕННЫЙ компонент для отладки Telegram данных
  */
 function DebugTelegram() {
-    if (typeof window === 'undefined') return null
+    // Используем useState и useEffect для клиентского рендеринга
+    const [debugData, setDebugData] = React.useState<any>(null)
 
-    const tg = (window as any).Telegram?.WebApp
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const tg = (window as any).Telegram?.WebApp
+            setDebugData({
+                hasTelegram: !!(window as any).Telegram,
+                hasWebApp: !!tg,
+                hasInitDataUnsafe: !!tg?.initDataUnsafe,
+                hasUser: !!tg?.initDataUnsafe?.user,
+                initDataUnsafe: tg?.initDataUnsafe,
+                fullTelegram: (window as any).Telegram,
+            })
+        }
+    }, [])
 
     return (
-        <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '8px' }}>🔍 Debug: Telegram WebApp данные</h3>
-            <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, overflow: 'auto', maxHeight: '400px' }}>
-                {JSON.stringify(tg?.initDataUnsafe, null, 2)}
-            </pre>
-            <div style={{ marginTop: '12px', fontSize: '12px', color: '#666' }}>
-                <p><strong>Has Telegram:</strong> {typeof window !== 'undefined' && !!(window as any).Telegram ? 'Да' : 'Нет'}</p>
-                <p><strong>Has WebApp:</strong> {!!tg ? 'Да' : 'Нет'}</p>
-                <p><strong>Has initDataUnsafe:</strong> {!!tg?.initDataUnsafe ? 'Да' : 'Нет'}</p>
-                <p><strong>Has user:</strong> {!!tg?.initDataUnsafe?.user ? 'Да' : 'Нет'}</p>
-            </div>
+        <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '8px', border: '2px solid #007bff' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '8px', color: '#007bff' }}>🔍 Debug: Telegram WebApp данные</h3>
+            {debugData ? (
+                <>
+                    <div style={{ marginBottom: '12px', fontSize: '12px', color: '#666' }}>
+                        <p><strong>Has Telegram:</strong> {debugData.hasTelegram ? '✅ Да' : '❌ Нет'}</p>
+                        <p><strong>Has WebApp:</strong> {debugData.hasWebApp ? '✅ Да' : '❌ Нет'}</p>
+                        <p><strong>Has initDataUnsafe:</strong> {debugData.hasInitDataUnsafe ? '✅ Да' : '❌ Нет'}</p>
+                        <p><strong>Has user:</strong> {debugData.hasUser ? '✅ Да' : '❌ Нет'}</p>
+                    </div>
+                    <div style={{ marginTop: '12px' }}>
+                        <strong style={{ fontSize: '12px' }}>initDataUnsafe:</strong>
+                        <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, overflow: 'auto', maxHeight: '300px', backgroundColor: '#fff', padding: '8px', borderRadius: '4px', marginTop: '4px' }}>
+                            {JSON.stringify(debugData.initDataUnsafe, null, 2) || 'null'}
+                        </pre>
+                    </div>
+                    <div style={{ marginTop: '12px' }}>
+                        <strong style={{ fontSize: '12px' }}>Полный объект Telegram:</strong>
+                        <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, overflow: 'auto', maxHeight: '200px', backgroundColor: '#fff', padding: '8px', borderRadius: '4px', marginTop: '4px' }}>
+                            {JSON.stringify(debugData.fullTelegram, null, 2) || 'null'}
+                        </pre>
+                    </div>
+                </>
+            ) : (
+                <p style={{ fontSize: '12px', color: '#666' }}>Загрузка данных отладки...</p>
+            )}
         </div>
     )
 }
@@ -34,8 +63,11 @@ export default function UserProfile() {
 
     if (loading) {
         return (
-            <div style={{ padding: '12px', textAlign: 'center' }}>
-                <p>Загрузка...</p>
+            <div style={{ padding: '12px' }}>
+                <DebugTelegram />
+                <div style={{ textAlign: 'center' }}>
+                    <p>Загрузка...</p>
+                </div>
             </div>
         )
     }
@@ -43,12 +75,14 @@ export default function UserProfile() {
     if (!user) {
         return (
             <div style={{ padding: '12px' }}>
+                <DebugTelegram />
                 <div
                     style={{
                         backgroundColor: '#fff3cd',
                         borderRadius: '8px',
                         padding: '16px',
                         border: '1px solid #ffc107',
+                        marginTop: '12px',
                     }}
                 >
                     <p style={{ margin: 0, marginBottom: '8px', fontWeight: 'bold' }}>
