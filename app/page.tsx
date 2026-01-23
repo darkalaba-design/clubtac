@@ -8,11 +8,11 @@ import GamesList from './components/GamesList'
 import UserProfile from './components/UserProfile'
 
 export default function HomePage() {
-  const [tab, setTab] = useState<'players' | 'teams' | 'games' | 'profile'>('players')
+  const [tab, setTab] = useState<'players' | 'teams' | 'games' | 'profile'>('profile')
 
   return (
     <>
-      <main style={{ padding: 12, paddingBottom: 80 }}>
+      <main style={{ padding: '12px 0', paddingBottom: 80 }}>
         {tab === 'profile' && <UserProfile />}
         {tab === 'players' && <HallOfFame />}
         {tab === 'teams' && <TeamsRanking />}

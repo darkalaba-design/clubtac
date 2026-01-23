@@ -58,20 +58,22 @@ export default function Tabs({
                     color: active === 'profile' ? '#007bff' : '#666',
                 }}
             >
-                {user && photoUrl ? (
-                    <img
-                        src={photoUrl}
-                        alt="Profile"
-                        style={{
-                            width: '26px',
-                            height: '26px',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                        }}
-                    />
-                ) : (
-                    <span style={{ fontSize: '26px' }}>👤</span>
-                )}
+                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {user && photoUrl ? (
+                        <img
+                            src={photoUrl}
+                            alt="Profile"
+                            style={{
+                                width: '26px',
+                                height: '26px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                            }}
+                        />
+                    ) : (
+                        <span style={{ fontSize: '26px' }}>👤</span>
+                    )}
+                </div>
                 <span style={{ fontSize: '10px' }}>Профиль</span>
             </button>
 
@@ -91,7 +93,9 @@ export default function Tabs({
                     color: active === 'players' ? '#007bff' : '#666',
                 }}
             >
-                <span style={{ fontSize: '26px' }}>🏆</span>
+                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '26px' }}>🏆</span>
+                </div>
                 <span style={{ fontSize: '10px' }}>Рейтинг</span>
             </button>
 
@@ -111,7 +115,9 @@ export default function Tabs({
                     color: active === 'teams' ? '#007bff' : '#666',
                 }}
             >
-                <span style={{ fontSize: '26px' }}>👥</span>
+                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '26px' }}>👥</span>
+                </div>
                 <span style={{ fontSize: '10px' }}>Команды</span>
             </button>
 
@@ -131,7 +137,9 @@ export default function Tabs({
                     color: active === 'games' ? '#007bff' : '#666',
                 }}
             >
-                <span style={{ fontSize: '26px' }}>🎮</span>
+                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '26px' }}>🎮</span>
+                </div>
                 <span style={{ fontSize: '10px' }}>Игры</span>
             </button>
         </div>

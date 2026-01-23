@@ -72,79 +72,68 @@ export default function HallOfFame() {
     }
 
     return (
-        <div style={{ padding: '12px' }}>
-            <div
-                style={{
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '12px',
-                    padding: '16px',
-                }}
-            >
-                <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                    🏆 Рейтинг игроков
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {players.map((player) => (
+        <div>
+            <h3 style={{ margin: '0 12px 12px', fontSize: '18px', fontWeight: 'bold' }}>
+                🏆 Рейтинг игроков
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {players.map((player, index) => (
+                    <div key={player.user_id}>
+                        {index > 0 && (
+                            <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                        )}
                         <Link
-                            key={player.user_id}
                             href={`/player/${player.user_id}`}
                             style={{
                                 textDecoration: 'none',
                                 color: 'inherit',
+                                display: 'block',
                             }}
                         >
                             <div
                                 style={{
                                     backgroundColor: '#ffffff',
-                                    borderRadius: '8px',
-                                    padding: '16px',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                    transition: 'transform 0.2s, box-shadow 0.2s',
+                                    padding: '16px 12px',
+                                    transition: 'background-color 0.2s',
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-2px)'
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'
+                                    e.currentTarget.style.backgroundColor = '#f8f9fa'
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0)'
-                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                                    e.currentTarget.style.backgroundColor = '#ffffff'
                                 }}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div
-                                            style={{
-                                                width: '40px',
-                                                height: '40px',
-                                                borderRadius: '50%',
-                                                backgroundColor: '#e0e0e0',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontWeight: 'bold',
-                                                fontSize: '16px',
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            #{player.place}
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>
-                                                {player.username}
-                                            </div>
-                                            <div style={{ fontSize: '12px', color: '#666' }}>
-                                                Игр: {player.games_played} | Побед: {player.wins} | % побед: {player.win_rate}%
-                                            </div>
-                                        </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div
+                                        style={{
+                                            width: '40px',
+                                            height: '40px',
+                                            borderRadius: '50%',
+                                            backgroundColor: '#e0e0e0',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontWeight: 'bold',
+                                            fontSize: '16px',
+                                            flexShrink: 0,
+                                            color: '#000000',
+                                        }}
+                                    >
+                                        #{player.place}
                                     </div>
-                                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#007bff' }}>
-                                        {player.win_rate}%
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', color: '#000000' }}>
+                                            {player.username}
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: '#666' }}>
+                                            Игр: <span style={{ color: '#000000', fontWeight: '500' }}>{player.games_played}</span> | Побед: <span style={{ color: '#000000', fontWeight: '500' }}>{player.wins}</span> | % побед: <span style={{ color: '#007bff', fontWeight: '500' }}>{player.win_rate}%</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </Link>
-                    ))}
-                </div>
+                    </div>
+                ))}
             </div>
         </div>
     )
