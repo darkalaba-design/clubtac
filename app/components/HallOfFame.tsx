@@ -51,7 +51,7 @@ export default function HallOfFame() {
                         {player.username}
                     </Link>
                     <br />
-                    Games: {player.games_played} | Wins: {player.wins} | Winrate: {player.win_rate}%
+                    Игр: {player.games_played} | Побед: {player.wins} | % побед: {player.win_rate}%
                 </li>
             ))}
         </ul>

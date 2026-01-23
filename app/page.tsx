@@ -12,8 +12,6 @@ export default function HomePage() {
 
   return (
     <main style={{ padding: 12 }}>
-      <h1>ClubTac Rating</h1>
-
       <Tabs active={tab} onChange={setTab} />
 
       {tab === 'players' && <HallOfFame />}

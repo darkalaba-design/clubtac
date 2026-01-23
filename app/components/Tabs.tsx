@@ -1,3 +1,8 @@
+'use client'
+
+import { useUser } from '../contexts/UserContext'
+import { useEffect, useState } from 'react'
+
 type Tab = 'players' | 'teams' | 'games' | 'profile'
 
 export default function Tabs({
@@ -7,6 +12,20 @@ export default function Tabs({
     active: Tab
     onChange: (tab: Tab) => void
 }) {
+    const { user } = useUser()
+    const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+
+    // Получаем фото из Telegram
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const tg = (window as any).Telegram?.WebApp
+            const telegramUser = tg?.initDataUnsafe?.user
+            if (telegramUser?.photo_url) {
+                setPhotoUrl(telegramUser.photo_url)
+            }
+        }
+    }, [])
+
     return (
         <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
             <button
@@ -15,7 +34,7 @@ export default function Tabs({
                     fontWeight: active === 'players' ? 'bold' : 'normal',
                 }}
             >
-                🏆 Hall of Fame
+                🏆 Рейтинг
             </button>
 
             <button
@@ -24,7 +43,7 @@ export default function Tabs({
                     fontWeight: active === 'teams' ? 'bold' : 'normal',
                 }}
             >
-                👥 Teams
+                👥 Команды
             </button>
 
             <button
@@ -33,16 +52,33 @@ export default function Tabs({
                     fontWeight: active === 'games' ? 'bold' : 'normal',
                 }}
             >
-                🎮 Games
+                🎮 Игры
             </button>
 
             <button
                 onClick={() => onChange('profile')}
                 style={{
                     fontWeight: active === 'profile' ? 'bold' : 'normal',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                 }}
             >
-                👤 Profile
+                {user && photoUrl ? (
+                    <img
+                        src={photoUrl}
+                        alt="Profile"
+                        style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                        }}
+                    />
+                ) : (
+                    <span>👤</span>
+                )}
+                Профиль
             </button>
         </div>
     )
