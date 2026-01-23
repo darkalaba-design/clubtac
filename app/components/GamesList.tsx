@@ -151,7 +151,7 @@ export default function GamesList() {
                                         <div
                                             style={{
                                                 backgroundColor: '#ffffff',
-                                                padding: '16px 12px',
+                                                padding: '10px 12px',
                                                 display: 'grid',
                                                 gridTemplateColumns: '1fr auto 1fr',
                                                 alignItems: 'center',
@@ -160,7 +160,7 @@ export default function GamesList() {
                                         >
                                             {/* Левая команда */}
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ marginBottom: '4px' }}>
+                                                <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
                                                     {playerIdMap[game.player_1_1] ? (
                                                         <Link
                                                             href={`/player/${playerIdMap[game.player_1_1]}`}
@@ -169,15 +169,17 @@ export default function GamesList() {
                                                                 textDecoration: 'none',
                                                                 fontWeight: '500',
                                                                 fontSize: '14px',
+                                                                verticalAlign: 'top',
+                                                                lineHeight: '14px',
                                                             }}
                                                         >
                                                             {game.player_1_1}
                                                         </Link>
                                                     ) : (
-                                                        <span style={{ fontWeight: '500', fontSize: '14px' }}>{game.player_1_1}</span>
+                                                        <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_1_1}</span>
                                                     )}
                                                 </div>
-                                                <div>
+                                                <div style={{ lineHeight: '14px', verticalAlign: 'bottom' }}>
                                                     {playerIdMap[game.player_1_2] ? (
                                                         <Link
                                                             href={`/player/${playerIdMap[game.player_1_2]}`}
@@ -186,12 +188,14 @@ export default function GamesList() {
                                                                 textDecoration: 'none',
                                                                 fontWeight: '500',
                                                                 fontSize: '14px',
+                                                                verticalAlign: 'top',
+                                                                lineHeight: '14px',
                                                             }}
                                                         >
                                                             {game.player_1_2}
                                                         </Link>
                                                     ) : (
-                                                        <span style={{ fontWeight: '500', fontSize: '14px' }}>{game.player_1_2}</span>
+                                                        <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_1_2}</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -200,23 +204,43 @@ export default function GamesList() {
                                             <div
                                                 style={{
                                                     textAlign: 'center',
-                                                    fontSize: '28px',
+                                                    fontSize: '32px',
                                                     fontWeight: 'bold',
                                                     lineHeight: '1',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '2px',
                                                 }}
                                             >
-                                                <span style={{ color: team1Won ? '#28a745' : '#666' }}>
+                                                <span 
+                                                    style={{ 
+                                                        color: team1Won ? '#28a745' : '#666',
+                                                        backgroundColor: team1Won ? '#e8f5e9' : '#f5f5f5',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '6px',
+                                                        minWidth: '32px',
+                                                    }}
+                                                >
                                                     {game.score_1}
                                                 </span>
-                                                <span style={{ margin: '0 6px', color: '#999' }}>:</span>
-                                                <span style={{ color: !team1Won ? '#28a745' : '#666' }}>
+                                                <span style={{ color: '#999', fontSize: '24px' }}>:</span>
+                                                <span 
+                                                    style={{ 
+                                                        color: !team1Won ? '#28a745' : '#666',
+                                                        backgroundColor: !team1Won ? '#e8f5e9' : '#f5f5f5',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '6px',
+                                                        minWidth: '32px',
+                                                    }}
+                                                >
                                                     {game.score_2}
                                                 </span>
                                             </div>
 
                                             {/* Правая команда */}
                                             <div style={{ textAlign: 'left' }}>
-                                                <div style={{ marginBottom: '4px' }}>
+                                                <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
                                                     {playerIdMap[game.player_2_1] ? (
                                                         <Link
                                                             href={`/player/${playerIdMap[game.player_2_1]}`}
@@ -225,15 +249,17 @@ export default function GamesList() {
                                                                 textDecoration: 'none',
                                                                 fontWeight: '500',
                                                                 fontSize: '14px',
+                                                                verticalAlign: 'top',
+                                                                lineHeight: '14px',
                                                             }}
                                                         >
                                                             {game.player_2_1}
                                                         </Link>
                                                     ) : (
-                                                        <span style={{ fontWeight: '500', fontSize: '14px' }}>{game.player_2_1}</span>
+                                                        <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_2_1}</span>
                                                     )}
                                                 </div>
-                                                <div>
+                                                <div style={{ lineHeight: '14px', verticalAlign: 'bottom' }}>
                                                     {playerIdMap[game.player_2_2] ? (
                                                         <Link
                                                             href={`/player/${playerIdMap[game.player_2_2]}`}
@@ -242,12 +268,14 @@ export default function GamesList() {
                                                                 textDecoration: 'none',
                                                                 fontWeight: '500',
                                                                 fontSize: '14px',
+                                                                verticalAlign: 'top',
+                                                                lineHeight: '14px',
                                                             }}
                                                         >
                                                             {game.player_2_2}
                                                         </Link>
                                                     ) : (
-                                                        <span style={{ fontWeight: '500', fontSize: '14px' }}>{game.player_2_2}</span>
+                                                        <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_2_2}</span>
                                                     )}
                                                 </div>
                                             </div>
