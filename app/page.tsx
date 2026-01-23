@@ -11,13 +11,14 @@ export default function HomePage() {
   const [tab, setTab] = useState<'players' | 'teams' | 'games' | 'profile'>('players')
 
   return (
-    <main style={{ padding: 12 }}>
+    <>
+      <main style={{ padding: 12, paddingBottom: 80 }}>
+        {tab === 'profile' && <UserProfile />}
+        {tab === 'players' && <HallOfFame />}
+        {tab === 'teams' && <TeamsRanking />}
+        {tab === 'games' && <GamesList />}
+      </main>
       <Tabs active={tab} onChange={setTab} />
-
-      {tab === 'players' && <HallOfFame />}
-      {tab === 'teams' && <TeamsRanking />}
-      {tab === 'games' && <GamesList />}
-      {tab === 'profile' && <UserProfile />}
-    </main>
+    </>
   )
 }

@@ -27,64 +27,25 @@ export default function Tabs({
     }, [])
 
     return (
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-            <button
-                onClick={() => onChange('players')}
-                style={{
-                    fontWeight: active === 'players' ? 'bold' : 'normal',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '8px',
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                }}
-            >
-                <span style={{ fontSize: '20px' }}>🏆</span>
-                <span style={{ fontSize: '12px' }}>Рейтинг</span>
-            </button>
-
-            <button
-                onClick={() => onChange('teams')}
-                style={{
-                    fontWeight: active === 'teams' ? 'bold' : 'normal',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '8px',
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                }}
-            >
-                <span style={{ fontSize: '20px' }}>👥</span>
-                <span style={{ fontSize: '12px' }}>Команды</span>
-            </button>
-
-            <button
-                onClick={() => onChange('games')}
-                style={{
-                    fontWeight: active === 'games' ? 'bold' : 'normal',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '8px',
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                }}
-            >
-                <span style={{ fontSize: '20px' }}>🎮</span>
-                <span style={{ fontSize: '12px' }}>Игры</span>
-            </button>
-
+        <div
+            style={{
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                display: 'flex',
+                gap: 0,
+                backgroundColor: '#ffffff',
+                borderTop: '1px solid #e0e0e0',
+                boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+                zIndex: 1000,
+                padding: '8px 0',
+            }}
+        >
             <button
                 onClick={() => onChange('profile')}
                 style={{
+                    flex: 1,
                     fontWeight: active === 'profile' ? 'bold' : 'normal',
                     display: 'flex',
                     flexDirection: 'column',
@@ -94,6 +55,7 @@ export default function Tabs({
                     border: 'none',
                     background: 'transparent',
                     cursor: 'pointer',
+                    color: active === 'profile' ? '#007bff' : '#666',
                 }}
             >
                 {user && photoUrl ? (
@@ -101,16 +63,76 @@ export default function Tabs({
                         src={photoUrl}
                         alt="Profile"
                         style={{
-                            width: '20px',
-                            height: '20px',
+                            width: '26px',
+                            height: '26px',
                             borderRadius: '50%',
                             objectFit: 'cover',
                         }}
                     />
                 ) : (
-                    <span style={{ fontSize: '20px' }}>👤</span>
+                    <span style={{ fontSize: '26px' }}>👤</span>
                 )}
-                <span style={{ fontSize: '12px' }}>Профиль</span>
+                <span style={{ fontSize: '10px' }}>Профиль</span>
+            </button>
+
+            <button
+                onClick={() => onChange('players')}
+                style={{
+                    flex: 1,
+                    fontWeight: active === 'players' ? 'bold' : 'normal',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    color: active === 'players' ? '#007bff' : '#666',
+                }}
+            >
+                <span style={{ fontSize: '26px' }}>🏆</span>
+                <span style={{ fontSize: '10px' }}>Рейтинг</span>
+            </button>
+
+            <button
+                onClick={() => onChange('teams')}
+                style={{
+                    flex: 1,
+                    fontWeight: active === 'teams' ? 'bold' : 'normal',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    color: active === 'teams' ? '#007bff' : '#666',
+                }}
+            >
+                <span style={{ fontSize: '26px' }}>👥</span>
+                <span style={{ fontSize: '10px' }}>Команды</span>
+            </button>
+
+            <button
+                onClick={() => onChange('games')}
+                style={{
+                    flex: 1,
+                    fontWeight: active === 'games' ? 'bold' : 'normal',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    color: active === 'games' ? '#007bff' : '#666',
+                }}
+            >
+                <span style={{ fontSize: '26px' }}>🎮</span>
+                <span style={{ fontSize: '10px' }}>Игры</span>
             </button>
         </div>
     )
