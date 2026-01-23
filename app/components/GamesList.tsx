@@ -65,18 +65,23 @@ export default function GamesList() {
         load()
     }, [])
 
-    if (loading) return <div>Загрузка...</div>
-    if (error) return <div>Ошибка: {error}</div>
-    if (games.length === 0) return <div>Нет данных</div>
+    // Форматирование даты
+    const formatDate = (dateString: string) => {
+        try {
+            const date = new Date(dateString)
+            return date.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            })
+        } catch {
+            return dateString
+        }
+    }
 
     // Группировка игр по датам
     const gamesByDate = games.reduce((acc, game) => {
-        const date = new Date(game.created_at).toLocaleDateString('ru-RU', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        })
-
+        const date = formatDate(game.created_at)
         if (!acc[date]) {
             acc[date] = []
         }
@@ -84,102 +89,179 @@ export default function GamesList() {
         return acc
     }, {} as Record<string, Game[]>)
 
+    if (loading) {
+        return (
+            <div style={{ padding: '12px', textAlign: 'center' }}>
+                <p>Загрузка...</p>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div style={{ padding: '12px' }}>
+                <div
+                    style={{
+                        backgroundColor: '#fff3cd',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        border: '1px solid #ffc107',
+                    }}
+                >
+                    <p style={{ margin: 0, color: '#856404' }}>Ошибка: {error}</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (games.length === 0) {
+        return (
+            <div style={{ padding: '12px', textAlign: 'center' }}>
+                <p>Нет данных</p>
+            </div>
+        )
+    }
+
     return (
-        <div className="space-y-8">
-            {Object.entries(gamesByDate).map(([date, dateGames]) => (
-                <div key={date}>
-                    <h2 className="text-xl font-bold mb-4">{date}</h2>
-                    <div className="space-y-4">
-                        {dateGames.map((game) => (
-                            <div
-                                key={game.game_id}
-                                className="border rounded-lg p-6 bg-white dark:bg-gray-800"
+        <div style={{ padding: '12px' }}>
+            <div
+                style={{
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '12px',
+                    padding: '16px',
+                }}
+            >
+                <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                    🎮 История игр
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {Object.entries(gamesByDate).map(([date, dateGames]) => (
+                        <div key={date}>
+                            <h4
                                 style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr auto 1fr',
-                                    alignItems: 'center',
-                                    gap: '12px',
+                                    marginTop: 0,
+                                    marginBottom: '12px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    color: '#666',
                                 }}
                             >
-                                {/* Левая команда */}
-                                <div className="text-right">
-                                    <div className="mb-2">
-                                        {playerIdMap[game.player_1_1] ? (
-                                            <Link
-                                                href={`/player/${playerIdMap[game.player_1_1]}`}
-                                                className="text-blue-600 hover:underline font-medium"
-                                            >
-                                                {game.player_1_1}
-                                            </Link>
-                                        ) : (
-                                            <span className="font-medium">{game.player_1_1}</span>
-                                        )}
-                                    </div>
-                                    <div>
-                                        {playerIdMap[game.player_1_2] ? (
-                                            <Link
-                                                href={`/player/${playerIdMap[game.player_1_2]}`}
-                                                className="text-blue-600 hover:underline font-medium"
-                                            >
-                                                {game.player_1_2}
-                                            </Link>
-                                        ) : (
-                                            <span className="font-medium">{game.player_1_2}</span>
-                                        )}
-                                    </div>
-                                </div>
+                                {date}
+                            </h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {dateGames.map((game) => {
+                                    const team1Won = game.score_1 > game.score_2
+                                    return (
+                                        <div
+                                            key={game.game_id}
+                                            style={{
+                                                backgroundColor: '#ffffff',
+                                                borderRadius: '8px',
+                                                padding: '16px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                display: 'grid',
+                                                gridTemplateColumns: '1fr auto 1fr',
+                                                alignItems: 'center',
+                                                gap: '16px',
+                                            }}
+                                        >
+                                            {/* Левая команда */}
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ marginBottom: '8px' }}>
+                                                    {playerIdMap[game.player_1_1] ? (
+                                                        <Link
+                                                            href={`/player/${playerIdMap[game.player_1_1]}`}
+                                                            style={{
+                                                                color: '#007bff',
+                                                                textDecoration: 'none',
+                                                                fontWeight: '500',
+                                                            }}
+                                                        >
+                                                            {game.player_1_1}
+                                                        </Link>
+                                                    ) : (
+                                                        <span style={{ fontWeight: '500' }}>{game.player_1_1}</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    {playerIdMap[game.player_1_2] ? (
+                                                        <Link
+                                                            href={`/player/${playerIdMap[game.player_1_2]}`}
+                                                            style={{
+                                                                color: '#007bff',
+                                                                textDecoration: 'none',
+                                                                fontWeight: '500',
+                                                            }}
+                                                        >
+                                                            {game.player_1_2}
+                                                        </Link>
+                                                    ) : (
+                                                        <span style={{ fontWeight: '500' }}>{game.player_1_2}</span>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                                {/* Счет по центру */}
-                                <div
-                                    className="text-center"
-                                    style={{
-                                        fontSize: '40px',
-                                        fontWeight: 'bold',
-                                        lineHeight: '1',
-                                    }}
-                                >
-                                    <span className={game.score_1 > game.score_2 ? 'text-green-600' : 'text-gray-600'}>
-                                        {game.score_1}
-                                    </span>
-                                    <span className="mx-2 text-gray-400">:</span>
-                                    <span className={game.score_2 > game.score_1 ? 'text-green-600' : 'text-gray-600'}>
-                                        {game.score_2}
-                                    </span>
-                                </div>
+                                            {/* Счет по центру */}
+                                            <div
+                                                style={{
+                                                    textAlign: 'center',
+                                                    fontSize: '32px',
+                                                    fontWeight: 'bold',
+                                                    lineHeight: '1',
+                                                }}
+                                            >
+                                                <span style={{ color: team1Won ? '#28a745' : '#666' }}>
+                                                    {game.score_1}
+                                                </span>
+                                                <span style={{ margin: '0 8px', color: '#999' }}>:</span>
+                                                <span style={{ color: !team1Won ? '#28a745' : '#666' }}>
+                                                    {game.score_2}
+                                                </span>
+                                            </div>
 
-                                {/* Правая команда */}
-                                <div className="text-left">
-                                    <div className="mb-2">
-                                        {playerIdMap[game.player_2_1] ? (
-                                            <Link
-                                                href={`/player/${playerIdMap[game.player_2_1]}`}
-                                                className="text-blue-600 hover:underline font-medium"
-                                            >
-                                                {game.player_2_1}
-                                            </Link>
-                                        ) : (
-                                            <span className="font-medium">{game.player_2_1}</span>
-                                        )}
-                                    </div>
-                                    <div>
-                                        {playerIdMap[game.player_2_2] ? (
-                                            <Link
-                                                href={`/player/${playerIdMap[game.player_2_2]}`}
-                                                className="text-blue-600 hover:underline font-medium"
-                                            >
-                                                {game.player_2_2}
-                                            </Link>
-                                        ) : (
-                                            <span className="font-medium">{game.player_2_2}</span>
-                                        )}
-                                    </div>
-                                </div>
+                                            {/* Правая команда */}
+                                            <div style={{ textAlign: 'left' }}>
+                                                <div style={{ marginBottom: '8px' }}>
+                                                    {playerIdMap[game.player_2_1] ? (
+                                                        <Link
+                                                            href={`/player/${playerIdMap[game.player_2_1]}`}
+                                                            style={{
+                                                                color: '#007bff',
+                                                                textDecoration: 'none',
+                                                                fontWeight: '500',
+                                                            }}
+                                                        >
+                                                            {game.player_2_1}
+                                                        </Link>
+                                                    ) : (
+                                                        <span style={{ fontWeight: '500' }}>{game.player_2_1}</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    {playerIdMap[game.player_2_2] ? (
+                                                        <Link
+                                                            href={`/player/${playerIdMap[game.player_2_2]}`}
+                                                            style={{
+                                                                color: '#007bff',
+                                                                textDecoration: 'none',
+                                                                fontWeight: '500',
+                                                            }}
+                                                        >
+                                                            {game.player_2_2}
+                                                        </Link>
+                                                    ) : (
+                                                        <span style={{ fontWeight: '500' }}>{game.player_2_2}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
                 </div>
-            ))}
+            </div>
         </div>
     )
 }
-

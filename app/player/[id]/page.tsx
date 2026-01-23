@@ -1,15 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export default function PlayerPage() {
     const params = useParams()
-    const router = useRouter()
     const playerId = params.id as string
-    
+
     const [player, setPlayer] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -45,27 +44,158 @@ export default function PlayerPage() {
         }
     }, [playerId])
 
-    if (loading) return <div>Загрузка...</div>
-    if (error) return <div>Ошибка: {error}</div>
-    if (!player) return <div>Игрок не найден</div>
+    if (loading) {
+        return (
+            <div style={{ padding: '12px', textAlign: 'center' }}>
+                <p>Загрузка...</p>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div style={{ padding: '12px' }}>
+                <div
+                    style={{
+                        backgroundColor: '#fff3cd',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        border: '1px solid #ffc107',
+                    }}
+                >
+                    <p style={{ margin: 0, color: '#856404' }}>Ошибка: {error}</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (!player) {
+        return (
+            <div style={{ padding: '12px' }}>
+                <div
+                    style={{
+                        backgroundColor: '#fff3cd',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        border: '1px solid #ffc107',
+                    }}
+                >
+                    <p style={{ margin: 0, color: '#856404' }}>Игрок не найден</p>
+                </div>
+            </div>
+        )
+    }
 
     return (
-        <main style={{ padding: 24 }}>
-            <Link href="/" className="text-blue-600 hover:underline mb-4 block">
+        <div style={{ padding: '12px' }}>
+            {/* Кнопка назад */}
+            <Link
+                href="/"
+                style={{
+                    display: 'inline-block',
+                    marginBottom: '16px',
+                    color: '#007bff',
+                    textDecoration: 'none',
+                    fontSize: '14px',
+                }}
+            >
                 ← Назад к рейтингу
             </Link>
-            
-            <h1 className="text-2xl font-bold mb-4">Статистика игрока: {player.username}</h1>
-            
-            <div className="border p-6 rounded">
-                <p><strong>Место в рейтинге:</strong> #{player.place}</p>
-                <p><strong>Игр сыграно:</strong> {player.games_played}</p>
-                <p><strong>Побед:</strong> {player.wins}</p>
-                <p><strong>Winrate:</strong> {player.win_rate}%</p>
+
+            {/* Компактный блок с информацией об игроке */}
+            <div
+                style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    marginBottom: '16px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    gap: '16px',
+                    alignItems: 'center',
+                }}
+            >
+                {/* Аватар с местом */}
+                <div
+                    style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '50%',
+                        backgroundColor: '#e0e0e0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        fontWeight: 'bold',
+                        fontSize: '24px',
+                    }}
+                >
+                    #{player.place}
+                </div>
+
+                {/* Информация */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
+                        {player.username}
+                    </h2>
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                        <span>ID: {player.user_id}</span>
+                    </div>
+                </div>
             </div>
-            
-            <p className="mt-4 text-gray-600">Детальная статистика будет добавлена позже</p>
-        </main>
+
+            {/* Статистика */}
+            <div
+                style={{
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    marginBottom: '16px',
+                }}
+            >
+                <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                    📊 Статистика
+                </h3>
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: '12px',
+                    }}
+                >
+                    <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Место в рейтинге</div>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>#{player.place}</div>
+                    </div>
+                    <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Игр сыграно</div>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{player.games_played}</div>
+                    </div>
+                    <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Победы</div>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#28a745' }}>{player.wins}</div>
+                    </div>
+                    <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>% побед</div>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>{player.win_rate}%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                style={{
+                    backgroundColor: '#e8f4f8',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    fontSize: '14px',
+                    color: '#555',
+                }}
+            >
+                <p style={{ margin: 0 }}>
+                    💡 Детальная статистика будет добавлена позже
+                </p>
+            </div>
+        </div>
     )
 }
-

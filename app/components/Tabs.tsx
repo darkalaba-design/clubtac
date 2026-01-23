@@ -32,27 +32,54 @@ export default function Tabs({
                 onClick={() => onChange('players')}
                 style={{
                     fontWeight: active === 'players' ? 'bold' : 'normal',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
                 }}
             >
-                🏆 Рейтинг
+                <span style={{ fontSize: '20px' }}>🏆</span>
+                <span style={{ fontSize: '12px' }}>Рейтинг</span>
             </button>
 
             <button
                 onClick={() => onChange('teams')}
                 style={{
                     fontWeight: active === 'teams' ? 'bold' : 'normal',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
                 }}
             >
-                👥 Команды
+                <span style={{ fontSize: '20px' }}>👥</span>
+                <span style={{ fontSize: '12px' }}>Команды</span>
             </button>
 
             <button
                 onClick={() => onChange('games')}
                 style={{
                     fontWeight: active === 'games' ? 'bold' : 'normal',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
                 }}
             >
-                🎮 Игры
+                <span style={{ fontSize: '20px' }}>🎮</span>
+                <span style={{ fontSize: '12px' }}>Игры</span>
             </button>
 
             <button
@@ -60,8 +87,13 @@ export default function Tabs({
                 style={{
                     fontWeight: active === 'profile' ? 'bold' : 'normal',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '4px',
+                    padding: '8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
                 }}
             >
                 {user && photoUrl ? (
@@ -76,9 +108,9 @@ export default function Tabs({
                         }}
                     />
                 ) : (
-                    <span>👤</span>
+                    <span style={{ fontSize: '20px' }}>👤</span>
                 )}
-                Профиль
+                <span style={{ fontSize: '12px' }}>Профиль</span>
             </button>
         </div>
     )
