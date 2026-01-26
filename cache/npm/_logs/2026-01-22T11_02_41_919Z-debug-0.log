@@ -65,3 +65,14 @@
 19 verbose npm  v11.7.0
 20 verbose exit 0
 21 info ok
+17 verbose cwd C:\Users\Vatoko
+18 verbose os Windows_NT 10.0.26100
+19 verbose node v22.14.0
+20 verbose npm  v11.7.0
+21 notice
+21 notice New minor version of npm available! 11.7.0 -> 11.8.0
+21 notice Changelog: https://github.com/npm/cli/releases/tag/v11.8.0
+21 notice To update run: npm install -g npm@11.8.0
+21 notice  { force: true, [Symbol(proc-log.meta)]: true }
+22 verbose exit 0
+23 info ok
