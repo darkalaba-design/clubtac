@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '../contexts/UserContext'
@@ -166,6 +166,86 @@ export default function GamesList() {
 
         loadEvents()
     }, [user])
+
+    // Функция для обновления статусов участников
+    const refreshParticipantStatuses = useCallback(async () => {
+        if (!user?.id || events.length === 0) return
+
+        try {
+            const supabase = createClient()
+            const eventIds = events.map(e => e.id)
+            
+            const { data: participants, error: participantsError } = await supabase
+                .from('clubtac_event_participants')
+                .select('event_id, payment_status')
+                .eq('user_id', user.id)
+                .in('event_id', eventIds)
+
+            if (!participantsError && participants) {
+                setEventParticipants(prev => {
+                    const updated = { ...prev }
+                    participants.forEach((p: any) => {
+                        updated[p.event_id] = { payment_status: p.payment_status }
+                    })
+                    return updated
+                })
+            }
+        } catch (err) {
+            console.error('Error refreshing participant statuses:', err)
+        }
+    }, [user?.id, events])
+
+    // Подписка на изменения статусов участников через Supabase Realtime
+    useEffect(() => {
+        if (!user?.id || events.length === 0) return
+
+        const supabase = createClient()
+        
+        // Подписываемся на изменения в таблице clubtac_event_participants
+        const channel = supabase
+            .channel('event_participants_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'clubtac_event_participants',
+                    filter: `user_id=eq.${user.id}`,
+                },
+                (payload) => {
+                    console.log('Participant status changed:', payload)
+                    const eventId = payload.new.event_id as string
+                    const paymentStatus = payload.new.payment_status as string
+                    
+                    // Обновляем статус участника
+                    setEventParticipants(prev => ({
+                        ...prev,
+                        [eventId]: { payment_status: paymentStatus }
+                    }))
+                }
+            )
+            .subscribe()
+
+        // Периодическая проверка статусов (каждые 10 секунд) как fallback
+        const intervalId = setInterval(() => {
+            refreshParticipantStatuses()
+        }, 10000)
+
+        // Проверка при возврате на страницу
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                refreshParticipantStatuses()
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        // Очистка при размонтировании
+        return () => {
+            supabase.removeChannel(channel)
+            clearInterval(intervalId)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    }, [user, events, refreshParticipantStatuses])
 
     // Загружаем завершенные события для прошедших игр
     useEffect(() => {
