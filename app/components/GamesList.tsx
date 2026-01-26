@@ -338,17 +338,6 @@ export default function GamesList() {
                     responseData = { message: 'Запрос принят' }
                 }
 
-                // Устанавливаем успешное состояние с ответом
-                setEventRegistrationStatus(prev => ({
-                    ...prev,
-                    [eventId]: {
-                        loading: false,
-                        success: true,
-                        error: null,
-                        response: responseData
-                    }
-                }))
-
                 // Обновляем статус участника в локальном состоянии
                 // Если есть paylink, значит регистрация прошла, но оплата pending
                 if (responseData.paylink) {
@@ -356,12 +345,22 @@ export default function GamesList() {
                         ...prev,
                         [eventId]: { payment_status: 'pending' }
                     }))
+                    
+                    // Устанавливаем успешное состояние с ответом
+                    setEventRegistrationStatus(prev => ({
+                        ...prev,
+                        [eventId]: {
+                            loading: false,
+                            success: true,
+                            error: null,
+                            response: responseData
+                        }
+                    }))
                 } else {
-                    // Если нет paylink, возможно оплата уже прошла или статус другой
-                    // Перезагружаем данные участников
+                    // Если нет paylink, проверяем статус участника в базе данных
                     if (user?.id) {
                         const supabase = createClient()
-                        const { data: participant } = await supabase
+                        const { data: participant, error: participantError } = await supabase
                             .from('clubtac_event_participants')
                             .select('payment_status')
                             .eq('event_id', eventId)
@@ -373,7 +372,67 @@ export default function GamesList() {
                                 ...prev,
                                 [eventId]: { payment_status: participant.payment_status }
                             }))
+                            
+                            // Устанавливаем успешное состояние с ответом
+                            setEventRegistrationStatus(prev => ({
+                                ...prev,
+                                [eventId]: {
+                                    loading: false,
+                                    success: true,
+                                    error: null,
+                                    response: responseData
+                                }
+                            }))
+                        } else {
+                            // Если участник не найден, это может быть ошибка - webhook сработал, но ссылка не сгенерировалась
+                            // Проверяем, является ли ответ просто "Accepted" или подобным текстом
+                            const isSimpleAccept = responseData?.message === 'Accepted' || 
+                                                   responseData?.message === 'Запрос принят' ||
+                                                   (typeof responseData === 'object' && Object.keys(responseData).length === 1 && 'message' in responseData)
+                            
+                            if (isSimpleAccept) {
+                                // Это ошибка - webhook сработал, но регистрация не завершена
+                                // Устанавливаем состояние ошибки
+                                setEventRegistrationStatus(prev => ({
+                                    ...prev,
+                                    [eventId]: {
+                                        loading: false,
+                                        success: false,
+                                        error: 'Что-то пошло не так. попробуйте еще раз',
+                                        response: null
+                                    }
+                                }))
+                                return // Выходим из функции, не обновляя статус участника
+                            } else {
+                                // Если это не простой "Accepted", устанавливаем статус 'pending'
+                                setEventParticipants(prev => ({
+                                    ...prev,
+                                    [eventId]: { payment_status: 'pending' }
+                                }))
+                                
+                                // Устанавливаем успешное состояние с ответом
+                                setEventRegistrationStatus(prev => ({
+                                    ...prev,
+                                    [eventId]: {
+                                        loading: false,
+                                        success: true,
+                                        error: null,
+                                        response: responseData
+                                    }
+                                }))
+                            }
                         }
+                    } else {
+                        // Если нет user.id, устанавливаем успешное состояние
+                        setEventRegistrationStatus(prev => ({
+                            ...prev,
+                            [eventId]: {
+                                loading: false,
+                                success: true,
+                                error: null,
+                                response: responseData
+                            }
+                        }))
                     }
                 }
             } catch (fetchError) {
@@ -554,7 +613,52 @@ export default function GamesList() {
                                     )
                                 }
 
-                                // Если нет ссылки на оплату, показываем обычный ответ
+                                // Если нет ссылки на оплату, проверяем статус участника в базе данных
+                                const participant = eventParticipants[event.id]
+                                const paymentStatus = participant?.payment_status
+
+                                if (paymentStatus === 'paid') {
+                                    return (
+                                        <div
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                backgroundColor: '#d4edda',
+                                                color: '#155724',
+                                                border: '1px solid #c3e6cb',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                textAlign: 'center',
+                                                fontWeight: '500',
+                                            }}
+                                        >
+                                            Вы зарегистрированы
+                                        </div>
+                                    )
+                                }
+
+                                if (paymentStatus === 'pending') {
+                                    return (
+                                        <button
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                backgroundColor: '#ffc107',
+                                                color: '#000000',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                fontWeight: '500',
+                                                cursor: 'pointer',
+                                            }}
+                                            onClick={() => handleRegisterForEvent(event.id)}
+                                        >
+                                            Сгенерировать ссылку на оплату
+                                        </button>
+                                    )
+                                }
+
+                                // Если статуса участника нет, показываем успешное сообщение
                                 return (
                                     <div
                                         style={{
@@ -568,9 +672,7 @@ export default function GamesList() {
                                             textAlign: 'center',
                                         }}
                                     >
-                                        {status.response && typeof status.response === 'object'
-                                            ? JSON.stringify(status.response, null, 2)
-                                            : status.response || 'Вы успешно записались на событие!'}
+                                        Вы успешно записались на событие!
                                     </div>
                                 )
                             }
