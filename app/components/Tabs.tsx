@@ -56,9 +56,11 @@ export default function Tabs({
                     background: 'transparent',
                     cursor: 'pointer',
                     color: active === 'profile' ? '#007bff' : '#666',
+                    position: 'relative',
+                    zIndex: 1,
                 }}
             >
-                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                     {user && photoUrl ? (
                         <img
                             src={photoUrl}
@@ -68,13 +70,14 @@ export default function Tabs({
                                 height: '26px',
                                 borderRadius: '50%',
                                 objectFit: 'cover',
+                                pointerEvents: 'none',
                             }}
                         />
                     ) : (
-                        <span style={{ fontSize: '26px' }}>👤</span>
+                        <span style={{ fontSize: '26px', pointerEvents: 'none' }}>👤</span>
                     )}
                 </div>
-                <span style={{ fontSize: '10px' }}>Профиль</span>
+                <span style={{ fontSize: '10px', pointerEvents: 'none' }}>Профиль</span>
             </button>
 
             <button
