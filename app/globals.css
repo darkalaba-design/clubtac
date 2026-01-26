@@ -44,3 +44,12 @@ div.border {
 .mx-2 {
   margin-inline: calc(var(--spacing) * 1);
 }
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

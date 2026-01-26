@@ -42,7 +42,12 @@ export default function GamesList() {
     const [eventsLoading, setEventsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [eventsError, setEventsError] = useState<string | null>(null)
-    const [registeringEventId, setRegisteringEventId] = useState<string | null>(null)
+    const [eventRegistrationStatus, setEventRegistrationStatus] = useState<Record<string, {
+        loading: boolean
+        success: boolean
+        error: string | null
+        response: any
+    }>>({})
 
     // Загружаем прошедшие игры
     useEffect(() => {
@@ -189,6 +194,72 @@ export default function GamesList() {
         return acc
     }, {} as Record<string, Game[]>)
 
+    // Функция для записи на событие
+    const handleRegisterForEvent = async (eventId: string) => {
+        if (!user) {
+            alert('Необходимо войти в систему')
+            return
+        }
+
+        // Устанавливаем состояние загрузки
+        setEventRegistrationStatus(prev => ({
+            ...prev,
+            [eventId]: {
+                loading: true,
+                success: false,
+                error: null,
+                response: null
+            }
+        }))
+
+        try {
+            const webhookUrl = 'https://hook.eu2.make.com/gt8ewzdg7dmpqr1qst4mnotgwpcqfc0m'
+            
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    event_id: eventId,
+                    user_id: user.id || null,
+                    telegram_id: user.telegram_id || null,
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`)
+            }
+
+            const responseData = await response.json()
+
+            // Устанавливаем успешное состояние с ответом
+            setEventRegistrationStatus(prev => ({
+                ...prev,
+                [eventId]: {
+                    loading: false,
+                    success: true,
+                    error: null,
+                    response: responseData
+                }
+            }))
+        } catch (err) {
+            console.error('Error registering for event:', err)
+            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка'
+            
+            // Устанавливаем состояние ошибки
+            setEventRegistrationStatus(prev => ({
+                ...prev,
+                [eventId]: {
+                    loading: false,
+                    success: false,
+                    error: errorMessage,
+                    response: null
+                }
+            }))
+        }
+    }
+
     // Рендер анонсов
     const renderAnnouncements = () => {
         if (eventsLoading) {
@@ -274,25 +345,105 @@ export default function GamesList() {
                                 </div>
                             )}
                         </div>
-                        <button
-                            style={{
-                                width: '100%',
-                                padding: '10px',
-                                backgroundColor: '#007bff',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                cursor: 'pointer',
-                            }}
-                            onClick={() => {
-                                // TODO: Реализовать запись на событие
-                                alert('Функция записи будет реализована позже')
-                            }}
-                        >
-                            Записаться
-                        </button>
+                        {(() => {
+                            const status = eventRegistrationStatus[event.id]
+                            const isLoading = status?.loading
+                            const isSuccess = status?.success
+                            const hasError = status?.error
+
+                            if (isLoading) {
+                                return (
+                                    <div
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#e0e0e0',
+                                            color: '#666',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            textAlign: 'center',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: '16px',
+                                                height: '16px',
+                                                border: '2px solid #666',
+                                                borderTop: '2px solid transparent',
+                                                borderRadius: '50%',
+                                                animation: 'spin 1s linear infinite',
+                                            }}
+                                        />
+                                        Отправка...
+                                    </div>
+                                )
+                            }
+
+                            if (isSuccess) {
+                                return (
+                                    <div
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#d4edda',
+                                            color: '#155724',
+                                            border: '1px solid #c3e6cb',
+                                            borderRadius: '6px',
+                                            fontSize: '14px',
+                                            textAlign: 'center',
+                                        }}
+                                    >
+                                        {status.response && typeof status.response === 'object' 
+                                            ? JSON.stringify(status.response, null, 2)
+                                            : status.response || 'Вы успешно записались на событие!'}
+                                    </div>
+                                )
+                            }
+
+                            if (hasError) {
+                                return (
+                                    <div
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#f8d7da',
+                                            color: '#721c24',
+                                            border: '1px solid #f5c6cb',
+                                            borderRadius: '6px',
+                                            fontSize: '14px',
+                                            textAlign: 'center',
+                                        }}
+                                    >
+                                        Ошибка: {status.error}
+                                    </div>
+                                )
+                            }
+
+                            return (
+                                <button
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: '#007bff',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        cursor: 'pointer',
+                                    }}
+                                    onClick={() => handleRegisterForEvent(event.id)}
+                                >
+                                    Записаться
+                                </button>
+                            )
+                        })()}
                     </div>
                 ))}
             </div>
