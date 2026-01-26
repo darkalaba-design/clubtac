@@ -37,9 +37,11 @@ export default function GamesList() {
     const [activeTab, setActiveTab] = useState<GamesTab>('announcements')
     const [games, setGames] = useState<Game[]>([])
     const [events, setEvents] = useState<Event[]>([])
+    const [pastEvents, setPastEvents] = useState<Event[]>([])
     const [playerIdMap, setPlayerIdMap] = useState<Record<string, number>>({})
     const [loading, setLoading] = useState(true)
     const [eventsLoading, setEventsLoading] = useState(true)
+    const [pastEventsLoading, setPastEventsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [eventsError, setEventsError] = useState<string | null>(null)
     const [eventRegistrationStatus, setEventRegistrationStatus] = useState<Record<string, {
@@ -48,6 +50,7 @@ export default function GamesList() {
         error: string | null
         response: any
     }>>({})
+    const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
 
     // Загружаем прошедшие игры
     useEffect(() => {
@@ -142,6 +145,39 @@ export default function GamesList() {
         loadEvents()
     }, [])
 
+    // Загружаем завершенные события для прошедших игр
+    useEffect(() => {
+        const loadPastEvents = async () => {
+            try {
+                const supabase = createClient()
+                const now = new Date().toISOString()
+
+                // Загружаем завершенные события
+                const { data: finishedEvents, error: eventsError } = await supabase
+                    .from('clubtac_events')
+                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at')
+                    .eq('status', 'finished')
+                    .lt('starts_at', now)
+                    .order('starts_at', { ascending: false })
+
+                if (eventsError) {
+                    console.error('Supabase past events error:', eventsError)
+                    setPastEventsLoading(false)
+                    return
+                }
+
+                console.log('Loaded past events:', finishedEvents)
+                setPastEvents(finishedEvents || [])
+            } catch (err) {
+                console.error('Error loading past events:', err)
+            } finally {
+                setPastEventsLoading(false)
+            }
+        }
+
+        loadPastEvents()
+    }, [])
+
     // Форматирование даты для прошедших игр
     const formatDate = (dateString: string) => {
         try {
@@ -184,15 +220,34 @@ export default function GamesList() {
         }
     }
 
-    // Группировка игр по датам
+    // Функция для поиска события по дате игры
+    const findEventByGameDate = (gameDate: string): Event | null => {
+        const gameDateObj = new Date(gameDate)
+        const gameDateOnly = new Date(gameDateObj.getFullYear(), gameDateObj.getMonth(), gameDateObj.getDate())
+        
+        return pastEvents.find(event => {
+            const eventDateObj = new Date(event.starts_at)
+            const eventDateOnly = new Date(eventDateObj.getFullYear(), eventDateObj.getMonth(), eventDateObj.getDate())
+            return eventDateOnly.getTime() === gameDateOnly.getTime()
+        }) || null
+    }
+
+    // Группировка игр по датам с информацией о событиях
     const gamesByDate = games.reduce((acc, game) => {
         const date = formatDate(game.created_at)
         if (!acc[date]) {
-            acc[date] = []
+            acc[date] = {
+                games: [],
+                event: null
+            }
         }
-        acc[date].push(game)
+        acc[date].games.push(game)
+        // Находим событие для этой даты (берем первое найденное)
+        if (!acc[date].event) {
+            acc[date].event = findEventByGameDate(game.created_at)
+        }
         return acc
-    }, {} as Record<string, Game[]>)
+    }, {} as Record<string, { games: Game[], event: Event | null }>)
 
     // Функция для записи на событие
     const handleRegisterForEvent = async (eventId: string) => {
@@ -518,38 +573,114 @@ export default function GamesList() {
             )
         }
 
+        const toggleDate = (date: string) => {
+            setExpandedDates(prev => {
+                const newSet = new Set(prev)
+                if (newSet.has(date)) {
+                    newSet.delete(date)
+                } else {
+                    newSet.add(date)
+                }
+                return newSet
+            })
+        }
+
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {Object.entries(gamesByDate).map(([date, dateGames]) => (
-                    <div key={date}>
-                        <h4
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 12px' }}>
+                {Object.entries(gamesByDate).map(([date, dateData]) => {
+                    const isExpanded = expandedDates.has(date)
+                    const event = dateData.event
+                    const dateGames = dateData.games
+                    return (
+                        <div
+                            key={date}
                             style={{
-                                margin: '0 12px 12px',
-                                fontSize: '16px',
-                                fontWeight: 'bold',
-                                color: '#666',
+                                backgroundColor: '#ffffff',
+                                borderRadius: '8px',
+                                border: '1px solid #e0e0e0',
+                                overflow: 'hidden',
                             }}
                         >
-                            {date}
-                        </h4>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            {dateGames.map((game, index) => {
-                                const team1Won = game.score_1 > game.score_2
-                                return (
-                                    <div key={game.game_id}>
-                                        {index > 0 && (
-                                            <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
-                                        )}
-                                        <div
-                                            style={{
-                                                backgroundColor: '#ffffff',
-                                                padding: '10px 12px',
-                                                display: 'grid',
-                                                gridTemplateColumns: '1fr auto 1fr',
-                                                alignItems: 'center',
-                                                gap: '12px',
-                                            }}
-                                        >
+                            {/* Заголовок карточки (кликабельный) */}
+                            <div
+                                onClick={() => toggleDate(date)}
+                                style={{
+                                    padding: '16px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-start',
+                                    backgroundColor: isExpanded ? '#f8f9fa' : '#ffffff',
+                                    transition: 'background-color 0.2s',
+                                }}
+                            >
+                                <div style={{ flex: 1 }}>
+                                    {event && event.starts_at ? (
+                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                                            {formatEventDate(event.starts_at)}
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                                            {date}
+                                        </div>
+                                    )}
+                                    {event && event.title && (
+                                        <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>
+                                            {event.title}
+                                        </div>
+                                    )}
+                                    {event && event.type && (
+                                        <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>
+                                            {getEventTypeName(event.type)}
+                                        </div>
+                                    )}
+                                    {event && event.address && (
+                                        <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                            📍 {event.address}
+                                        </div>
+                                    )}
+                                    {event && event.club_id && (
+                                        <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                            🏢 Клуб ID: {event.club_id}
+                                        </div>
+                                    )}
+                                    <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                                        Игр: {dateGames.length}
+                                    </div>
+                                </div>
+                                <div
+                                    style={{
+                                        fontSize: '20px',
+                                        color: '#666',
+                                        transition: 'transform 0.3s',
+                                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                        marginLeft: '12px',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    ▼
+                                </div>
+                            </div>
+
+                            {/* Раскрывающийся контент с играми */}
+                            {isExpanded && (
+                                <div style={{ borderTop: '1px solid #e0e0e0' }}>
+                                    {dateGames.map((game, index) => {
+                                        const team1Won = game.score_1 > game.score_2
+                                        return (
+                                            <div key={game.game_id}>
+                                                {index > 0 && (
+                                                    <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                                                )}
+                                                <div
+                                                    style={{
+                                                        padding: '10px 12px',
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '1fr auto 1fr',
+                                                        alignItems: 'center',
+                                                        gap: '12px',
+                                                    }}
+                                                >
                                             {/* Левая команда */}
                                             <div style={{ textAlign: 'right' }}>
                                                 <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
@@ -674,10 +805,12 @@ export default function GamesList() {
                                         </div>
                                     </div>
                                 )
-                            })}
+                                    })}
+                                </div>
+                            )}
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
             </div>
         )
     }
