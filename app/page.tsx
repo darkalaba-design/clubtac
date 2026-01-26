@@ -12,7 +12,12 @@ export default function HomePage() {
 
   return (
     <>
-      <main style={{ padding: tab === 'profile' ? '0 0 100px 0' : '12px 0', paddingBottom: 100 }}>
+      <main style={{
+        paddingTop: tab === 'profile' ? '0' : '12px',
+        paddingRight: '0',
+        paddingBottom: '120px',
+        paddingLeft: '0'
+      }}>
         {tab === 'profile' && <UserProfile />}
         {tab === 'players' && <HallOfFame />}
         {tab === 'teams' && <TeamsRanking />}
