@@ -51,6 +51,7 @@ export default function GamesList() {
         response: any
     }>>({})
     const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
+    const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string }>>({})
 
     // Загружаем прошедшие игры
     useEffect(() => {
@@ -134,6 +135,27 @@ export default function GamesList() {
 
                 console.log('Filtered events (scheduled and future):', filteredEvents)
                 setEvents(filteredEvents)
+
+                // Загружаем статусы регистрации пользователя на события
+                if (user?.id) {
+                    const eventIds = filteredEvents.map(e => e.id)
+                    if (eventIds.length > 0) {
+                        const { data: participants, error: participantsError } = await supabase
+                            .from('clubtac_event_participants')
+                            .select('event_id, payment_status')
+                            .eq('user_id', user.id)
+                            .in('event_id', eventIds)
+
+                        if (!participantsError && participants) {
+                            const participantsMap: Record<string, { payment_status: string }> = {}
+                            participants.forEach((p: any) => {
+                                participantsMap[p.event_id] = { payment_status: p.payment_status }
+                            })
+                            setEventParticipants(participantsMap)
+                            console.log('Loaded event participants:', participantsMap)
+                        }
+                    }
+                }
             } catch (err) {
                 console.error('Error loading events:', err)
                 setEventsError(err instanceof Error ? err.message : 'Unknown error')
@@ -143,7 +165,7 @@ export default function GamesList() {
         }
 
         loadEvents()
-    }, [])
+    }, [user])
 
     // Загружаем завершенные события для прошедших игр
     useEffect(() => {
@@ -224,7 +246,7 @@ export default function GamesList() {
     const findEventByGameDate = (gameDate: string): Event | null => {
         const gameDateObj = new Date(gameDate)
         const gameDateOnly = new Date(gameDateObj.getFullYear(), gameDateObj.getMonth(), gameDateObj.getDate())
-        
+
         return pastEvents.find(event => {
             const eventDateObj = new Date(event.starts_at)
             const eventDateOnly = new Date(eventDateObj.getFullYear(), eventDateObj.getMonth(), eventDateObj.getDate())
@@ -269,7 +291,7 @@ export default function GamesList() {
 
         try {
             const webhookUrl = 'https://hook.eu2.make.com/gt8ewzdg7dmpqr1qst4mnotgwpcqfc0m'
-            
+
             const response = await fetch(webhookUrl, {
                 method: 'POST',
                 headers: {
@@ -298,10 +320,38 @@ export default function GamesList() {
                     response: responseData
                 }
             }))
+
+            // Обновляем статус участника в локальном состоянии
+            // Если есть paylink, значит регистрация прошла, но оплата pending
+            if (responseData.paylink) {
+                setEventParticipants(prev => ({
+                    ...prev,
+                    [eventId]: { payment_status: 'pending' }
+                }))
+            } else {
+                // Если нет paylink, возможно оплата уже прошла или статус другой
+                // Перезагружаем данные участников
+                if (user?.id) {
+                    const supabase = createClient()
+                    const { data: participant } = await supabase
+                        .from('clubtac_event_participants')
+                        .select('payment_status')
+                        .eq('event_id', eventId)
+                        .eq('user_id', user.id)
+                        .single()
+
+                    if (participant) {
+                        setEventParticipants(prev => ({
+                            ...prev,
+                            [eventId]: { payment_status: participant.payment_status }
+                        }))
+                    }
+                }
+            }
         } catch (err) {
             console.error('Error registering for event:', err)
             const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка'
-            
+
             // Устанавливаем состояние ошибки
             setEventRegistrationStatus(prev => ({
                 ...prev,
@@ -442,10 +492,10 @@ export default function GamesList() {
 
                             if (isSuccess) {
                                 // Проверяем, есть ли в ответе ссылка на оплату
-                                const paylink = status.response?.paylink || 
-                                               (status.response && typeof status.response === 'object' && 'paylink' in status.response 
-                                                   ? status.response.paylink 
-                                                   : null)
+                                const paylink = status.response?.paylink ||
+                                    (status.response && typeof status.response === 'object' && 'paylink' in status.response
+                                        ? status.response.paylink
+                                        : null)
 
                                 if (paylink) {
                                     return (
@@ -487,7 +537,7 @@ export default function GamesList() {
                                             textAlign: 'center',
                                         }}
                                     >
-                                        {status.response && typeof status.response === 'object' 
+                                        {status.response && typeof status.response === 'object'
                                             ? JSON.stringify(status.response, null, 2)
                                             : status.response || 'Вы успешно записались на событие!'}
                                     </div>
@@ -510,6 +560,51 @@ export default function GamesList() {
                                     >
                                         Ошибка: {status.error}
                                     </div>
+                                )
+                            }
+
+                            // Проверяем статус регистрации пользователя
+                            const participant = eventParticipants[event.id]
+                            const paymentStatus = participant?.payment_status
+
+                            if (paymentStatus === 'paid') {
+                                return (
+                                    <div
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#d4edda',
+                                            color: '#155724',
+                                            border: '1px solid #c3e6cb',
+                                            borderRadius: '6px',
+                                            fontSize: '14px',
+                                            textAlign: 'center',
+                                            fontWeight: '500',
+                                        }}
+                                    >
+                                        Вы зарегистрированы
+                                    </div>
+                                )
+                            }
+
+                            if (paymentStatus === 'pending') {
+                                return (
+                                    <button
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#ffc107',
+                                            color: '#000000',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                            cursor: 'pointer',
+                                        }}
+                                        onClick={() => handleRegisterForEvent(event.id)}
+                                    >
+                                        Сгенерировать ссылку на оплату
+                                    </button>
                                 )
                             }
 
@@ -681,130 +776,130 @@ export default function GamesList() {
                                                         gap: '12px',
                                                     }}
                                                 >
-                                            {/* Левая команда */}
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
-                                                    {playerIdMap[game.player_1_1] ? (
-                                                        <Link
-                                                            href={`/player/${playerIdMap[game.player_1_1]}`}
-                                                            style={{
-                                                                color: '#007bff',
-                                                                textDecoration: 'none',
-                                                                fontWeight: '500',
-                                                                fontSize: '14px',
-                                                                verticalAlign: 'top',
-                                                                lineHeight: '14px',
-                                                            }}
-                                                        >
-                                                            {game.player_1_1}
-                                                        </Link>
-                                                    ) : (
-                                                        <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_1_1}</span>
-                                                    )}
-                                                </div>
-                                                <div style={{ lineHeight: '14px', verticalAlign: 'bottom' }}>
-                                                    {playerIdMap[game.player_1_2] ? (
-                                                        <Link
-                                                            href={`/player/${playerIdMap[game.player_1_2]}`}
-                                                            style={{
-                                                                color: '#007bff',
-                                                                textDecoration: 'none',
-                                                                fontWeight: '500',
-                                                                fontSize: '14px',
-                                                                verticalAlign: 'top',
-                                                                lineHeight: '14px',
-                                                            }}
-                                                        >
-                                                            {game.player_1_2}
-                                                        </Link>
-                                                    ) : (
-                                                        <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_1_2}</span>
-                                                    )}
-                                                </div>
-                                            </div>
+                                                    {/* Левая команда */}
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
+                                                            {playerIdMap[game.player_1_1] ? (
+                                                                <Link
+                                                                    href={`/player/${playerIdMap[game.player_1_1]}`}
+                                                                    style={{
+                                                                        color: '#007bff',
+                                                                        textDecoration: 'none',
+                                                                        fontWeight: '500',
+                                                                        fontSize: '14px',
+                                                                        verticalAlign: 'top',
+                                                                        lineHeight: '14px',
+                                                                    }}
+                                                                >
+                                                                    {game.player_1_1}
+                                                                </Link>
+                                                            ) : (
+                                                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_1_1}</span>
+                                                            )}
+                                                        </div>
+                                                        <div style={{ lineHeight: '14px', verticalAlign: 'bottom' }}>
+                                                            {playerIdMap[game.player_1_2] ? (
+                                                                <Link
+                                                                    href={`/player/${playerIdMap[game.player_1_2]}`}
+                                                                    style={{
+                                                                        color: '#007bff',
+                                                                        textDecoration: 'none',
+                                                                        fontWeight: '500',
+                                                                        fontSize: '14px',
+                                                                        verticalAlign: 'top',
+                                                                        lineHeight: '14px',
+                                                                    }}
+                                                                >
+                                                                    {game.player_1_2}
+                                                                </Link>
+                                                            ) : (
+                                                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_1_2}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
 
-                                            {/* Счет по центру */}
-                                            <div
-                                                style={{
-                                                    textAlign: 'center',
-                                                    fontSize: '32px',
-                                                    fontWeight: 'bold',
-                                                    lineHeight: '1',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '2px',
-                                                }}
-                                            >
-                                                <span
-                                                    style={{
-                                                        color: team1Won ? '#28a745' : '#666',
-                                                        backgroundColor: team1Won ? '#e8f5e9' : '#f5f5f5',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '6px',
-                                                        minWidth: '32px',
-                                                    }}
-                                                >
-                                                    {game.score_1}
-                                                </span>
-                                                <span style={{ color: '#999', fontSize: '24px' }}>:</span>
-                                                <span
-                                                    style={{
-                                                        color: !team1Won ? '#28a745' : '#666',
-                                                        backgroundColor: !team1Won ? '#e8f5e9' : '#f5f5f5',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '6px',
-                                                        minWidth: '32px',
-                                                    }}
-                                                >
-                                                    {game.score_2}
-                                                </span>
-                                            </div>
+                                                    {/* Счет по центру */}
+                                                    <div
+                                                        style={{
+                                                            textAlign: 'center',
+                                                            fontSize: '32px',
+                                                            fontWeight: 'bold',
+                                                            lineHeight: '1',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '2px',
+                                                        }}
+                                                    >
+                                                        <span
+                                                            style={{
+                                                                color: team1Won ? '#28a745' : '#666',
+                                                                backgroundColor: team1Won ? '#e8f5e9' : '#f5f5f5',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '6px',
+                                                                minWidth: '32px',
+                                                            }}
+                                                        >
+                                                            {game.score_1}
+                                                        </span>
+                                                        <span style={{ color: '#999', fontSize: '24px' }}>:</span>
+                                                        <span
+                                                            style={{
+                                                                color: !team1Won ? '#28a745' : '#666',
+                                                                backgroundColor: !team1Won ? '#e8f5e9' : '#f5f5f5',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '6px',
+                                                                minWidth: '32px',
+                                                            }}
+                                                        >
+                                                            {game.score_2}
+                                                        </span>
+                                                    </div>
 
-                                            {/* Правая команда */}
-                                            <div style={{ textAlign: 'left' }}>
-                                                <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
-                                                    {playerIdMap[game.player_2_1] ? (
-                                                        <Link
-                                                            href={`/player/${playerIdMap[game.player_2_1]}`}
-                                                            style={{
-                                                                color: '#007bff',
-                                                                textDecoration: 'none',
-                                                                fontWeight: '500',
-                                                                fontSize: '14px',
-                                                                verticalAlign: 'top',
-                                                                lineHeight: '14px',
-                                                            }}
-                                                        >
-                                                            {game.player_2_1}
-                                                        </Link>
-                                                    ) : (
-                                                        <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_2_1}</span>
-                                                    )}
-                                                </div>
-                                                <div style={{ lineHeight: '14px', verticalAlign: 'bottom' }}>
-                                                    {playerIdMap[game.player_2_2] ? (
-                                                        <Link
-                                                            href={`/player/${playerIdMap[game.player_2_2]}`}
-                                                            style={{
-                                                                color: '#007bff',
-                                                                textDecoration: 'none',
-                                                                fontWeight: '500',
-                                                                fontSize: '14px',
-                                                                verticalAlign: 'top',
-                                                                lineHeight: '14px',
-                                                            }}
-                                                        >
-                                                            {game.player_2_2}
-                                                        </Link>
-                                                    ) : (
-                                                        <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_2_2}</span>
-                                                    )}
+                                                    {/* Правая команда */}
+                                                    <div style={{ textAlign: 'left' }}>
+                                                        <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
+                                                            {playerIdMap[game.player_2_1] ? (
+                                                                <Link
+                                                                    href={`/player/${playerIdMap[game.player_2_1]}`}
+                                                                    style={{
+                                                                        color: '#007bff',
+                                                                        textDecoration: 'none',
+                                                                        fontWeight: '500',
+                                                                        fontSize: '14px',
+                                                                        verticalAlign: 'top',
+                                                                        lineHeight: '14px',
+                                                                    }}
+                                                                >
+                                                                    {game.player_2_1}
+                                                                </Link>
+                                                            ) : (
+                                                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_2_1}</span>
+                                                            )}
+                                                        </div>
+                                                        <div style={{ lineHeight: '14px', verticalAlign: 'bottom' }}>
+                                                            {playerIdMap[game.player_2_2] ? (
+                                                                <Link
+                                                                    href={`/player/${playerIdMap[game.player_2_2]}`}
+                                                                    style={{
+                                                                        color: '#007bff',
+                                                                        textDecoration: 'none',
+                                                                        fontWeight: '500',
+                                                                        fontSize: '14px',
+                                                                        verticalAlign: 'top',
+                                                                        lineHeight: '14px',
+                                                                    }}
+                                                                >
+                                                                    {game.player_2_2}
+                                                                </Link>
+                                                            ) : (
+                                                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_2_2}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                )
+                                        )
                                     })}
                                 </div>
                             )}
