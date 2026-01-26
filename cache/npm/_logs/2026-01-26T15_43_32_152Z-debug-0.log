@@ -6,17 +6,11 @@
 5 silly config load:file:C:\Users\Vatoko\AppData\Roaming\npm\etc\npmrc
 6 verbose title npm exec firecrawl-mcp
 7 verbose argv "exec" "--yes" "--" "firecrawl-mcp"
-8 verbose logfile logs-max:10 dir:F:\CursorProjects\clubtac-web\cache\npm\_logs\2026-01-26T11_34_08_827Z-
-9 verbose logfile F:\CursorProjects\clubtac-web\cache\npm\_logs\2026-01-26T11_34_08_827Z-debug-0.log
+8 verbose logfile logs-max:10 dir:F:\CursorProjects\clubtac-web\cache\npm\_logs\2026-01-26T15_43_32_152Z-
+9 verbose logfile F:\CursorProjects\clubtac-web\cache\npm\_logs\2026-01-26T15_43_32_152Z-debug-0.log
 10 silly logfile start cleaning logs, removing 1 files
 11 silly logfile done cleaning log files
 12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
-13 http fetch GET 200 https://registry.npmjs.org/firecrawl-mcp 535ms (cache revalidated)
+13 http fetch GET 200 https://registry.npmjs.org/firecrawl-mcp 628ms (cache revalidated)
 14 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
 15 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
-16 verbose cwd C:\Users\Vatoko
-17 verbose os Windows_NT 10.0.26100
-18 verbose node v22.14.0
-19 verbose npm  v11.7.0
-20 verbose exit 0
-21 info ok

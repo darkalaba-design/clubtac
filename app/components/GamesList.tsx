@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useUser } from '../contexts/UserContext'
 
 interface Game {
     game_id: number
@@ -32,6 +33,7 @@ interface Event {
 type GamesTab = 'announcements' | 'past'
 
 export default function GamesList() {
+    const { user } = useUser()
     const [activeTab, setActiveTab] = useState<GamesTab>('announcements')
     const [games, setGames] = useState<Game[]>([])
     const [events, setEvents] = useState<Event[]>([])
@@ -40,6 +42,7 @@ export default function GamesList() {
     const [eventsLoading, setEventsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [eventsError, setEventsError] = useState<string | null>(null)
+    const [registeringEventId, setRegisteringEventId] = useState<string | null>(null)
 
     // Загружаем прошедшие игры
     useEffect(() => {
@@ -93,23 +96,36 @@ export default function GamesList() {
                 const supabase = createClient()
                 const now = new Date().toISOString()
 
-                // Загружаем события с датой позже текущей и статусом scheduled
-                const { data: eventsData, error: eventsError } = await supabase
+                console.log('Loading events from clubtac_events, current time:', now)
+
+                // Сначала загрузим все события для отладки
+                const { data: allEvents, error: allEventsError } = await supabase
                     .from('clubtac_events')
-                    .select('*')
-                    .eq('status', 'scheduled')
-                    .gt('starts_at', now)
+                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at')
                     .order('starts_at', { ascending: true })
 
-                if (eventsError) {
-                    console.error('Supabase events error:', eventsError)
-                    setEventsError(eventsError.message)
+                console.log('All events from DB:', allEvents)
+                console.log('All events error:', allEventsError)
+
+                if (allEventsError) {
+                    console.error('Supabase events error:', allEventsError)
+                    setEventsError(allEventsError.message)
                     setEventsLoading(false)
                     return
                 }
 
-                console.log('Loaded events:', eventsData)
-                setEvents(eventsData || [])
+                // Фильтруем события с датой позже текущей и статусом scheduled
+                const filteredEvents = (allEvents || []).filter(event => {
+                    const eventDate = new Date(event.starts_at)
+                    const nowDate = new Date(now)
+                    const isFuture = eventDate > nowDate
+                    const isScheduled = event.status === 'scheduled'
+                    console.log(`Event ${event.title}: date=${event.starts_at}, isFuture=${isFuture}, status=${event.status}, isScheduled=${isScheduled}`)
+                    return isScheduled && isFuture
+                })
+
+                console.log('Filtered events (scheduled and future):', filteredEvents)
+                setEvents(filteredEvents)
             } catch (err) {
                 console.error('Error loading events:', err)
                 setEventsError(err instanceof Error ? err.message : 'Unknown error')
@@ -202,8 +218,13 @@ export default function GamesList() {
 
         if (events.length === 0) {
             return (
-                <div style={{ padding: '12px', textAlign: 'center' }}>
-                    <p>Нет предстоящих событий</p>
+                <div style={{ padding: '12px' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                        <p>Нет предстоящих событий</p>
+                        <p style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+                            Проверьте консоль браузера для отладочной информации
+                        </p>
+                    </div>
                 </div>
             )
         }
@@ -224,27 +245,32 @@ export default function GamesList() {
                             <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
                                 {formatEventDate(event.starts_at)}
                             </div>
-                            {event.address && (
-                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
-                                    {event.address}
-                                </div>
-                            )}
-                            <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>
-                                {getEventTypeName(event.type)}
-                            </div>
                             {event.title && (
                                 <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>
                                     {event.title}
                                 </div>
                             )}
+                            <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>
+                                {getEventTypeName(event.type)}
+                            </div>
+                            {event.address && (
+                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                    📍 {event.address}
+                                </div>
+                            )}
+                            {event.club_id && (
+                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                    🏢 Клуб ID: {event.club_id}
+                                </div>
+                            )}
                             {event.duration_minutes && (
                                 <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
-                                    Длительность: {event.duration_minutes} мин.
+                                    ⏱️ Длительность: {event.duration_minutes} мин.
                                 </div>
                             )}
                             {event.price !== null && (
                                 <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-                                    {event.price === 0 ? 'Бесплатно' : `Цена: ${event.price} ₽`}
+                                    💰 {event.price === 0 ? 'Бесплатно' : `Цена: ${event.price} ₽`}
                                 </div>
                             )}
                         </div>
