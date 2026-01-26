@@ -386,6 +386,39 @@ export default function GamesList() {
                             }
 
                             if (isSuccess) {
+                                // Проверяем, есть ли в ответе ссылка на оплату
+                                const paylink = status.response?.paylink || 
+                                               (status.response && typeof status.response === 'object' && 'paylink' in status.response 
+                                                   ? status.response.paylink 
+                                                   : null)
+
+                                if (paylink) {
+                                    return (
+                                        <a
+                                            href={paylink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                display: 'block',
+                                                width: '100%',
+                                                padding: '10px',
+                                                backgroundColor: '#28a745',
+                                                color: '#ffffff',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                fontWeight: '500',
+                                                textAlign: 'center',
+                                                textDecoration: 'none',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            Оплатить
+                                        </a>
+                                    )
+                                }
+
+                                // Если нет ссылки на оплату, показываем обычный ответ
                                 return (
                                     <div
                                         style={{
