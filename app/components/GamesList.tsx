@@ -292,73 +292,104 @@ export default function GamesList() {
         try {
             const webhookUrl = 'https://hook.eu2.make.com/gt8ewzdg7dmpqr1qst4mnotgwpcqfc0m'
 
-            const response = await fetch(webhookUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    event_id: eventId,
-                    user_id: user.id || null,
-                    telegram_id: user.telegram_id || null,
-                }),
-            })
+            // Создаем AbortController для таймаута
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 секунд таймаут
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`)
-            }
+            try {
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        event_id: eventId,
+                        user_id: user.id || null,
+                        telegram_id: user.telegram_id || null,
+                    }),
+                    signal: controller.signal,
+                })
 
-            const responseData = await response.json()
+                clearTimeout(timeoutId)
 
-            // Устанавливаем успешное состояние с ответом
-            setEventRegistrationStatus(prev => ({
-                ...prev,
-                [eventId]: {
-                    loading: false,
-                    success: true,
-                    error: null,
-                    response: responseData
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`)
                 }
-            }))
 
-            // Обновляем статус участника в локальном состоянии
-            // Если есть paylink, значит регистрация прошла, но оплата pending
-            if (responseData.paylink) {
-                setEventParticipants(prev => ({
+                // Пытаемся распарсить ответ как JSON
+                let responseData
+                try {
+                    const text = await response.text()
+                    if (text) {
+                        try {
+                            responseData = JSON.parse(text)
+                        } catch (jsonError) {
+                            // Если не удалось распарсить JSON, считаем текстовый ответ успехом
+                            console.warn('Failed to parse JSON, got text:', text)
+                            responseData = { message: text || 'Запрос принят' }
+                        }
+                    } else {
+                        // Пустой ответ считаем успехом
+                        responseData = { message: 'Запрос принят' }
+                    }
+                } catch (textError) {
+                    // Если не удалось прочитать ответ, считаем это успехом
+                    console.warn('Failed to read response:', textError)
+                    responseData = { message: 'Запрос принят' }
+                }
+
+                // Устанавливаем успешное состояние с ответом
+                setEventRegistrationStatus(prev => ({
                     ...prev,
-                    [eventId]: { payment_status: 'pending' }
+                    [eventId]: {
+                        loading: false,
+                        success: true,
+                        error: null,
+                        response: responseData
+                    }
                 }))
-            } else {
-                // Если нет paylink, возможно оплата уже прошла или статус другой
-                // Перезагружаем данные участников
-                if (user?.id) {
-                    const supabase = createClient()
-                    const { data: participant } = await supabase
-                        .from('clubtac_event_participants')
-                        .select('payment_status')
-                        .eq('event_id', eventId)
-                        .eq('user_id', user.id)
-                        .single()
 
-                    if (participant) {
-                        setEventParticipants(prev => ({
-                            ...prev,
-                            [eventId]: { payment_status: participant.payment_status }
-                        }))
+                // Обновляем статус участника в локальном состоянии
+                // Если есть paylink, значит регистрация прошла, но оплата pending
+                if (responseData.paylink) {
+                    setEventParticipants(prev => ({
+                        ...prev,
+                        [eventId]: { payment_status: 'pending' }
+                    }))
+                } else {
+                    // Если нет paylink, возможно оплата уже прошла или статус другой
+                    // Перезагружаем данные участников
+                    if (user?.id) {
+                        const supabase = createClient()
+                        const { data: participant } = await supabase
+                            .from('clubtac_event_participants')
+                            .select('payment_status')
+                            .eq('event_id', eventId)
+                            .eq('user_id', user.id)
+                            .single()
+
+                        if (participant) {
+                            setEventParticipants(prev => ({
+                                ...prev,
+                                [eventId]: { payment_status: participant.payment_status }
+                            }))
+                        }
                     }
                 }
+            } catch (fetchError) {
+                clearTimeout(timeoutId)
+                throw fetchError
             }
         } catch (err) {
             console.error('Error registering for event:', err)
-            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка'
 
-            // Устанавливаем состояние ошибки
+            // Устанавливаем состояние ошибки с универсальным сообщением
             setEventRegistrationStatus(prev => ({
                 ...prev,
                 [eventId]: {
                     loading: false,
                     success: false,
-                    error: errorMessage,
+                    error: 'Что-то пошло не так. попробуйте еще раз',
                     response: null
                 }
             }))
@@ -546,19 +577,37 @@ export default function GamesList() {
 
                             if (hasError) {
                                 return (
-                                    <div
-                                        style={{
-                                            width: '100%',
-                                            padding: '10px',
-                                            backgroundColor: '#f8d7da',
-                                            color: '#721c24',
-                                            border: '1px solid #f5c6cb',
-                                            borderRadius: '6px',
-                                            fontSize: '14px',
-                                            textAlign: 'center',
-                                        }}
-                                    >
-                                        Ошибка: {status.error}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                backgroundColor: '#f8d7da',
+                                                color: '#721c24',
+                                                border: '1px solid #f5c6cb',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                textAlign: 'center',
+                                            }}
+                                        >
+                                            {status.error}
+                                        </div>
+                                        <button
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                backgroundColor: '#007bff',
+                                                color: '#ffffff',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                fontWeight: '500',
+                                                cursor: 'pointer',
+                                            }}
+                                            onClick={() => handleRegisterForEvent(event.id)}
+                                        >
+                                            Записаться
+                                        </button>
                                     </div>
                                 )
                             }
