@@ -201,21 +201,36 @@ export default function GamesList() {
 
         const supabase = createClient()
         
+        // Создаем уникальное имя канала для каждого пользователя
+        const channelName = `event_participants_changes_${user.id}_${Date.now()}`
+        
+        console.log('Setting up Realtime subscription for user:', user.id)
+        
         // Подписываемся на изменения в таблице clubtac_event_participants
+        // Пробуем два варианта: с фильтром и без (с фильтрацией на клиенте)
         const channel = supabase
-            .channel('event_participants_changes')
+            .channel(channelName)
             .on(
                 'postgres_changes',
                 {
                     event: 'UPDATE',
                     schema: 'public',
                     table: 'clubtac_event_participants',
-                    filter: `user_id=eq.${user.id}`,
                 },
                 (payload) => {
-                    console.log('Participant status changed:', payload)
+                    console.log('Participant status changed via Realtime (all updates):', payload)
+                    
+                    // Фильтруем на клиенте - проверяем, что это изменение для текущего пользователя
+                    const changedUserId = payload.new.user_id
+                    if (changedUserId !== user.id) {
+                        console.log('Update is for different user, ignoring')
+                        return
+                    }
+                    
                     const eventId = payload.new.event_id as string
                     const paymentStatus = payload.new.payment_status as string
+                    
+                    console.log('Updating participant status:', { eventId, paymentStatus })
                     
                     // Обновляем статус участника
                     setEventParticipants(prev => ({
@@ -224,7 +239,18 @@ export default function GamesList() {
                     }))
                 }
             )
-            .subscribe()
+            .subscribe((status) => {
+                console.log('Realtime subscription status:', status)
+                if (status === 'SUBSCRIBED') {
+                    console.log('Successfully subscribed to Realtime changes for clubtac_event_participants')
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error('Realtime channel error - check Supabase Realtime settings')
+                } else if (status === 'TIMED_OUT') {
+                    console.error('Realtime subscription timed out')
+                } else if (status === 'CLOSED') {
+                    console.log('Realtime channel closed')
+                }
+            })
 
         // Периодическая проверка статусов (каждые 10 секунд) как fallback
         const intervalId = setInterval(() => {
@@ -241,11 +267,12 @@ export default function GamesList() {
 
         // Очистка при размонтировании
         return () => {
+            console.log('Cleaning up Realtime subscription')
             supabase.removeChannel(channel)
             clearInterval(intervalId)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [user, events, refreshParticipantStatuses])
+    }, [user?.id, events, refreshParticipantStatuses])
 
     // Загружаем завершенные события для прошедших игр
     useEffect(() => {
