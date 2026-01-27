@@ -52,6 +52,12 @@ export default function GamesList() {
     }>>({})
     const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
     const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string }>>({})
+    const [eventParticipantsCount, setEventParticipantsCount] = useState<Record<string, number>>({})
+    const [realtimeNotification, setRealtimeNotification] = useState<{
+        show: boolean
+        message: string
+        data?: any
+    } | null>(null)
 
     // Загружаем прошедшие игры
     useEffect(() => {
@@ -136,10 +142,26 @@ export default function GamesList() {
                 console.log('Filtered events (scheduled and future):', filteredEvents)
                 setEvents(filteredEvents)
 
-                // Загружаем статусы регистрации пользователя на события
-                if (user?.id) {
-                    const eventIds = filteredEvents.map(e => e.id)
-                    if (eventIds.length > 0) {
+                // Загружаем статусы регистрации пользователя на события и количество участников
+                const eventIds = filteredEvents.map(e => e.id)
+                if (eventIds.length > 0) {
+                    // Загружаем количество участников для каждого события
+                    const { data: participantsCount, error: countError } = await supabase
+                        .from('clubtac_event_participants')
+                        .select('event_id')
+                        .in('event_id', eventIds)
+
+                    if (!countError && participantsCount) {
+                        const countMap: Record<string, number> = {}
+                        participantsCount.forEach((p: any) => {
+                            countMap[p.event_id] = (countMap[p.event_id] || 0) + 1
+                        })
+                        setEventParticipantsCount(countMap)
+                        console.log('Loaded event participants count:', countMap)
+                    }
+
+                    // Загружаем статусы регистрации текущего пользователя
+                    if (user?.id) {
                         const { data: participants, error: participantsError } = await supabase
                             .from('clubtac_event_participants')
                             .select('event_id, payment_status')
@@ -167,6 +189,31 @@ export default function GamesList() {
         loadEvents()
     }, [user])
 
+    // Функция для обновления количества участников
+    const refreshParticipantCounts = useCallback(async () => {
+        if (events.length === 0) return
+
+        try {
+            const supabase = createClient()
+            const eventIds = events.map(e => e.id)
+            
+            const { data: participantsCount, error: countError } = await supabase
+                .from('clubtac_event_participants')
+                .select('event_id')
+                .in('event_id', eventIds)
+
+            if (!countError && participantsCount) {
+                const countMap: Record<string, number> = {}
+                participantsCount.forEach((p: any) => {
+                    countMap[p.event_id] = (countMap[p.event_id] || 0) + 1
+                })
+                setEventParticipantsCount(countMap)
+            }
+        } catch (err) {
+            console.error('Error refreshing participant counts:', err)
+        }
+    }, [events])
+
     // Функция для обновления статусов участников
     const refreshParticipantStatuses = useCallback(async () => {
         if (!user?.id || events.length === 0) return
@@ -190,10 +237,13 @@ export default function GamesList() {
                     return updated
                 })
             }
+            
+            // Также обновляем количество участников
+            refreshParticipantCounts()
         } catch (err) {
             console.error('Error refreshing participant statuses:', err)
         }
-    }, [user?.id, events])
+    }, [user?.id, events, refreshParticipantCounts])
 
     // Подписка на изменения статусов участников через Supabase Realtime
     useEffect(() => {
@@ -220,6 +270,18 @@ export default function GamesList() {
                 (payload) => {
                     console.log('Participant status changed via Realtime (all updates):', payload)
                     
+                    // Показываем уведомление о получении данных через Realtime
+                    setRealtimeNotification({
+                        show: true,
+                        message: `Realtime получил обновление!`,
+                        data: payload
+                    })
+                    
+                    // Автоматически скрываем уведомление через 5 секунд
+                    setTimeout(() => {
+                        setRealtimeNotification(null)
+                    }, 5000)
+                    
                     // Фильтруем на клиенте - проверяем, что это изменение для текущего пользователя
                     const changedUserId = payload.new.user_id
                     if (changedUserId !== user.id) {
@@ -237,18 +299,54 @@ export default function GamesList() {
                         ...prev,
                         [eventId]: { payment_status: paymentStatus }
                     }))
+                    
+                    // Обновляем количество участников (перезагружаем для актуальности)
+                    refreshParticipantCounts()
                 }
             )
             .subscribe((status) => {
                 console.log('Realtime subscription status:', status)
                 if (status === 'SUBSCRIBED') {
                     console.log('Successfully subscribed to Realtime changes for clubtac_event_participants')
+                    // Показываем уведомление о успешной подписке
+                    setRealtimeNotification({
+                        show: true,
+                        message: `Realtime подписка активна! Статус: ${status}`,
+                        data: { status }
+                    })
+                    setTimeout(() => {
+                        setRealtimeNotification(null)
+                    }, 3000)
                 } else if (status === 'CHANNEL_ERROR') {
                     console.error('Realtime channel error - check Supabase Realtime settings')
+                    setRealtimeNotification({
+                        show: true,
+                        message: `Ошибка Realtime: ${status}`,
+                        data: { status }
+                    })
+                    setTimeout(() => {
+                        setRealtimeNotification(null)
+                    }, 5000)
                 } else if (status === 'TIMED_OUT') {
                     console.error('Realtime subscription timed out')
+                    setRealtimeNotification({
+                        show: true,
+                        message: `Realtime таймаут: ${status}`,
+                        data: { status }
+                    })
+                    setTimeout(() => {
+                        setRealtimeNotification(null)
+                    }, 5000)
                 } else if (status === 'CLOSED') {
                     console.log('Realtime channel closed')
+                    setRealtimeNotification({
+                        show: true,
+                        message: `Realtime канал закрыт: ${status}`,
+                        data: { status }
+                    })
+                    setTimeout(() => {
+                        setRealtimeNotification(null)
+                    }, 3000)
                 }
             })
 
@@ -272,7 +370,7 @@ export default function GamesList() {
             clearInterval(intervalId)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [user?.id, events, refreshParticipantStatuses])
+    }, [user?.id, events, refreshParticipantStatuses, refreshParticipantCounts])
 
     // Загружаем завершенные события для прошедших игр
     useEffect(() => {
@@ -642,10 +740,13 @@ export default function GamesList() {
                                 </div>
                             )}
                             {event.price !== null && (
-                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
                                     💰 {event.price === 0 ? 'Бесплатно' : `Цена: ${event.price} ₽`}
                                 </div>
                             )}
+                            <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                                👥 Зарегистрировано: {eventParticipantsCount[event.id] || 0} {eventParticipantsCount[event.id] === 1 ? 'участник' : eventParticipantsCount[event.id] && eventParticipantsCount[event.id] < 5 ? 'участника' : 'участников'}
+                            </div>
                         </div>
                         {(() => {
                             const status = eventRegistrationStatus[event.id]
@@ -1170,6 +1271,67 @@ export default function GamesList() {
 
     return (
         <div>
+            {/* Уведомление о Realtime обновлениях */}
+            {realtimeNotification && realtimeNotification.show && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: '20px',
+                        right: '20px',
+                        backgroundColor: '#28a745',
+                        color: '#ffffff',
+                        padding: '16px 20px',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        zIndex: 10000,
+                        maxWidth: '400px',
+                        animation: 'slideIn 0.3s ease-out',
+                    }}
+                >
+                    <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '16px' }}>
+                        🔔 {realtimeNotification.message}
+                    </div>
+                    {realtimeNotification.data && (
+                        <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '8px', wordBreak: 'break-word' }}>
+                            <details>
+                                <summary style={{ cursor: 'pointer', marginBottom: '4px' }}>Данные</summary>
+                                <pre style={{ 
+                                    fontSize: '10px', 
+                                    backgroundColor: 'rgba(0,0,0,0.2)', 
+                                    padding: '8px', 
+                                    borderRadius: '4px',
+                                    overflow: 'auto',
+                                    maxHeight: '200px'
+                                }}>
+                                    {JSON.stringify(realtimeNotification.data, null, 2)}
+                                </pre>
+                            </details>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => setRealtimeNotification(null)}
+                        style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            background: 'rgba(255,255,255,0.2)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '24px',
+                            height: '24px',
+                            color: '#ffffff',
+                            cursor: 'pointer',
+                            fontSize: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
             <h3 style={{ margin: '0 12px 12px', fontSize: '18px', fontWeight: 'bold' }}>
                 🎮 Игры
             </h3>
