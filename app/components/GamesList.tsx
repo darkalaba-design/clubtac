@@ -53,6 +53,7 @@ export default function GamesList() {
     const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
     const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string }>>({})
     const [eventParticipantsCount, setEventParticipantsCount] = useState<Record<string, number>>({})
+    const [clubNames, setClubNames] = useState<Record<string, string>>({})
     const [realtimeNotification, setRealtimeNotification] = useState<{
         show: boolean
         message: string
@@ -176,6 +177,24 @@ export default function GamesList() {
                             setEventParticipants(participantsMap)
                             console.log('Loaded event participants:', participantsMap)
                         }
+                    }
+                }
+
+                // Загружаем названия клубов
+                const uniqueClubIds = [...new Set(filteredEvents.map(e => e.club_id).filter(Boolean))]
+                if (uniqueClubIds.length > 0) {
+                    const { data: clubs, error: clubsError } = await supabase
+                        .from('clubtac_clubs')
+                        .select('id, name')
+                        .in('id', uniqueClubIds)
+
+                    if (!clubsError && clubs) {
+                        const clubsMap: Record<string, string> = {}
+                        clubs.forEach((club: any) => {
+                            clubsMap[club.id] = club.name
+                        })
+                        setClubNames(clubsMap)
+                        console.log('Loaded club names:', clubsMap)
                     }
                 }
             } catch (err) {
@@ -731,7 +750,7 @@ export default function GamesList() {
                             )}
                             {event.club_id && (
                                 <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
-                                    🏢 Клуб ID: {event.club_id}
+                                    🏢 {clubNames[event.club_id] || `Клуб ID: ${event.club_id}`}
                                 </div>
                             )}
                             {event.duration_minutes && (
@@ -789,12 +808,38 @@ export default function GamesList() {
                             }
 
                             if (isSuccess) {
+                                // Сначала проверяем статус участника в базе данных (приоритет над ответом webhook)
+                                const participant = eventParticipants[event.id]
+                                const paymentStatus = participant?.payment_status
+
+                                // Если статус оплачен, показываем "Вы зарегистрированы" независимо от наличия paylink
+                                if (paymentStatus === 'paid') {
+                                    return (
+                                        <div
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                backgroundColor: '#d4edda',
+                                                color: '#155724',
+                                                border: '1px solid #c3e6cb',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                textAlign: 'center',
+                                                fontWeight: '500',
+                                            }}
+                                        >
+                                            Вы зарегистрированы
+                                        </div>
+                                    )
+                                }
+
                                 // Проверяем, есть ли в ответе ссылка на оплату
                                 const paylink = status.response?.paylink ||
                                     (status.response && typeof status.response === 'object' && 'paylink' in status.response
                                         ? status.response.paylink
                                         : null)
 
+                                // Если есть paylink и статус не paid, показываем кнопку "Оплатить"
                                 if (paylink) {
                                     return (
                                         <a
@@ -821,30 +866,7 @@ export default function GamesList() {
                                     )
                                 }
 
-                                // Если нет ссылки на оплату, проверяем статус участника в базе данных
-                                const participant = eventParticipants[event.id]
-                                const paymentStatus = participant?.payment_status
-
-                                if (paymentStatus === 'paid') {
-                                    return (
-                                        <div
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                backgroundColor: '#d4edda',
-                                                color: '#155724',
-                                                border: '1px solid #c3e6cb',
-                                                borderRadius: '6px',
-                                                fontSize: '14px',
-                                                textAlign: 'center',
-                                                fontWeight: '500',
-                                            }}
-                                        >
-                                            Вы зарегистрированы
-                                        </div>
-                                    )
-                                }
-
+                                // Если нет ссылки на оплату, но статус pending, показываем кнопку для генерации ссылки
                                 if (paymentStatus === 'pending') {
                                     return (
                                         <button
