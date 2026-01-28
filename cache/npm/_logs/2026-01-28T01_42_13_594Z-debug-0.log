@@ -1,0 +1,51 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Users\Vatoko\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.7.0
+2 info using node@v22.14.0
+3 silly config load:file:C:\Users\Vatoko\AppData\Roaming\npm\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\Vatoko\AppData\Local\Microsoft\TypeScript\5.9\.npmrc
+5 silly config load:file:C:\Users\Vatoko\.npmrc
+6 silly config load:file:C:\Users\Vatoko\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install @types/react@ts5.9
+8 verbose argv "install" "--ignore-scripts" "@types/react@ts5.9" "--save-dev" "--user-agent" "typesInstaller/5.9.2"
+9 verbose logfile logs-max:10 dir:F:\CursorProjects\clubtac-web\cache\npm\_logs\2026-01-28T01_42_13_594Z-
+10 verbose logfile F:\CursorProjects\clubtac-web\cache\npm\_logs\2026-01-28T01_42_13_594Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly logfile done cleaning log files
+14 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact cache-miss
+15 http fetch GET 200 https://registry.npmjs.org/@types%2freact 851ms (cache miss)
+16 silly packumentCache corgi:https://registry.npmjs.org/@types%2freact set size:undefined disposed:false
+17 silly idealTree buildDeps
+18 silly fetch manifest @types/react@19.2.10
+19 silly packumentCache full:https://registry.npmjs.org/@types%2freact cache-miss
+20 http cache https://registry.npmjs.org/@types%2freact 11ms (cache hit)
+21 silly packumentCache full:https://registry.npmjs.org/@types%2freact set size:2555610 disposed:false
+22 silly placeDep ROOT @types/react@19.2.10 REPLACE for:  want: 19.2.10
+23 silly reify mark retired [
+23 silly reify   'C:\\Users\\Vatoko\\AppData\\Local\\Microsoft\\TypeScript\\5.9\\node_modules\\@types\\react'
+23 silly reify ]
+24 silly reify moves {
+24 silly reify   'C:\\Users\\Vatoko\\AppData\\Local\\Microsoft\\TypeScript\\5.9\\node_modules\\@types\\react': 'C:\\Users\\Vatoko\\AppData\\Local\\Microsoft\\TypeScript\\5.9\\node_modules\\@types\\.react-9WtqOwy8'
+24 silly reify }
+25 silly audit bulk request {
+25 silly audit   '@types/estree': [ '1.0.8' ],
+25 silly audit   '@types/json-schema': [ '7.0.15' ],
+25 silly audit   '@types/node': [ '24.10.1' ],
+25 silly audit   '@types/react-dom': [ '19.2.3' ],
+25 silly audit   csstype: [ '3.2.3' ],
+25 silly audit   'types-registry': [ '0.1.754' ],
+25 silly audit   'undici-types': [ '7.16.0' ],
+25 silly audit   '@types/react': [ '19.2.10' ]
+25 silly audit }
+26 http cache @types/react@https://registry.npmjs.org/@types/react/-/react-19.2.10.tgz 0ms (cache hit)
+27 silly tarball no local data for @types/react@https://registry.npmjs.org/@types/react/-/react-19.2.10.tgz. Extracting by manifest.
+28 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 266ms
+29 silly audit report {}
+30 http fetch GET 200 https://registry.npmjs.org/@types/react/-/react-19.2.10.tgz 584ms (cache miss)
+31 silly CHANGE node_modules/@types/react
+32 verbose cwd C:\Users\Vatoko\AppData\Local\Microsoft\TypeScript\5.9
+33 verbose os Windows_NT 10.0.26100
+34 verbose node v22.14.0
+35 verbose npm  v11.7.0
+36 verbose exit 0
+37 info ok
