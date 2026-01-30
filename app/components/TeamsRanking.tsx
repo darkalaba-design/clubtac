@@ -51,13 +51,13 @@ export default function TeamsRanking() {
             <div style={{ padding: '12px' }}>
                 <div
                     style={{
-                        backgroundColor: '#fff3cd',
+                        backgroundColor: '#FFF9E6',
                         borderRadius: '8px',
                         padding: '16px',
-                        border: '1px solid #ffc107',
+                        border: '1px solid #FFE950',
                     }}
                 >
-                    <p style={{ margin: 0, color: '#856404' }}>Ошибка: {error}</p>
+                    <p style={{ margin: 0, color: '#1D1D1B' }}>Ошибка: {error}</p>
                 </div>
             </div>
         )
@@ -73,7 +73,7 @@ export default function TeamsRanking() {
 
     return (
         <div>
-            <h3 style={{ margin: '0 12px 12px', fontSize: '18px', fontWeight: 'bold' }}>
+            <h3 style={{ margin: '0 12px 12px', fontSize: '18px', fontWeight: 'bold', color: '#1D1D1B' }}>
                 👥 Рейтинг команд
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -83,19 +83,12 @@ export default function TeamsRanking() {
                     return (
                         <div key={`${team.player_1_id}-${team.player_2_id}`}>
                             {index > 0 && (
-                                <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                             )}
                             <div
                                 style={{
-                                    backgroundColor: '#ffffff',
+                                    backgroundColor: '#FFFFFF',
                                     padding: '16px 12px',
-                                    transition: 'background-color 0.2s',
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#f8f9fa'
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#ffffff'
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -104,14 +97,14 @@ export default function TeamsRanking() {
                                             width: '40px',
                                             height: '40px',
                                             borderRadius: '50%',
-                                            backgroundColor: '#efefef',
+                                            backgroundColor: '#FFE950',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             fontWeight: 'bold',
                                             fontSize: '16px',
                                             flexShrink: 0,
-                                            color: '#000000',
+                                            color: '#1D1D1B',
                                         }}
                                     >
                                         #{team.rank}
@@ -120,26 +113,28 @@ export default function TeamsRanking() {
                                         <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>
                                             <Link
                                                 href={`/player/${team.player_1_id}`}
+                                                className="link-player"
                                                 style={{
-                                                    color: '#007bff',
+                                                    color: '#1D1D1B',
                                                     textDecoration: 'none',
                                                 }}
                                             >
                                                 {team.player_1_username}
                                             </Link>
-                                            <span style={{ margin: '0 4px', color: '#666' }}>+</span>
+                                            <span style={{ margin: '0 4px', color: '#6B6B69' }}>+</span>
                                             <Link
                                                 href={`/player/${team.player_2_id}`}
+                                                className="link-player"
                                                 style={{
-                                                    color: '#007bff',
+                                                    color: '#1D1D1B',
                                                     textDecoration: 'none',
                                                 }}
                                             >
                                                 {team.player_2_username}
                                             </Link>
                                         </div>
-                                        <div style={{ fontSize: '12px', color: '#666' }}>
-                                            Игр: <span style={{ color: '#000000', fontWeight: '500' }}>{team.games_played}</span> | Побед: <span style={{ color: '#000000', fontWeight: '500' }}>{team.wins}</span> | % побед: <span style={{ color: '#007bff', fontWeight: '500' }}>{winRate}%</span>
+                                        <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                            Игр: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{team.games_played}</span> | Побед: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{team.wins}</span> | % побед: <span style={{ color: '#2C2C2C', fontWeight: '500' }}>{winRate}%</span>
                                         </div>
                                     </div>
                                 </div>

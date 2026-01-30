@@ -55,13 +55,13 @@ export default function PlayerPage({ params }: { params: Promise<{ id: string }>
             <div style={{ padding: '12px' }}>
                 <div
                     style={{
-                        backgroundColor: '#fff3cd',
+                        backgroundColor: '#FFF9E6',
                         borderRadius: '8px',
                         padding: '16px',
-                        border: '1px solid #ffc107',
+                        border: '1px solid #FFE950',
                     }}
                 >
-                    <p style={{ margin: 0, color: '#856404' }}>Ошибка: {error}</p>
+                    <p style={{ margin: 0, color: '#1D1D1B' }}>Ошибка: {error}</p>
                 </div>
             </div>
         )
@@ -72,13 +72,13 @@ export default function PlayerPage({ params }: { params: Promise<{ id: string }>
             <div style={{ padding: '12px' }}>
                 <div
                     style={{
-                        backgroundColor: '#fff3cd',
+                        backgroundColor: '#FFF9E6',
                         borderRadius: '8px',
                         padding: '16px',
-                        border: '1px solid #ffc107',
+                        border: '1px solid #FFE950',
                     }}
                 >
-                    <p style={{ margin: 0, color: '#856404' }}>Игрок не найден</p>
+                    <p style={{ margin: 0, color: '#1D1D1B' }}>Игрок не найден</p>
                 </div>
             </div>
         )
@@ -92,7 +92,7 @@ export default function PlayerPage({ params }: { params: Promise<{ id: string }>
                 style={{
                     display: 'inline-block',
                     marginBottom: '16px',
-                    color: '#007bff',
+                    color: '#1D1D1B',
                     textDecoration: 'none',
                     fontSize: '14px',
                 }}
@@ -103,11 +103,11 @@ export default function PlayerPage({ params }: { params: Promise<{ id: string }>
             {/* Компактный блок с информацией об игроке */}
             <div
                 style={{
-                    backgroundColor: '#ffffff',
+                    backgroundColor: '#FFFFFF',
                     borderRadius: '12px',
                     padding: '16px',
                     marginBottom: '16px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
                     display: 'flex',
                     gap: '16px',
                     alignItems: 'center',
@@ -119,7 +119,7 @@ export default function PlayerPage({ params }: { params: Promise<{ id: string }>
                         width: '80px',
                         height: '80px',
                         borderRadius: '50%',
-                        backgroundColor: '#efefef',
+                        backgroundColor: '#FFE950',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -137,7 +137,7 @@ export default function PlayerPage({ params }: { params: Promise<{ id: string }>
                     <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
                         {player.username}
                     </h2>
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
                         <span>ID: {player.user_id}</span>
                         {player.points != null && (
                             <span>Очки: {Math.round(player.points)}</span>
@@ -149,7 +149,7 @@ export default function PlayerPage({ params }: { params: Promise<{ id: string }>
             {/* Статистика */}
             <div
                 style={{
-                    backgroundColor: '#f8f9fa',
+                    backgroundColor: '#FFFEF7',
                     borderRadius: '12px',
                     padding: '16px',
                     marginBottom: '16px',
@@ -165,32 +165,32 @@ export default function PlayerPage({ params }: { params: Promise<{ id: string }>
                         gap: '12px',
                     }}
                 >
-                    <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Место в рейтинге</div>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>#{player.place}</div>
+                    <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{player.place}</div>
                     </div>
-                    <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Игр сыграно</div>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{player.games_played}</div>
+                    <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>{player.games_played}</div>
                     </div>
-                    <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Победы</div>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#28a745' }}>{player.wins}</div>
+                    <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>{player.wins}</div>
                     </div>
-                    <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>% побед</div>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>{player.win_rate}%</div>
+                    <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>{player.win_rate}%</div>
                     </div>
                 </div>
             </div>
 
             <div
                 style={{
-                    backgroundColor: '#e8f4f8',
+                    backgroundColor: '#FFFEF7',
                     borderRadius: '8px',
                     padding: '16px',
                     fontSize: '14px',
-                    color: '#555',
+                    color: '#6B6B69',
                 }}
             >
                 <p style={{ margin: 0 }}>

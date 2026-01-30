@@ -50,13 +50,13 @@ export default function HallOfFame() {
             <div style={{ padding: '12px' }}>
                 <div
                     style={{
-                        backgroundColor: '#fff3cd',
+                        backgroundColor: '#FFF9E6',
                         borderRadius: '8px',
                         padding: '16px',
-                        border: '1px solid #ffc107',
+                        border: '1px solid #FFE950',
                     }}
                 >
-                    <p style={{ margin: 0, color: '#856404' }}>Ошибка: {error}</p>
+                    <p style={{ margin: 0, color: '#1D1D1B' }}>Ошибка: {error}</p>
                 </div>
             </div>
         )
@@ -72,14 +72,14 @@ export default function HallOfFame() {
 
     return (
         <div>
-            <h3 style={{ margin: '0 12px 12px', fontSize: '18px', fontWeight: 'bold' }}>
+            <h3 style={{ margin: '0 12px 12px', fontSize: '18px', fontWeight: 'bold', color: '#1D1D1B' }}>
                 🏆 Рейтинг игроков
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {players.map((player, index) => (
                     <div key={player.user_id}>
                         {index > 0 && (
-                            <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                            <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                         )}
                         <Link
                             href={`/player/${player.user_id}`}
@@ -91,15 +91,15 @@ export default function HallOfFame() {
                         >
                             <div
                                 style={{
-                                    backgroundColor: '#ffffff',
+                                    backgroundColor: '#FFFFFF',
                                     padding: '16px 12px',
                                     transition: 'background-color 0.2s',
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#f8f9fa'
+                                    e.currentTarget.style.backgroundColor = '#FFFEF7'
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#ffffff'
+                                    e.currentTarget.style.backgroundColor = '#FFFFFF'
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -108,26 +108,26 @@ export default function HallOfFame() {
                                             width: '40px',
                                             height: '40px',
                                             borderRadius: '50%',
-                                            backgroundColor: '#efefef',
+                                            backgroundColor: '#FFE950',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             fontWeight: 'bold',
                                             fontSize: '16px',
                                             flexShrink: 0,
-                                            color: '#000000',
+                                            color: '#1D1D1B',
                                         }}
                                     >
                                         #{player.place}
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', color: '#000000' }}>
+                                        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', color: '#1D1D1B' }}>
                                             {player.username}
                                         </div>
-                                        <div style={{ fontSize: '12px', color: '#666' }}>
-                                            Игр: <span style={{ color: '#000000', fontWeight: '500' }}>{player.games_played}</span> | Побед: <span style={{ color: '#000000', fontWeight: '500' }}>{player.wins}</span> | % побед: <span style={{ color: '#007bff', fontWeight: '500' }}>{player.win_rate}%</span>
+                                        <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                            Игр: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{player.games_played}</span> | Побед: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{player.wins}</span> | % побед: <span style={{ color: '#2C2C2C', fontWeight: '500' }}>{player.win_rate}%</span>
                                             {player.points != null && (
-                                                <> | Очки: <span style={{ color: '#000000', fontWeight: '500' }}>{Math.round(player.points)}</span></>
+                                                <> | Очки: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{Math.round(player.points)}</span></>
                                             )}
                                         </div>
                                     </div>

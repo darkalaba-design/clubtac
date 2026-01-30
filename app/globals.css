@@ -1,9 +1,16 @@
 @import "tailwindcss";
 
+/* Корпоративная палитра */
 :root {
-  --background: #f2f2f2;
-  --foreground: #171717;
-  /* Tailwind CSS 4 theme variables */
+  --background: #FFFEF7;
+  --foreground: #1D1D1B;
+  --accent: #FFDF00;
+  --accent-light: #FFE950;
+  --surface: #FFFFFF;
+  --dark: #2C2C2C;
+  --text-muted: #6B6B69;
+  --divider: #EBE8E0;
+  --border: #E5E2DC;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -12,8 +19,11 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #1a1a1a;
-    --foreground: #ededed;
+    --background: #1D1D1B;
+    --foreground: #FFFFFF;
+    --surface: #2C2C2C;
+    --divider: #3D3D3B;
+    --border: #3D3D3B;
   }
 }
 
@@ -31,8 +41,8 @@ h1 {
 li.border,
 div.border {
   margin-bottom: 4px;
-  background-color: #eeeeee;
-  border-color: #cccccc;
+  background-color: var(--surface);
+  border-color: var(--border);
   padding: 12px;
   gap: 12px;
 }
@@ -43,6 +53,15 @@ div.border {
 
 .mx-2 {
   margin-inline: calc(var(--spacing) * 1);
+}
+
+/* Жёлтый ховер для ссылок на игроков */
+a.link-player {
+  transition: color 0.15s ease;
+}
+
+a.link-player:hover {
+  color: #FFDF00 !important;
 }
 
 @keyframes spin {

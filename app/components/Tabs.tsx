@@ -35,9 +35,9 @@ export default function Tabs({
                 right: 0,
                 display: 'flex',
                 gap: 0,
-                backgroundColor: '#ffffff',
-                borderTop: '1px solid #e0e0e0',
-                boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+                backgroundColor: '#FFFFFF',
+                borderTop: '1px solid #EBE8E0',
+                boxShadow: '0 -2px 12px rgba(29,29,27,0.06)',
                 zIndex: 1000,
                 padding: '8px 0',
             }}
@@ -53,9 +53,10 @@ export default function Tabs({
                     gap: '4px',
                     padding: '8px',
                     border: 'none',
+                    borderBottom: active === 'profile' ? '3px solid #FFDF00' : '3px solid transparent',
                     background: 'transparent',
                     cursor: 'pointer',
-                    color: active === 'profile' ? '#007bff' : '#666',
+                    color: active === 'profile' ? '#1D1D1B' : '#6B6B69',
                     position: 'relative',
                     zIndex: 1,
                 }}
@@ -91,9 +92,10 @@ export default function Tabs({
                     gap: '4px',
                     padding: '8px',
                     border: 'none',
+                    borderBottom: active === 'players' ? '3px solid #FFDF00' : '3px solid transparent',
                     background: 'transparent',
                     cursor: 'pointer',
-                    color: active === 'players' ? '#007bff' : '#666',
+                    color: active === 'players' ? '#1D1D1B' : '#6B6B69',
                 }}
             >
                 <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -113,9 +115,10 @@ export default function Tabs({
                     gap: '4px',
                     padding: '8px',
                     border: 'none',
+                    borderBottom: active === 'teams' ? '3px solid #FFDF00' : '3px solid transparent',
                     background: 'transparent',
                     cursor: 'pointer',
-                    color: active === 'teams' ? '#007bff' : '#666',
+                    color: active === 'teams' ? '#1D1D1B' : '#6B6B69',
                 }}
             >
                 <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -135,9 +138,10 @@ export default function Tabs({
                     gap: '4px',
                     padding: '8px',
                     border: 'none',
+                    borderBottom: active === 'games' ? '3px solid #FFDF00' : '3px solid transparent',
                     background: 'transparent',
                     cursor: 'pointer',
-                    color: active === 'games' ? '#007bff' : '#666',
+                    color: active === 'games' ? '#1D1D1B' : '#6B6B69',
                 }}
             >
                 <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

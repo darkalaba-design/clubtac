@@ -96,12 +96,12 @@ export default function UserProfile() {
             <div>
                 <div
                     style={{
-                        backgroundColor: '#fff4e6',
+                        backgroundColor: '#FFF9E6',
                         borderRadius: '8px',
                         padding: '8px 12px',
                         marginBottom: '12px',
                         fontSize: '13px',
-                        color: '#b45309',
+                        color: '#1D1D1B',
                     }}
                 >
                     Пользователь не определён — откройте приложение через Telegram Mini App.
@@ -109,7 +109,7 @@ export default function UserProfile() {
                 {/* Блок профиля — пустые данные */}
                 <div
                     style={{
-                        backgroundColor: '#ffffff',
+                        backgroundColor: '#FFFFFF',
                         padding: '16px 12px',
                         display: 'flex',
                         gap: '16px',
@@ -121,7 +121,7 @@ export default function UserProfile() {
                             width: '80px',
                             height: '80px',
                             borderRadius: '50%',
-                            backgroundColor: '#efefef',
+                            backgroundColor: '#EBE8E0',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -131,18 +131,18 @@ export default function UserProfile() {
                         <span style={{ fontSize: '32px' }}>👤</span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold', color: '#999' }}>
+                        <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold', color: '#6B6B69' }}>
                             —
                         </h2>
-                        <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#bbb' }}>@username</p>
-                        <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#ccc', marginTop: '4px' }}>
+                        <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>@username</p>
+                        <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
                             <span>Очки: —</span>
                         </div>
                     </div>
                 </div>
                 {/* Статистика — пустые значения */}
-                <div style={{ height: '1px', backgroundColor: '#efefef' }} />
-                <div style={{ backgroundColor: '#ffffff', padding: '16px 12px' }}>
+                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
                     <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
                         📊 Статистика
                     </h3>
@@ -153,39 +153,39 @@ export default function UserProfile() {
                             gap: '12px',
                         }}
                     >
-                        <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Место в рейтинге</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ccc' }}>—</div>
+                        <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
                         </div>
-                        <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Игр сыграно</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ccc' }}>—</div>
+                        <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
                         </div>
-                        <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Победы</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ccc' }}>—</div>
+                        <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
                         </div>
-                        <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>% побед</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ccc' }}>—</div>
+                        <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
                         </div>
                     </div>
                 </div>
                 {/* Последние игры — пусто */}
-                <div style={{ height: '1px', backgroundColor: '#efefef' }} />
-                <div style={{ backgroundColor: '#ffffff', padding: '16px 12px' }}>
+                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
                     <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
                         🎮 Последние игры
                     </h3>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#999' }}>Нет данных</p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
                 </div>
                 {/* Лучшие напарники — пусто */}
-                <div style={{ height: '1px', backgroundColor: '#efefef' }} />
-                <div style={{ backgroundColor: '#ffffff', padding: '16px 12px' }}>
+                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
                     <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
                         🤝 Лучшие напарники
                     </h3>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#999' }}>Нет данных</p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
                 </div>
             </div>
         )
@@ -222,7 +222,7 @@ export default function UserProfile() {
             {/* Компактный блок с информацией о пользователе */}
             <div
                 style={{
-                    backgroundColor: '#ffffff',
+                    backgroundColor: '#FFFFFF',
                     padding: '16px 12px',
                     display: 'flex',
                     gap: '16px',
@@ -235,7 +235,7 @@ export default function UserProfile() {
                         width: '80px',
                         height: '80px',
                         borderRadius: '50%',
-                        backgroundColor: '#efefef',
+                        backgroundColor: '#EBE8E0',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -260,11 +260,11 @@ export default function UserProfile() {
                         {fullName}
                     </h2>
                     {user.username && (
-                        <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#666' }}>
+                        <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>
                             @{user.username}
                         </p>
                     )}
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
                         {user.id && <span>ID: {user.id}</span>}
                         <span>TG: {user.telegram_id}</span>
                         {stats?.stats?.points != null && (
@@ -281,10 +281,10 @@ export default function UserProfile() {
                 </div>
             ) : stats?.stats ? (
                 <>
-                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                     <div
                         style={{
-                            backgroundColor: '#ffffff',
+                            backgroundColor: '#FFFFFF',
                             padding: '16px 12px',
                         }}
                     >
@@ -298,23 +298,23 @@ export default function UserProfile() {
                                 gap: '12px',
                             }}
                         >
-                            <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Место в рейтинге</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>#{stats.stats.place}</div>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{stats.stats.place}</div>
                             </div>
-                            <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Игр сыграно</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stats.stats.games_played}</div>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>{stats.stats.games_played}</div>
                             </div>
-                            <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Победы</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#28a745' }}>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
                                     {stats.stats.wins}
                                 </div>
                             </div>
-                            <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>% побед</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
                                     {stats.stats.win_rate}%
                                 </div>
                             </div>
@@ -323,15 +323,15 @@ export default function UserProfile() {
                 </>
             ) : (
                 <>
-                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                     <div
                         style={{
-                            backgroundColor: '#fff3cd',
+                            backgroundColor: '#FFF9E6',
                             padding: '16px 12px',
                             textAlign: 'center',
                         }}
                     >
-                        <p style={{ margin: 0, color: '#856404' }}>
+                        <p style={{ margin: 0, color: '#1D1D1B' }}>
                             Статистика недоступна. Возможно, вы ещё не играли.
                         </p>
                     </div>
@@ -341,10 +341,10 @@ export default function UserProfile() {
             {/* Последние игры */}
             {stats?.recentGames && stats.recentGames.length > 0 && (
                 <>
-                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                     <div
                         style={{
-                            backgroundColor: '#ffffff',
+                            backgroundColor: '#FFFFFF',
                             padding: '16px 12px',
                         }}
                     >
@@ -368,13 +368,13 @@ export default function UserProfile() {
                                 return (
                                     <div key={game.game_id}>
                                         {index > 0 && (
-                                            <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                                            <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                                         )}
                                         <div
                                             style={{
-                                                backgroundColor: '#ffffff',
+                                                backgroundColor: '#FFFFFF',
                                                 padding: '12px 0',
-                                                borderLeft: `4px solid ${won ? '#28a745' : '#dc3545'}`,
+                                                borderLeft: `4px solid ${won ? '#1B5E20' : '#B71C1C'}`,
                                                 paddingLeft: '12px',
                                             }}
                                         >
@@ -382,9 +382,9 @@ export default function UserProfile() {
                                                 <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
                                                     {won ? '✅ Победа' : '❌ Поражение'} {game.score_1} : {game.score_2}
                                                 </div>
-                                                <div style={{ fontSize: '12px', color: '#666' }}>{formatDate(game.created_at)}</div>
+                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>{formatDate(game.created_at)}</div>
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#666' }}>
+                                            <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                 <div>
                                                     Вы + {partner} <strong>vs</strong> {opponent1} + {opponent2}
                                                 </div>
@@ -401,10 +401,10 @@ export default function UserProfile() {
             {/* Лучшие напарники */}
             {stats?.bestPartners && stats.bestPartners.length > 0 && (
                 <>
-                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                     <div
                         style={{
-                            backgroundColor: '#ffffff',
+                            backgroundColor: '#FFFFFF',
                             padding: '16px 12px',
                         }}
                     >
@@ -415,11 +415,11 @@ export default function UserProfile() {
                             {stats.bestPartners.map((partner, index) => (
                                 <div key={partner.name}>
                                     {index > 0 && (
-                                        <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                                     )}
                                     <div
                                         style={{
-                                            backgroundColor: '#ffffff',
+                                            backgroundColor: '#FFFFFF',
                                             padding: '12px 0',
                                             display: 'flex',
                                             justifyContent: 'space-between',
@@ -430,11 +430,11 @@ export default function UserProfile() {
                                             <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
                                                 {index === 0 && '🥇'} {index === 1 && '🥈'} {index === 2 && '🥉'} {partner.name}
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#666' }}>
+                                            <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                 {partner.games} игр, {partner.wins} побед
                                             </div>
                                         </div>
-                                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#007bff' }}>
+                                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2C2C2C' }}>
                                             {partner.winRate}%
                                         </div>
                                     </div>

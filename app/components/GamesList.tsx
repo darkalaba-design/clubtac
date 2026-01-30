@@ -694,13 +694,13 @@ export default function GamesList() {
                 <div style={{ padding: '12px' }}>
                     <div
                         style={{
-                            backgroundColor: '#fff3cd',
+                            backgroundColor: '#FFF9E6',
                             borderRadius: '8px',
                             padding: '16px',
-                            border: '1px solid #ffc107',
+                            border: '1px solid #FFE950',
                         }}
                     >
-                        <p style={{ margin: 0, color: '#856404' }}>Ошибка: {eventsError}</p>
+                        <p style={{ margin: 0, color: '#1D1D1B' }}>Ошибка: {eventsError}</p>
                     </div>
                 </div>
             )
@@ -711,7 +711,7 @@ export default function GamesList() {
                 <div style={{ padding: '12px' }}>
                     <div style={{ textAlign: 'center', marginBottom: '12px' }}>
                         <p>Нет предстоящих событий</p>
-                        <p style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+                        <p style={{ fontSize: '12px', color: '#6B6B69', marginTop: '8px' }}>
                             Проверьте консоль браузера для отладочной информации
                         </p>
                     </div>
@@ -725,10 +725,10 @@ export default function GamesList() {
                     <div
                         key={event.id}
                         style={{
-                            backgroundColor: '#ffffff',
+                            backgroundColor: '#FFFFFF',
                             borderRadius: '8px',
                             padding: '16px',
-                            boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
+                            boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
                         }}
                     >
                         <div style={{ marginBottom: '12px' }}>
@@ -740,30 +740,30 @@ export default function GamesList() {
                                     {event.title}
                                 </div>
                             )}
-                            <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '8px' }}>
                                 {getEventTypeName(event.type)}
                             </div>
                             {event.address && (
-                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
                                     📍 {event.address}
                                 </div>
                             )}
                             {event.club_id && (
-                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
                                     🏢 {clubNames[event.club_id] || `Клуб ID: ${event.club_id}`}
                                 </div>
                             )}
                             {event.duration_minutes && (
-                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
                                     ⏱️ Длительность: {event.duration_minutes} мин.
                                 </div>
                             )}
                             {event.price !== null && (
-                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
                                     💰 {event.price === 0 ? 'Бесплатно' : `Цена: ${event.price} ₽`}
                                 </div>
                             )}
-                            <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '8px' }}>
                                 👥 Зарегистрировано: {eventParticipantsCount[event.id] || 0} {eventParticipantsCount[event.id] === 1 ? 'участник' : eventParticipantsCount[event.id] && eventParticipantsCount[event.id] < 5 ? 'участника' : 'участников'}
                             </div>
                         </div>
@@ -779,8 +779,8 @@ export default function GamesList() {
                                         style={{
                                             width: '100%',
                                             padding: '10px',
-                                            backgroundColor: '#efefef',
-                                            color: '#666',
+                                            backgroundColor: '#EBE8E0',
+                                            color: '#6B6B69',
                                             border: 'none',
                                             borderRadius: '6px',
                                             fontSize: '14px',
@@ -796,7 +796,7 @@ export default function GamesList() {
                                             style={{
                                                 width: '16px',
                                                 height: '16px',
-                                                border: '2px solid #666',
+                                                border: '2px solid #6B6B69',
                                                 borderTop: '2px solid transparent',
                                                 borderRadius: '50%',
                                                 animation: 'spin 1s linear infinite',
@@ -821,7 +821,7 @@ export default function GamesList() {
                                                 padding: '10px',
                                                 backgroundColor: '#d4edda',
                                                 color: '#155724',
-                                                border: '1px solid #c3e6cb',
+                                                border: '1px solid #C8E6C9',
                                                 borderRadius: '6px',
                                                 fontSize: '14px',
                                                 textAlign: 'center',
@@ -850,7 +850,7 @@ export default function GamesList() {
                                                 display: 'block',
                                                 width: '100%',
                                                 padding: '10px',
-                                                backgroundColor: '#28a745',
+                                                backgroundColor: '#1B5E20',
                                                 color: '#ffffff',
                                                 border: 'none',
                                                 borderRadius: '6px',
@@ -873,8 +873,8 @@ export default function GamesList() {
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
-                                                backgroundColor: '#ffc107',
-                                                color: '#000000',
+                                                backgroundColor: '#FFDF00',
+                                                color: '#1D1D1B',
                                                 border: 'none',
                                                 borderRadius: '6px',
                                                 fontSize: '14px',
@@ -894,9 +894,9 @@ export default function GamesList() {
                                         style={{
                                             width: '100%',
                                             padding: '10px',
-                                            backgroundColor: '#d4edda',
-                                            color: '#155724',
-                                            border: '1px solid #c3e6cb',
+                                            backgroundColor: '#E8F5E9',
+                                            color: '#1B5E20',
+                                            border: '1px solid #C8E6C9',
                                             borderRadius: '6px',
                                             fontSize: '14px',
                                             textAlign: 'center',
@@ -916,7 +916,7 @@ export default function GamesList() {
                                                 padding: '10px',
                                                 backgroundColor: '#f8d7da',
                                                 color: '#721c24',
-                                                border: '1px solid #f5c6cb',
+                                                border: '1px solid #FFCDD2',
                                                 borderRadius: '6px',
                                                 fontSize: '14px',
                                                 textAlign: 'center',
@@ -928,8 +928,8 @@ export default function GamesList() {
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
-                                                backgroundColor: '#007bff',
-                                                color: '#ffffff',
+                                                backgroundColor: '#FFDF00',
+                                                color: '#1D1D1B',
                                                 border: 'none',
                                                 borderRadius: '6px',
                                                 fontSize: '14px',
@@ -954,9 +954,9 @@ export default function GamesList() {
                                         style={{
                                             width: '100%',
                                             padding: '10px',
-                                            backgroundColor: '#d4edda',
-                                            color: '#155724',
-                                            border: '1px solid #c3e6cb',
+                                            backgroundColor: '#E8F5E9',
+                                            color: '#1B5E20',
+                                            border: '1px solid #C8E6C9',
                                             borderRadius: '6px',
                                             fontSize: '14px',
                                             textAlign: 'center',
@@ -974,8 +974,8 @@ export default function GamesList() {
                                         style={{
                                             width: '100%',
                                             padding: '10px',
-                                            backgroundColor: '#ffc107',
-                                            color: '#000000',
+                                            backgroundColor: '#FFE950',
+                                            color: '#1D1D1B',
                                             border: 'none',
                                             borderRadius: '6px',
                                             fontSize: '14px',
@@ -994,8 +994,8 @@ export default function GamesList() {
                                     style={{
                                         width: '100%',
                                         padding: '10px',
-                                        backgroundColor: '#007bff',
-                                        color: '#ffffff',
+                                        backgroundColor: '#FFDF00',
+                                        color: '#1D1D1B',
                                         border: 'none',
                                         borderRadius: '6px',
                                         fontSize: '14px',
@@ -1029,13 +1029,13 @@ export default function GamesList() {
                 <div style={{ padding: '12px' }}>
                     <div
                         style={{
-                            backgroundColor: '#fff3cd',
+                            backgroundColor: '#FFF9E6',
                             borderRadius: '8px',
                             padding: '16px',
-                            border: '1px solid #ffc107',
+                            border: '1px solid #FFE950',
                         }}
                     >
-                        <p style={{ margin: 0, color: '#856404' }}>Ошибка: {error}</p>
+                        <p style={{ margin: 0, color: '#1D1D1B' }}>Ошибка: {error}</p>
                     </div>
                 </div>
             )
@@ -1071,9 +1071,9 @@ export default function GamesList() {
                         <div
                             key={date}
                             style={{
-                                backgroundColor: '#ffffff',
+                                backgroundColor: '#FFFFFF',
                                 borderRadius: '8px',
-                                boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
+                                boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
                                 overflow: 'hidden',
                             }}
                         >
@@ -1086,7 +1086,7 @@ export default function GamesList() {
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'flex-start',
-                                    backgroundColor: isExpanded ? '#f8f9fa' : '#ffffff',
+                                    backgroundColor: isExpanded ? '#FFFEF7' : '#FFFFFF',
                                     transition: 'background-color 0.2s',
                                 }}
                             >
@@ -1106,28 +1106,28 @@ export default function GamesList() {
                                         </div>
                                     )}
                                     {event && event.type && (
-                                        <div style={{ fontSize: '12px', color: '#999', marginBottom: '8px' }}>
+                                        <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '8px' }}>
                                             {getEventTypeName(event.type)}
                                         </div>
                                     )}
                                     {event && event.address && (
-                                        <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                        <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
                                             📍 {event.address}
                                         </div>
                                     )}
                                     {event && event.club_id && (
-                                        <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                                        <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
                                             🏢 Клуб ID: {event.club_id}
                                         </div>
                                     )}
-                                    <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '8px' }}>
                                         Игр: {dateGames.length}
                                     </div>
                                 </div>
                                 <div
                                     style={{
                                         fontSize: '20px',
-                                        color: '#666',
+                                        color: '#6B6B69',
                                         transition: 'transform 0.3s',
                                         transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                                         marginLeft: '12px',
@@ -1140,13 +1140,13 @@ export default function GamesList() {
 
                             {/* Раскрывающийся контент с играми */}
                             {isExpanded && (
-                                <div style={{ borderTop: '1px solid #e0e0e0' }}>
+                                <div style={{ borderTop: '1px solid #EBE8E0' }}>
                                     {dateGames.map((game, index) => {
                                         const team1Won = game.score_1 > game.score_2
                                         return (
                                             <div key={game.game_id}>
                                                 {index > 0 && (
-                                                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                                                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                                                 )}
                                                 <div
                                                     style={{
@@ -1163,8 +1163,9 @@ export default function GamesList() {
                                                             {playerIdMap[game.player_1_1] ? (
                                                                 <Link
                                                                     href={`/player/${playerIdMap[game.player_1_1]}`}
+                                                                    className="link-player"
                                                                     style={{
-                                                                        color: '#007bff',
+                                                                        color: '#1D1D1B',
                                                                         textDecoration: 'none',
                                                                         fontWeight: '500',
                                                                         fontSize: '14px',
@@ -1182,8 +1183,9 @@ export default function GamesList() {
                                                             {playerIdMap[game.player_1_2] ? (
                                                                 <Link
                                                                     href={`/player/${playerIdMap[game.player_1_2]}`}
+                                                                    className="link-player"
                                                                     style={{
-                                                                        color: '#007bff',
+                                                                        color: '#1D1D1B',
                                                                         textDecoration: 'none',
                                                                         fontWeight: '500',
                                                                         fontSize: '14px',
@@ -1214,8 +1216,8 @@ export default function GamesList() {
                                                     >
                                                         <span
                                                             style={{
-                                                                color: team1Won ? '#28a745' : '#666',
-                                                                backgroundColor: team1Won ? '#e8f5e9' : '#f5f5f5',
+                                                                color: team1Won ? '#1B5E20' : '#6B6B69',
+                                                                backgroundColor: team1Won ? '#E8F5E9' : '#FFFEF7',
                                                                 padding: '4px 8px',
                                                                 borderRadius: '6px',
                                                                 minWidth: '32px',
@@ -1223,11 +1225,11 @@ export default function GamesList() {
                                                         >
                                                             {game.score_1}
                                                         </span>
-                                                        <span style={{ color: '#999', fontSize: '24px' }}>:</span>
+                                                        <span style={{ color: '#6B6B69', fontSize: '24px' }}>:</span>
                                                         <span
                                                             style={{
-                                                                color: !team1Won ? '#28a745' : '#666',
-                                                                backgroundColor: !team1Won ? '#e8f5e9' : '#f5f5f5',
+                                                                color: !team1Won ? '#1B5E20' : '#6B6B69',
+                                                                backgroundColor: !team1Won ? '#E8F5E9' : '#FFFEF7',
                                                                 padding: '4px 8px',
                                                                 borderRadius: '6px',
                                                                 minWidth: '32px',
@@ -1243,8 +1245,9 @@ export default function GamesList() {
                                                             {playerIdMap[game.player_2_1] ? (
                                                                 <Link
                                                                     href={`/player/${playerIdMap[game.player_2_1]}`}
+                                                                    className="link-player"
                                                                     style={{
-                                                                        color: '#007bff',
+                                                                        color: '#1D1D1B',
                                                                         textDecoration: 'none',
                                                                         fontWeight: '500',
                                                                         fontSize: '14px',
@@ -1262,8 +1265,9 @@ export default function GamesList() {
                                                             {playerIdMap[game.player_2_2] ? (
                                                                 <Link
                                                                     href={`/player/${playerIdMap[game.player_2_2]}`}
+                                                                    className="link-player"
                                                                     style={{
-                                                                        color: '#007bff',
+                                                                        color: '#1D1D1B',
                                                                         textDecoration: 'none',
                                                                         fontWeight: '500',
                                                                         fontSize: '14px',
@@ -1300,7 +1304,7 @@ export default function GamesList() {
                         position: 'fixed',
                         top: '20px',
                         right: '20px',
-                        backgroundColor: '#28a745',
+                        backgroundColor: '#1B5E20',
                         color: '#ffffff',
                         padding: '16px 20px',
                         borderRadius: '8px',
@@ -1362,7 +1366,7 @@ export default function GamesList() {
             <div
                 style={{
                     display: 'flex',
-                    borderBottom: '2px solid #e0e0e0',
+                    borderBottom: '2px solid #EBE8E0',
                     margin: '0 12px',
                     marginBottom: '16px',
                 }}
@@ -1377,8 +1381,8 @@ export default function GamesList() {
                         cursor: 'pointer',
                         fontSize: '14px',
                         fontWeight: activeTab === 'announcements' ? 'bold' : 'normal',
-                        color: activeTab === 'announcements' ? '#007bff' : '#666',
-                        borderBottom: activeTab === 'announcements' ? '2px solid #007bff' : '2px solid transparent',
+                        color: activeTab === 'announcements' ? '#1D1D1B' : '#6B6B69',
+                        borderBottom: activeTab === 'announcements' ? '2px solid #FFDF00' : '2px solid transparent',
                         marginBottom: '-2px',
                     }}
                 >
@@ -1394,8 +1398,8 @@ export default function GamesList() {
                         cursor: 'pointer',
                         fontSize: '14px',
                         fontWeight: activeTab === 'past' ? 'bold' : 'normal',
-                        color: activeTab === 'past' ? '#007bff' : '#666',
-                        borderBottom: activeTab === 'past' ? '2px solid #007bff' : '2px solid transparent',
+                        color: activeTab === 'past' ? '#1D1D1B' : '#6B6B69',
+                        borderBottom: activeTab === 'past' ? '2px solid #FFDF00' : '2px solid transparent',
                         marginBottom: '-2px',
                     }}
                 >
