@@ -90,24 +90,102 @@ export default function UserProfile() {
         )
     }
 
+    // Пустая структура при неопределённом пользователе
     if (!user) {
         return (
-            <div style={{ padding: '12px' }}>
+            <div>
                 <div
                     style={{
-                        backgroundColor: '#fff3cd',
+                        backgroundColor: '#fff4e6',
                         borderRadius: '8px',
-                        padding: '16px',
-                        border: '1px solid #ffc107',
+                        padding: '8px 12px',
+                        marginBottom: '12px',
+                        fontSize: '13px',
+                        color: '#b45309',
                     }}
                 >
-                    <p style={{ margin: 0, marginBottom: '8px', fontWeight: 'bold' }}>
-                        ⚠️ Пользователь не найден
-                    </p>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
-                        Убедитесь, что вы открыли приложение через Telegram Mini App.
-                        Проверьте консоль браузера для получения дополнительной информации.
-                    </p>
+                    Пользователь не определён — откройте приложение через Telegram Mini App.
+                </div>
+                {/* Блок профиля — пустые данные */}
+                <div
+                    style={{
+                        backgroundColor: '#ffffff',
+                        padding: '16px 12px',
+                        display: 'flex',
+                        gap: '16px',
+                        alignItems: 'center',
+                    }}
+                >
+                    <div
+                        style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            backgroundColor: '#efefef',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                        }}
+                    >
+                        <span style={{ fontSize: '32px' }}>👤</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold', color: '#999' }}>
+                            —
+                        </h2>
+                        <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#bbb' }}>@username</p>
+                        <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#ccc', marginTop: '4px' }}>
+                            <span>Очки: —</span>
+                        </div>
+                    </div>
+                </div>
+                {/* Статистика — пустые значения */}
+                <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                <div style={{ backgroundColor: '#ffffff', padding: '16px 12px' }}>
+                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                        📊 Статистика
+                    </h3>
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gap: '12px',
+                        }}
+                    >
+                        <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Место в рейтинге</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ccc' }}>—</div>
+                        </div>
+                        <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Игр сыграно</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ccc' }}>—</div>
+                        </div>
+                        <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Победы</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ccc' }}>—</div>
+                        </div>
+                        <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>% побед</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ccc' }}>—</div>
+                        </div>
+                    </div>
+                </div>
+                {/* Последние игры — пусто */}
+                <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                <div style={{ backgroundColor: '#ffffff', padding: '16px 12px' }}>
+                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                        🎮 Последние игры
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#999' }}>Нет данных</p>
+                </div>
+                {/* Лучшие напарники — пусто */}
+                <div style={{ height: '1px', backgroundColor: '#efefef' }} />
+                <div style={{ backgroundColor: '#ffffff', padding: '16px 12px' }}>
+                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                        🤝 Лучшие напарники
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#999' }}>Нет данных</p>
                 </div>
             </div>
         )
@@ -157,7 +235,7 @@ export default function UserProfile() {
                         width: '80px',
                         height: '80px',
                         borderRadius: '50%',
-                        backgroundColor: '#e0e0e0',
+                        backgroundColor: '#efefef',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -203,7 +281,7 @@ export default function UserProfile() {
                 </div>
             ) : stats?.stats ? (
                 <>
-                    <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
                     <div
                         style={{
                             backgroundColor: '#ffffff',
@@ -245,7 +323,7 @@ export default function UserProfile() {
                 </>
             ) : (
                 <>
-                    <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
                     <div
                         style={{
                             backgroundColor: '#fff3cd',
@@ -263,7 +341,7 @@ export default function UserProfile() {
             {/* Последние игры */}
             {stats?.recentGames && stats.recentGames.length > 0 && (
                 <>
-                    <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
                     <div
                         style={{
                             backgroundColor: '#ffffff',
@@ -290,7 +368,7 @@ export default function UserProfile() {
                                 return (
                                     <div key={game.game_id}>
                                         {index > 0 && (
-                                            <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                                            <div style={{ height: '1px', backgroundColor: '#efefef' }} />
                                         )}
                                         <div
                                             style={{
@@ -323,7 +401,7 @@ export default function UserProfile() {
             {/* Лучшие напарники */}
             {stats?.bestPartners && stats.bestPartners.length > 0 && (
                 <>
-                    <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
                     <div
                         style={{
                             backgroundColor: '#ffffff',
@@ -337,7 +415,7 @@ export default function UserProfile() {
                             {stats.bestPartners.map((partner, index) => (
                                 <div key={partner.name}>
                                     {index > 0 && (
-                                        <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                                        <div style={{ height: '1px', backgroundColor: '#efefef' }} />
                                     )}
                                     <div
                                         style={{

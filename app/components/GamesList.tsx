@@ -728,7 +728,7 @@ export default function GamesList() {
                             backgroundColor: '#ffffff',
                             borderRadius: '8px',
                             padding: '16px',
-                            border: '1px solid #e0e0e0',
+                            boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
                         }}
                     >
                         <div style={{ marginBottom: '12px' }}>
@@ -779,7 +779,7 @@ export default function GamesList() {
                                         style={{
                                             width: '100%',
                                             padding: '10px',
-                                            backgroundColor: '#e0e0e0',
+                                            backgroundColor: '#efefef',
                                             color: '#666',
                                             border: 'none',
                                             borderRadius: '6px',
@@ -1073,7 +1073,7 @@ export default function GamesList() {
                             style={{
                                 backgroundColor: '#ffffff',
                                 borderRadius: '8px',
-                                border: '1px solid #e0e0e0',
+                                boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
                                 overflow: 'hidden',
                             }}
                         >
@@ -1146,7 +1146,7 @@ export default function GamesList() {
                                         return (
                                             <div key={game.game_id}>
                                                 {index > 0 && (
-                                                    <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                                                    <div style={{ height: '1px', backgroundColor: '#efefef' }} />
                                                 )}
                                                 <div
                                                     style={{

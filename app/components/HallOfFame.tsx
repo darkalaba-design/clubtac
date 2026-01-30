@@ -79,7 +79,7 @@ export default function HallOfFame() {
                 {players.map((player, index) => (
                     <div key={player.user_id}>
                         {index > 0 && (
-                            <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                            <div style={{ height: '1px', backgroundColor: '#efefef' }} />
                         )}
                         <Link
                             href={`/player/${player.user_id}`}
@@ -108,7 +108,7 @@ export default function HallOfFame() {
                                             width: '40px',
                                             height: '40px',
                                             borderRadius: '50%',
-                                            backgroundColor: '#e0e0e0',
+                                            backgroundColor: '#efefef',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',

@@ -83,7 +83,7 @@ export default function TeamsRanking() {
                     return (
                         <div key={`${team.player_1_id}-${team.player_2_id}`}>
                             {index > 0 && (
-                                <div style={{ height: '2px', backgroundColor: '#e0e0e0' }} />
+                                <div style={{ height: '1px', backgroundColor: '#efefef' }} />
                             )}
                             <div
                                 style={{
@@ -104,7 +104,7 @@ export default function TeamsRanking() {
                                             width: '40px',
                                             height: '40px',
                                             borderRadius: '50%',
-                                            backgroundColor: '#e0e0e0',
+                                            backgroundColor: '#efefef',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',

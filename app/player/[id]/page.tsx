@@ -1,13 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-export default function PlayerPage() {
-    const params = useParams()
-    const playerId = params.id as string
+export default function PlayerPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id: playerId } = use(params)
 
     const [player, setPlayer] = useState<any>(null)
     const [loading, setLoading] = useState(true)
@@ -121,7 +119,7 @@ export default function PlayerPage() {
                         width: '80px',
                         height: '80px',
                         borderRadius: '50%',
-                        backgroundColor: '#e0e0e0',
+                        backgroundColor: '#efefef',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
