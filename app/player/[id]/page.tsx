@@ -18,7 +18,7 @@ export default function PlayerPage() {
             try {
                 const supabase = createClient()
                 const { data, error: queryError } = await supabase
-                    .from('players_hall_of_fame_ranked')
+                    .from('clubtac_players_hall_of_fame_ranked_v2')
                     .select('*')
                     .eq('user_id', playerId)
                     .single()
@@ -141,6 +141,9 @@ export default function PlayerPage() {
                     </h2>
                     <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#999', marginTop: '4px' }}>
                         <span>ID: {player.user_id}</span>
+                        {player.points != null && (
+                            <span>Очки: {Math.round(player.points)}</span>
+                        )}
                     </div>
                 </div>
             </div>

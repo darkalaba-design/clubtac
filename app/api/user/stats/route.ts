@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
         // Получаем пользователя из clubtac_users
         let userQuery = supabase.from('clubtac_users').select('*')
-        
+
         if (telegramId) {
             userQuery = userQuery.eq('telegram_id', parseInt(telegramId))
         } else if (username) {
@@ -38,10 +38,10 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Получаем статистику из players_hall_of_fame_ranked
+        // Получаем статистику из clubtac_players_hall_of_fame_ranked_v2
         // Ищем по username или user_id
         let statsQuery = supabase
-            .from('players_hall_of_fame_ranked')
+            .from('clubtac_players_hall_of_fame_ranked_v2')
             .select('*')
 
         if (user.username) {

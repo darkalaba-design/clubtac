@@ -11,6 +11,7 @@ interface UserStats {
         games_played: number
         wins: number
         win_rate: number
+        points?: number
     } | null
     recentGames: Array<{
         game_id: number
@@ -188,6 +189,9 @@ export default function UserProfile() {
                     <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#999', marginTop: '4px' }}>
                         {user.id && <span>ID: {user.id}</span>}
                         <span>TG: {user.telegram_id}</span>
+                        {stats?.stats?.points != null && (
+                            <span>Очки: {Math.round(stats.stats.points)}</span>
+                        )}
                     </div>
                 </div>
             </div>

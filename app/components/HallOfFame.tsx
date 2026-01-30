@@ -14,7 +14,7 @@ export default function HallOfFame() {
             try {
                 const supabase = createClient()
                 const { data, error: queryError } = await supabase
-                    .from('players_hall_of_fame_ranked')
+                    .from('clubtac_players_hall_of_fame_ranked_v2')
                     .select('*')
                     .order('place')
 
@@ -25,7 +25,6 @@ export default function HallOfFame() {
                     return
                 }
 
-                console.log('Loaded players:', data)
                 setPlayers(data || [])
             } catch (err) {
                 console.error('Error loading players:', err)
@@ -127,6 +126,9 @@ export default function HallOfFame() {
                                         </div>
                                         <div style={{ fontSize: '12px', color: '#666' }}>
                                             Игр: <span style={{ color: '#000000', fontWeight: '500' }}>{player.games_played}</span> | Побед: <span style={{ color: '#000000', fontWeight: '500' }}>{player.wins}</span> | % побед: <span style={{ color: '#007bff', fontWeight: '500' }}>{player.win_rate}%</span>
+                                            {player.points != null && (
+                                                <> | Очки: <span style={{ color: '#000000', fontWeight: '500' }}>{Math.round(player.points)}</span></>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

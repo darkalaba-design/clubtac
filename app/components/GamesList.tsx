@@ -81,7 +81,7 @@ export default function GamesList() {
 
                 // Загружаем маппинг имен на ID
                 const { data: playersData, error: playersError } = await supabase
-                    .from('players_hall_of_fame_ranked')
+                    .from('clubtac_players_hall_of_fame_ranked_v2')
                     .select('user_id, username')
 
                 if (!playersError && playersData) {
@@ -215,7 +215,7 @@ export default function GamesList() {
         try {
             const supabase = createClient()
             const eventIds = events.map(e => e.id)
-            
+
             const { data: participantsCount, error: countError } = await supabase
                 .from('clubtac_event_participants')
                 .select('event_id')
@@ -240,7 +240,7 @@ export default function GamesList() {
         try {
             const supabase = createClient()
             const eventIds = events.map(e => e.id)
-            
+
             const { data: participants, error: participantsError } = await supabase
                 .from('clubtac_event_participants')
                 .select('event_id, payment_status')
@@ -256,7 +256,7 @@ export default function GamesList() {
                     return updated
                 })
             }
-            
+
             // Также обновляем количество участников
             refreshParticipantCounts()
         } catch (err) {
@@ -269,12 +269,12 @@ export default function GamesList() {
         if (!user?.id || events.length === 0) return
 
         const supabase = createClient()
-        
+
         // Создаем уникальное имя канала для каждого пользователя
         const channelName = `event_participants_changes_${user.id}_${Date.now()}`
-        
+
         console.log('Setting up Realtime subscription for user:', user.id)
-        
+
         // Подписываемся на изменения в таблице clubtac_event_participants
         // Пробуем два варианта: с фильтром и без (с фильтрацией на клиенте)
         const channel = supabase
@@ -288,37 +288,37 @@ export default function GamesList() {
                 },
                 (payload) => {
                     console.log('Participant status changed via Realtime (all updates):', payload)
-                    
+
                     // Показываем уведомление о получении данных через Realtime
                     setRealtimeNotification({
                         show: true,
                         message: `Realtime получил обновление!`,
                         data: payload
                     })
-                    
+
                     // Автоматически скрываем уведомление через 5 секунд
                     setTimeout(() => {
                         setRealtimeNotification(null)
                     }, 5000)
-                    
+
                     // Фильтруем на клиенте - проверяем, что это изменение для текущего пользователя
                     const changedUserId = payload.new.user_id
                     if (changedUserId !== user.id) {
                         console.log('Update is for different user, ignoring')
                         return
                     }
-                    
+
                     const eventId = payload.new.event_id as string
                     const paymentStatus = payload.new.payment_status as string
-                    
+
                     console.log('Updating participant status:', { eventId, paymentStatus })
-                    
+
                     // Обновляем статус участника
                     setEventParticipants(prev => ({
                         ...prev,
                         [eventId]: { payment_status: paymentStatus }
                     }))
-                    
+
                     // Обновляем количество участников (перезагружаем для актуальности)
                     refreshParticipantCounts()
                 }
@@ -569,7 +569,7 @@ export default function GamesList() {
                         ...prev,
                         [eventId]: { payment_status: 'pending' }
                     }))
-                    
+
                     // Устанавливаем успешное состояние с ответом
                     setEventRegistrationStatus(prev => ({
                         ...prev,
@@ -596,7 +596,7 @@ export default function GamesList() {
                                 ...prev,
                                 [eventId]: { payment_status: participant.payment_status }
                             }))
-                            
+
                             // Устанавливаем успешное состояние с ответом
                             setEventRegistrationStatus(prev => ({
                                 ...prev,
@@ -610,10 +610,10 @@ export default function GamesList() {
                         } else {
                             // Если участник не найден, это может быть ошибка - webhook сработал, но ссылка не сгенерировалась
                             // Проверяем, является ли ответ просто "Accepted" или подобным текстом
-                            const isSimpleAccept = responseData?.message === 'Accepted' || 
-                                                   responseData?.message === 'Запрос принят' ||
-                                                   (typeof responseData === 'object' && Object.keys(responseData).length === 1 && 'message' in responseData)
-                            
+                            const isSimpleAccept = responseData?.message === 'Accepted' ||
+                                responseData?.message === 'Запрос принят' ||
+                                (typeof responseData === 'object' && Object.keys(responseData).length === 1 && 'message' in responseData)
+
                             if (isSimpleAccept) {
                                 // Это ошибка - webhook сработал, но регистрация не завершена
                                 // Устанавливаем состояние ошибки
@@ -633,7 +633,7 @@ export default function GamesList() {
                                     ...prev,
                                     [eventId]: { payment_status: 'pending' }
                                 }))
-                                
+
                                 // Устанавливаем успешное состояние с ответом
                                 setEventRegistrationStatus(prev => ({
                                     ...prev,
@@ -1317,10 +1317,10 @@ export default function GamesList() {
                         <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '8px', wordBreak: 'break-word' }}>
                             <details>
                                 <summary style={{ cursor: 'pointer', marginBottom: '4px' }}>Данные</summary>
-                                <pre style={{ 
-                                    fontSize: '10px', 
-                                    backgroundColor: 'rgba(0,0,0,0.2)', 
-                                    padding: '8px', 
+                                <pre style={{
+                                    fontSize: '10px',
+                                    backgroundColor: 'rgba(0,0,0,0.2)',
+                                    padding: '8px',
                                     borderRadius: '4px',
                                     overflow: 'auto',
                                     maxHeight: '200px'
