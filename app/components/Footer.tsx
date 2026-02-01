@@ -26,7 +26,7 @@ export default function Footer() {
         />
       </a>
       <a
-        href="https://derbushev.ru/"
+        href="https://derbushev.ru/about/"
         target="_blank"
         rel="noopener noreferrer"
         style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
