@@ -3,7 +3,7 @@ export default function Footer() {
     <footer
       style={{
         padding: '16px 12px',
-        marginBottom: '120px',
+        marginBottom: '81px',
         backgroundColor: '#FFFEF7',
         borderTop: '1px solid #EBE8E0',
         display: 'flex',

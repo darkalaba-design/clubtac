@@ -26,8 +26,9 @@ interface Event {
     address: string
     starts_at: string
     price: number | null
-    status: 'scheduled' | 'finished' | 'cancelled'
+    status: 'scheduled' | 'finished' | 'cancelled' | 'canceled'
     created_at: string
+    description?: string | null
 }
 
 type GamesTab = 'announcements' | 'past'
@@ -51,6 +52,7 @@ export default function GamesList() {
         response: any
     }>>({})
     const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
+    const [expandedDescriptionIds, setExpandedDescriptionIds] = useState<Set<string>>(new Set())
     const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string }>>({})
     const [eventParticipantsCount, setEventParticipantsCount] = useState<Record<string, number>>({})
     const [clubNames, setClubNames] = useState<Record<string, string>>({})
@@ -117,7 +119,7 @@ export default function GamesList() {
                 // Сначала загрузим все события для отладки
                 const { data: allEvents, error: allEventsError } = await supabase
                     .from('clubtac_events')
-                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at')
+                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description')
                     .order('starts_at', { ascending: true })
 
                 console.log('All events from DB:', allEvents)
@@ -130,27 +132,26 @@ export default function GamesList() {
                     return
                 }
 
-                // Фильтруем события с датой позже текущей и статусом scheduled
+                // Фильтруем события с датой позже текущей (все статусы, включая cancelled)
                 const filteredEvents = (allEvents || []).filter(event => {
                     const eventDate = new Date(event.starts_at)
                     const nowDate = new Date(now)
                     const isFuture = eventDate > nowDate
-                    const isScheduled = event.status === 'scheduled'
-                    console.log(`Event ${event.title}: date=${event.starts_at}, isFuture=${isFuture}, status=${event.status}, isScheduled=${isScheduled}`)
-                    return isScheduled && isFuture
+                    return isFuture
                 })
 
-                console.log('Filtered events (scheduled and future):', filteredEvents)
+                console.log('Filtered events (future):', filteredEvents)
                 setEvents(filteredEvents)
 
                 // Загружаем статусы регистрации пользователя на события и количество участников
                 const eventIds = filteredEvents.map(e => e.id)
                 if (eventIds.length > 0) {
-                    // Загружаем количество участников для каждого события
+                    // Загружаем количество участников с оплатой (payment_status = paid) для каждого события
                     const { data: participantsCount, error: countError } = await supabase
                         .from('clubtac_event_participants')
-                        .select('event_id')
+                        .select('event_id, payment_status')
                         .in('event_id', eventIds)
+                        .eq('payment_status', 'paid')
 
                     if (!countError && participantsCount) {
                         const countMap: Record<string, number> = {}
@@ -158,7 +159,7 @@ export default function GamesList() {
                             countMap[p.event_id] = (countMap[p.event_id] || 0) + 1
                         })
                         setEventParticipantsCount(countMap)
-                        console.log('Loaded event participants count:', countMap)
+                        console.log('Loaded event participants count (paid only):', countMap)
                     }
 
                     // Загружаем статусы регистрации текущего пользователя
@@ -218,8 +219,9 @@ export default function GamesList() {
 
             const { data: participantsCount, error: countError } = await supabase
                 .from('clubtac_event_participants')
-                .select('event_id')
+                .select('event_id, payment_status')
                 .in('event_id', eventIds)
+                .eq('payment_status', 'paid')
 
             if (!countError && participantsCount) {
                 const countMap: Record<string, number> = {}
@@ -729,11 +731,15 @@ export default function GamesList() {
                             borderRadius: '8px',
                             padding: '16px',
                             boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
+                            border: (event.status === 'cancelled' || event.status === 'canceled') ? '2px solid #B71C1C' : undefined,
                         }}
                     >
                         <div style={{ marginBottom: '12px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {formatEventDate(event.starts_at)}
+                                {(event.status === 'cancelled' || event.status === 'canceled') && (
+                                    <span style={{ fontSize: '11px', color: '#B71C1C', fontWeight: '600' }}>Отменено</span>
+                                )}
                             </div>
                             {event.title && (
                                 <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>
@@ -766,6 +772,39 @@ export default function GamesList() {
                             <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '8px' }}>
                                 👥 Зарегистрировано: {eventParticipantsCount[event.id] || 0} {eventParticipantsCount[event.id] === 1 ? 'участник' : eventParticipantsCount[event.id] && eventParticipantsCount[event.id] < 5 ? 'участника' : 'участников'}
                             </div>
+                            {event.description && event.description.trim() !== '' && (
+                                <div style={{ marginTop: '8px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setExpandedDescriptionIds(prev => {
+                                                const next = new Set(prev)
+                                                if (next.has(event.id)) next.delete(event.id)
+                                                else next.add(event.id)
+                                                return next
+                                            })
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 12px',
+                                            background: 'transparent',
+                                            border: '1px solid #EBE8E0',
+                                            borderRadius: '6px',
+                                            color: '#1D1D1B',
+                                            cursor: 'pointer',
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                        }}
+                                    >
+                                        {expandedDescriptionIds.has(event.id) ? 'Свернуть' : 'Подробнее'}
+                                    </button>
+                                    {expandedDescriptionIds.has(event.id) && (
+                                        <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#FFFEF7', borderRadius: '8px', fontSize: '14px', color: '#6B6B69', whiteSpace: 'pre-wrap' }}>
+                                            {event.description}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         {(() => {
                             const status = eventRegistrationStatus[event.id]

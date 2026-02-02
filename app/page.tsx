@@ -13,9 +13,12 @@ export default function HomePage() {
   return (
     <>
       <main style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
         paddingTop: tab === 'profile' ? '0' : '12px',
         paddingRight: '0',
-        paddingBottom: '120px',
+        paddingBottom: '81px',
         paddingLeft: '0'
       }}>
         {tab === 'profile' && <UserProfile />}

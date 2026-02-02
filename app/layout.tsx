@@ -39,7 +39,9 @@ export default function RootLayout({
       >
         <UserProvider>
           <TelegramAuth />
-          {children}
+          <div className="layout-content">
+            {children}
+          </div>
           <Footer />
         </UserProvider>
       </body>
