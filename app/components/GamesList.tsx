@@ -53,9 +53,11 @@ export default function GamesList() {
     }>>({})
     const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
     const [expandedDescriptionIds, setExpandedDescriptionIds] = useState<Set<string>>(new Set())
-    const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string }>>({})
+    const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string; paylink?: string | null; created_at?: string | null }>>({})
     const [eventParticipantsCount, setEventParticipantsCount] = useState<Record<string, number>>({})
     const [clubNames, setClubNames] = useState<Record<string, string>>({})
+    const [refreshedPaylinks, setRefreshedPaylinks] = useState<Record<string, string>>({})
+    const [paylinkRefreshLoading, setPaylinkRefreshLoading] = useState<Record<string, boolean>>({})
     const [realtimeNotification, setRealtimeNotification] = useState<{
         show: boolean
         message: string
@@ -162,18 +164,22 @@ export default function GamesList() {
                         console.log('Loaded event participants count (paid only):', countMap)
                     }
 
-                    // Загружаем статусы регистрации текущего пользователя
+                    // Загружаем статусы регистрации текущего пользователя (включая paylink и created_at)
                     if (user?.id) {
                         const { data: participants, error: participantsError } = await supabase
                             .from('clubtac_event_participants')
-                            .select('event_id, payment_status')
+                            .select('event_id, payment_status, paylink, created_at')
                             .eq('user_id', user.id)
                             .in('event_id', eventIds)
 
                         if (!participantsError && participants) {
-                            const participantsMap: Record<string, { payment_status: string }> = {}
+                            const participantsMap: Record<string, { payment_status: string; paylink?: string | null; created_at?: string | null }> = {}
                             participants.forEach((p: any) => {
-                                participantsMap[p.event_id] = { payment_status: p.payment_status }
+                                participantsMap[p.event_id] = {
+                                    payment_status: p.payment_status,
+                                    paylink: p.paylink ?? null,
+                                    created_at: p.created_at ?? null,
+                                }
                             })
                             setEventParticipants(participantsMap)
                             console.log('Loaded event participants:', participantsMap)
@@ -245,7 +251,7 @@ export default function GamesList() {
 
             const { data: participants, error: participantsError } = await supabase
                 .from('clubtac_event_participants')
-                .select('event_id, payment_status')
+                .select('event_id, payment_status, paylink, created_at')
                 .eq('user_id', user.id)
                 .in('event_id', eventIds)
 
@@ -253,7 +259,11 @@ export default function GamesList() {
                 setEventParticipants(prev => {
                     const updated = { ...prev }
                     participants.forEach((p: any) => {
-                        updated[p.event_id] = { payment_status: p.payment_status }
+                        updated[p.event_id] = {
+                            payment_status: p.payment_status,
+                            paylink: p.paylink ?? null,
+                            created_at: p.created_at ?? null,
+                        }
                     })
                     return updated
                 })
@@ -312,13 +322,20 @@ export default function GamesList() {
 
                     const eventId = payload.new.event_id as string
                     const paymentStatus = payload.new.payment_status as string
+                    const paylink = (payload.new as any).paylink
+                    const created_at = (payload.new as any).created_at
 
                     console.log('Updating participant status:', { eventId, paymentStatus })
 
-                    // Обновляем статус участника
+                    // Обновляем статус участника (Realtime может присылать paylink/created_at при обновлении)
                     setEventParticipants(prev => ({
                         ...prev,
-                        [eventId]: { payment_status: paymentStatus }
+                        [eventId]: {
+                            ...prev[eventId],
+                            payment_status: paymentStatus,
+                            paylink: paylink !== undefined ? paylink : prev[eventId]?.paylink,
+                            created_at: created_at !== undefined ? created_at : prev[eventId]?.created_at,
+                        }
                     }))
 
                     // Обновляем количество участников (перезагружаем для актуальности)
@@ -468,6 +485,25 @@ export default function GamesList() {
         }
     }
 
+    // Сравнение дат по календарному дню (локальное время)
+    const toDateOnly = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+    const isEventDateToday = (startsAt: string) => {
+        const eventDate = new Date(startsAt)
+        const today = new Date()
+        return toDateOnly(eventDate) === toDateOnly(today)
+    }
+    const isEventDateTomorrowOrLater = (startsAt: string) => {
+        const eventDate = new Date(startsAt)
+        const today = new Date()
+        return toDateOnly(eventDate) > toDateOnly(today)
+    }
+    const isCreatedAtToday = (createdAt: string | null | undefined) => {
+        if (!createdAt) return false
+        const created = new Date(createdAt)
+        const today = new Date()
+        return toDateOnly(created) === toDateOnly(today)
+    }
+
     // Функция для поиска события по дате игры
     const findEventByGameDate = (gameDate: string): Event | null => {
         const gameDateObj = new Date(gameDate)
@@ -497,6 +533,55 @@ export default function GamesList() {
         return acc
     }, {} as Record<string, { games: Game[], event: Event | null }>)
 
+    const webhookUrl = 'https://hook.eu2.make.com/gt8ewzdg7dmpqr1qst4mnotgwpcqfc0m'
+
+    // Обновить ссылку на оплату (в день события, если запись создана не сегодня — сумма другая)
+    const refreshPaylinkForEvent = useCallback(async (eventId: string) => {
+        if (!user?.id) return
+        setPaylinkRefreshLoading(prev => ({ ...prev, [eventId]: true }))
+        try {
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 30000)
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    event_id: eventId,
+                    user_id: user.id || null,
+                    telegram_id: user.telegram_id || null,
+                }),
+                signal: controller.signal,
+            })
+            clearTimeout(timeoutId)
+            if (!response.ok) throw new Error(`HTTP ${response.status}`)
+            const text = await response.text()
+            let data: { paylink?: string } = {}
+            if (text) {
+                try { data = JSON.parse(text) } catch { data = { paylink: undefined } }
+            }
+            if (data.paylink) {
+                setRefreshedPaylinks(prev => ({ ...prev, [eventId]: data.paylink! }))
+            }
+        } catch (err) {
+            console.error('Error refreshing paylink:', err)
+        } finally {
+            setPaylinkRefreshLoading(prev => ({ ...prev, [eventId]: false }))
+        }
+    }, [user?.id, user?.telegram_id])
+
+    // Когда событие сегодня, участник pending и created_at не сегодня — запрашиваем новую ссылку
+    useEffect(() => {
+        if (!user?.id || events.length === 0) return
+        events.forEach((event) => {
+            const participant = eventParticipants[event.id]
+            if (participant?.payment_status !== 'pending') return
+            if (!isEventDateToday(event.starts_at)) return
+            if (isCreatedAtToday(participant.created_at)) return
+            if (refreshedPaylinks[event.id] || paylinkRefreshLoading[event.id]) return
+            refreshPaylinkForEvent(event.id)
+        })
+    }, [user?.id, events, eventParticipants, refreshedPaylinks, paylinkRefreshLoading, refreshPaylinkForEvent])
+
     // Функция для записи на событие
     const handleRegisterForEvent = async (eventId: string) => {
         if (!user) {
@@ -516,8 +601,6 @@ export default function GamesList() {
         }))
 
         try {
-            const webhookUrl = 'https://hook.eu2.make.com/gt8ewzdg7dmpqr1qst4mnotgwpcqfc0m'
-
             // Создаем AbortController для таймаута
             const controller = new AbortController()
             const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 секунд таймаут
@@ -1008,6 +1091,121 @@ export default function GamesList() {
                             }
 
                             if (paymentStatus === 'pending') {
+                                // Событие завтра или позже — показываем ссылку из БД
+                                if (isEventDateTomorrowOrLater(event.starts_at) && participant.paylink) {
+                                    return (
+                                        <a
+                                            href={participant.paylink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                display: 'block',
+                                                width: '100%',
+                                                padding: '10px',
+                                                backgroundColor: '#1B5E20',
+                                                color: '#ffffff',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                fontWeight: '500',
+                                                textAlign: 'center',
+                                                textDecoration: 'none',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            Оплатить
+                                        </a>
+                                    )
+                                }
+                                // Событие сегодня, запись создана сегодня — ссылка уже актуальна
+                                if (isEventDateToday(event.starts_at) && isCreatedAtToday(participant.created_at) && participant.paylink) {
+                                    return (
+                                        <a
+                                            href={participant.paylink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                display: 'block',
+                                                width: '100%',
+                                                padding: '10px',
+                                                backgroundColor: '#1B5E20',
+                                                color: '#ffffff',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                fontWeight: '500',
+                                                textAlign: 'center',
+                                                textDecoration: 'none',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            Оплатить
+                                        </a>
+                                    )
+                                }
+                                // Событие сегодня, запись создана не сегодня — обновлённая ссылка из webhook
+                                if (isEventDateToday(event.starts_at) && !isCreatedAtToday(participant.created_at)) {
+                                    const paylink = refreshedPaylinks[event.id]
+                                    if (paylinkRefreshLoading[event.id]) {
+                                        return (
+                                            <div
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px',
+                                                    backgroundColor: '#EBE8E0',
+                                                    color: '#6B6B69',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    fontSize: '14px',
+                                                    fontWeight: '500',
+                                                    textAlign: 'center',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '8px',
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        width: '16px',
+                                                        height: '16px',
+                                                        border: '2px solid #6B6B69',
+                                                        borderTop: '2px solid transparent',
+                                                        borderRadius: '50%',
+                                                        animation: 'spin 1s linear infinite',
+                                                    }}
+                                                />
+                                                Обновление ссылки...
+                                            </div>
+                                        )
+                                    }
+                                    if (paylink) {
+                                        return (
+                                            <a
+                                                href={paylink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    display: 'block',
+                                                    width: '100%',
+                                                    padding: '10px',
+                                                    backgroundColor: '#1B5E20',
+                                                    color: '#ffffff',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    fontSize: '14px',
+                                                    fontWeight: '500',
+                                                    textAlign: 'center',
+                                                    textDecoration: 'none',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                Оплатить
+                                            </a>
+                                        )
+                                    }
+                                }
+                                // Нет ссылки — кнопка генерации (как раньше)
                                 return (
                                     <button
                                         style={{
