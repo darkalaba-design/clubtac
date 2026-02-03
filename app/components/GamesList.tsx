@@ -764,7 +764,7 @@ export default function GamesList() {
                             borderRadius: '8px',
                             padding: '16px',
                             boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
-                            border: (event.status === 'cancelled' || event.status === 'canceled') ? '2px solid #B71C1C' : undefined,
+                            border: (event.status === 'cancelled' || event.status === 'canceled') ? '2px solid #B71C1C' : isEventTodayAndNotStarted(event.starts_at) ? '1px solid #C8E6C9' : undefined,
                         }}
                     >
                         <div style={{ marginBottom: '12px' }}>
