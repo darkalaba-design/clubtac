@@ -118,13 +118,14 @@ export default function GamesList() {
 
                 console.log('Loading events from clubtac_events, current time:', now)
 
-                // Сначала загрузим все события для отладки
+                // События, которые ещё не начались: starts_at > сейчас (включая сегодняшние с будущим временем)
                 const { data: allEvents, error: allEventsError } = await supabase
                     .from('clubtac_events')
                     .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description')
+                    .gt('starts_at', now)
                     .order('starts_at', { ascending: true })
 
-                console.log('All events from DB:', allEvents)
+                console.log('Events (not started yet):', allEvents)
                 console.log('All events error:', allEventsError)
 
                 if (allEventsError) {
@@ -134,15 +135,7 @@ export default function GamesList() {
                     return
                 }
 
-                // Фильтруем события с датой позже текущей (все статусы, включая cancelled)
-                const filteredEvents = (allEvents || []).filter(event => {
-                    const eventDate = new Date(event.starts_at)
-                    const nowDate = new Date(now)
-                    const isFuture = eventDate > nowDate
-                    return isFuture
-                })
-
-                console.log('Filtered events (future):', filteredEvents)
+                const filteredEvents = allEvents || []
                 setEvents(filteredEvents)
 
                 // Загружаем статусы регистрации пользователя на события и количество участников
@@ -503,6 +496,12 @@ export default function GamesList() {
         const today = new Date()
         return toDateOnly(created) === toDateOnly(today)
     }
+    // Событие сегодня и время начала ещё не наступило (starts_at в будущем)
+    const isEventTodayAndNotStarted = (startsAt: string) => {
+        const eventDate = new Date(startsAt)
+        const now = new Date()
+        return toDateOnly(eventDate) === toDateOnly(now) && eventDate.getTime() > now.getTime()
+    }
 
     // Функция для поиска события по дате игры
     const findEventByGameDate = (gameDate: string): Event | null => {
@@ -818,8 +817,11 @@ export default function GamesList() {
                         }}
                     >
                         <div style={{ marginBottom: '12px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 {formatEventDate(event.starts_at)}
+                                {isEventTodayAndNotStarted(event.starts_at) && (
+                                    <span style={{ fontSize: '12px', color: '#1B5E20', fontWeight: '600' }}>Сегодня</span>
+                                )}
                                 {(event.status === 'cancelled' || event.status === 'canceled') && (
                                     <span style={{ fontSize: '11px', color: '#B71C1C', fontWeight: '600' }}>Отменено</span>
                                 )}
@@ -848,8 +850,20 @@ export default function GamesList() {
                                 </div>
                             )}
                             {event.price !== null && (
-                                <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
-                                    💰 {event.price === 0 ? 'Бесплатно' : `Цена: ${event.price} ₽`}
+                                <div style={{
+                                    fontSize: '14px',
+                                    marginBottom: '4px',
+                                    ...(isEventTodayAndNotStarted(event.starts_at) && event.price > 0
+                                        ? { color: '#B71C1C', fontWeight: 'bold' }
+                                        : { color: '#6B6B69' }
+                                    ),
+                                }}>
+                                    💰 {event.price === 0
+                                        ? 'Бесплатно'
+                                        : isEventTodayAndNotStarted(event.starts_at)
+                                            ? `Цена: ${Math.round(event.price * 1.4)} ₽`
+                                            : `Цена: ${event.price} ₽`
+                                    }
                                 </div>
                             )}
                             <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '8px' }}>
