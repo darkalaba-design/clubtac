@@ -56,8 +56,6 @@ export default function GamesList() {
     const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string; paylink?: string | null; created_at?: string | null }>>({})
     const [eventParticipantsCount, setEventParticipantsCount] = useState<Record<string, number>>({})
     const [clubNames, setClubNames] = useState<Record<string, string>>({})
-    const [refreshedPaylinks, setRefreshedPaylinks] = useState<Record<string, string>>({})
-    const [paylinkRefreshLoading, setPaylinkRefreshLoading] = useState<Record<string, boolean>>({})
     const [realtimeNotification, setRealtimeNotification] = useState<{
         show: boolean
         message: string
@@ -534,53 +532,6 @@ export default function GamesList() {
 
     const webhookUrl = 'https://hook.eu2.make.com/gt8ewzdg7dmpqr1qst4mnotgwpcqfc0m'
 
-    // Обновить ссылку на оплату (в день события, если запись создана не сегодня — сумма другая)
-    const refreshPaylinkForEvent = useCallback(async (eventId: string) => {
-        if (!user?.id) return
-        setPaylinkRefreshLoading(prev => ({ ...prev, [eventId]: true }))
-        try {
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 30000)
-            const response = await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    event_id: eventId,
-                    user_id: user.id || null,
-                    telegram_id: user.telegram_id || null,
-                }),
-                signal: controller.signal,
-            })
-            clearTimeout(timeoutId)
-            if (!response.ok) throw new Error(`HTTP ${response.status}`)
-            const text = await response.text()
-            let data: { paylink?: string } = {}
-            if (text) {
-                try { data = JSON.parse(text) } catch { data = { paylink: undefined } }
-            }
-            if (data.paylink) {
-                setRefreshedPaylinks(prev => ({ ...prev, [eventId]: data.paylink! }))
-            }
-        } catch (err) {
-            console.error('Error refreshing paylink:', err)
-        } finally {
-            setPaylinkRefreshLoading(prev => ({ ...prev, [eventId]: false }))
-        }
-    }, [user?.id, user?.telegram_id])
-
-    // Когда событие сегодня, участник pending и created_at не сегодня — запрашиваем новую ссылку
-    useEffect(() => {
-        if (!user?.id || events.length === 0) return
-        events.forEach((event) => {
-            const participant = eventParticipants[event.id]
-            if (participant?.payment_status !== 'pending') return
-            if (!isEventDateToday(event.starts_at)) return
-            if (isCreatedAtToday(participant.created_at)) return
-            if (refreshedPaylinks[event.id] || paylinkRefreshLoading[event.id]) return
-            refreshPaylinkForEvent(event.id)
-        })
-    }, [user?.id, events, eventParticipants, refreshedPaylinks, paylinkRefreshLoading, refreshPaylinkForEvent])
-
     // Функция для записи на событие
     const handleRegisterForEvent = async (eventId: string) => {
         if (!user) {
@@ -809,7 +760,7 @@ export default function GamesList() {
                     <div
                         key={event.id}
                         style={{
-                            backgroundColor: '#FFFFFF',
+                            backgroundColor: isEventTodayAndNotStarted(event.starts_at) ? '#F5FAF5' : '#FFFFFF',
                             borderRadius: '8px',
                             padding: '16px',
                             boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
@@ -820,7 +771,16 @@ export default function GamesList() {
                             <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 {formatEventDate(event.starts_at)}
                                 {isEventTodayAndNotStarted(event.starts_at) && (
-                                    <span style={{ fontSize: '12px', color: '#1B5E20', fontWeight: '600' }}>Сегодня</span>
+                                    <span style={{
+                                        fontSize: '12px',
+                                        color: '#1B5E20',
+                                        fontWeight: '600',
+                                        backgroundColor: '#C8E6C9',
+                                        padding: '4px 10px',
+                                        borderRadius: '6px',
+                                    }}>
+                                        Сегодня
+                                    </span>
                                 )}
                                 {(event.status === 'cancelled' || event.status === 'canceled') && (
                                     <span style={{ fontSize: '11px', color: '#B71C1C', fontWeight: '600' }}>Отменено</span>
@@ -1157,67 +1117,43 @@ export default function GamesList() {
                                         </a>
                                     )
                                 }
-                                // Событие сегодня, запись создана не сегодня — обновлённая ссылка из webhook
+                                // Событие сегодня, запись создана не сегодня — ссылка устарела (цена изменилась), показываем нотифайер и кнопку
                                 if (isEventDateToday(event.starts_at) && !isCreatedAtToday(participant.created_at)) {
-                                    const paylink = refreshedPaylinks[event.id]
-                                    if (paylinkRefreshLoading[event.id]) {
-                                        return (
+                                    return (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                             <div
                                                 style={{
                                                     width: '100%',
-                                                    padding: '10px',
-                                                    backgroundColor: '#EBE8E0',
-                                                    color: '#6B6B69',
-                                                    border: 'none',
+                                                    padding: '10px 12px',
+                                                    backgroundColor: '#FFF3E0',
+                                                    color: '#E65100',
+                                                    border: '1px solid #FFE0B2',
                                                     borderRadius: '6px',
                                                     fontSize: '14px',
                                                     fontWeight: '500',
                                                     textAlign: 'center',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '8px',
                                                 }}
                                             >
-                                                <div
-                                                    style={{
-                                                        width: '16px',
-                                                        height: '16px',
-                                                        border: '2px solid #6B6B69',
-                                                        borderTop: '2px solid transparent',
-                                                        borderRadius: '50%',
-                                                        animation: 'spin 1s linear infinite',
-                                                    }}
-                                                />
-                                                Обновление ссылки...
+                                                Ссылка на оплату устарела
                                             </div>
-                                        )
-                                    }
-                                    if (paylink) {
-                                        return (
-                                            <a
-                                                href={paylink}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <button
                                                 style={{
-                                                    display: 'block',
                                                     width: '100%',
                                                     padding: '10px',
-                                                    backgroundColor: '#1B5E20',
-                                                    color: '#ffffff',
+                                                    backgroundColor: '#FFDF00',
+                                                    color: '#1D1D1B',
                                                     border: 'none',
                                                     borderRadius: '6px',
                                                     fontSize: '14px',
                                                     fontWeight: '500',
-                                                    textAlign: 'center',
-                                                    textDecoration: 'none',
                                                     cursor: 'pointer',
                                                 }}
+                                                onClick={() => handleRegisterForEvent(event.id)}
                                             >
-                                                Оплатить
-                                            </a>
-                                        )
-                                    }
+                                                Сгенерировать ссылку на оплату
+                                            </button>
+                                        </div>
+                                    )
                                 }
                                 // Нет ссылки — кнопка генерации (как раньше)
                                 return (
