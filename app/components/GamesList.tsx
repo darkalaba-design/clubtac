@@ -337,15 +337,6 @@ export default function GamesList() {
                 console.log('Realtime subscription status:', status)
                 if (status === 'SUBSCRIBED') {
                     console.log('Successfully subscribed to Realtime changes for clubtac_event_participants')
-                    // Показываем уведомление о успешной подписке
-                    setRealtimeNotification({
-                        show: true,
-                        message: `Realtime подписка активна! Статус: ${status}`,
-                        data: { status }
-                    })
-                    setTimeout(() => {
-                        setRealtimeNotification(null)
-                    }, 3000)
                 } else if (status === 'CHANNEL_ERROR') {
                     console.error('Realtime channel error - check Supabase Realtime settings')
                     setRealtimeNotification({
