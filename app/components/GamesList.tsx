@@ -916,7 +916,7 @@ export default function GamesList() {
                                     {eventParticipantsListLoading[event.id] ? (
                                         <div style={{ fontSize: '13px', color: '#6B6B69' }}>Загрузка списка...</div>
                                     ) : (eventParticipantsList[event.id]?.length ? (
-                                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '14px', color: '#1D1D1B' }}>
+                                        <ul style={{ margin: 0, paddingLeft: '0px', fontSize: '14px', color: '#1D1D1B' }}>
                                             {eventParticipantsList[event.id].map((p) => (
                                                 <li key={p.user_id} style={{ marginBottom: '4px' }}>
                                                     <Link href={`/player/${p.user_id}`} style={{ color: '#1B5E20', textDecoration: 'none', fontWeight: '500' }}>
