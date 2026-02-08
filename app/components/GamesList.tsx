@@ -53,6 +53,9 @@ export default function GamesList() {
     }>>({})
     const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
     const [expandedDescriptionIds, setExpandedDescriptionIds] = useState<Set<string>>(new Set())
+    const [expandedParticipantListIds, setExpandedParticipantListIds] = useState<Set<string>>(new Set())
+    const [eventParticipantsList, setEventParticipantsList] = useState<Record<string, { user_id: number; first_name?: string | null; last_name?: string | null; username?: string | null; nickname?: string | null }[]>>({})
+    const [eventParticipantsListLoading, setEventParticipantsListLoading] = useState<Record<string, boolean>>({})
     const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string; paylink?: string | null; created_at?: string | null }>>({})
     const [eventParticipantsCount, setEventParticipantsCount] = useState<Record<string, number>>({})
     const [clubNames, setClubNames] = useState<Record<string, string>>({})
@@ -266,6 +269,69 @@ export default function GamesList() {
             console.error('Error refreshing participant statuses:', err)
         }
     }, [user?.id, events, refreshParticipantCounts])
+
+    // Загрузить список участников события (оплативших) при раскрытии
+    const loadEventParticipantsList = useCallback(async (eventId: string) => {
+        if (eventParticipantsList[eventId]) return
+        setEventParticipantsListLoading(prev => ({ ...prev, [eventId]: true }))
+        try {
+            const supabase = createClient()
+            const { data: participants, error: partError } = await supabase
+                .from('clubtac_event_participants')
+                .select('user_id')
+                .eq('event_id', eventId)
+                .eq('payment_status', 'paid')
+
+            if (partError || !participants?.length) {
+                setEventParticipantsList(prev => ({ ...prev, [eventId]: [] }))
+                setEventParticipantsListLoading(prev => ({ ...prev, [eventId]: false }))
+                return
+            }
+
+            const userIds = participants.map((p: any) => p.user_id).filter(Boolean)
+            if (userIds.length === 0) {
+                setEventParticipantsList(prev => ({ ...prev, [eventId]: [] }))
+                setEventParticipantsListLoading(prev => ({ ...prev, [eventId]: false }))
+                return
+            }
+
+            const { data: users } = await supabase
+                .from('clubtac_users')
+                .select('id, first_name, last_name, username, nickname')
+                .in('id', userIds)
+
+            const userMap: Record<number, { first_name?: string | null; last_name?: string | null; username?: string | null; nickname?: string | null }> = {}
+            users?.forEach((u: any) => {
+                userMap[u.id] = {
+                    first_name: u.first_name ?? null,
+                    last_name: u.last_name ?? null,
+                    username: u.username ?? null,
+                    nickname: u.nickname ?? null,
+                }
+            })
+
+            const list = userIds.map((uid: number) => ({
+                user_id: uid,
+                ...userMap[uid],
+            }))
+            setEventParticipantsList(prev => ({ ...prev, [eventId]: list }))
+        } catch (err) {
+            console.error('Error loading event participants list:', err)
+            setEventParticipantsList(prev => ({ ...prev, [eventId]: [] }))
+        } finally {
+            setEventParticipantsListLoading(prev => ({ ...prev, [eventId]: false }))
+        }
+    }, [eventParticipantsList])
+
+    // Формат: @username - (nickname) - имя фамилия (части опускаем, если нет)
+    const formatParticipantDisplay = (p: { user_id: number; first_name?: string | null; last_name?: string | null; username?: string | null; nickname?: string | null }) => {
+        const parts: string[] = []
+        if (p.username) parts.push(`@${p.username}`)
+        if (p.nickname) parts.push(`(${p.nickname})`)
+        const namePart = [p.first_name, p.last_name].filter(Boolean).join(' ').trim()
+        if (namePart) parts.push(namePart)
+        return parts.length ? parts.join(' - ') : `Участник #${p.user_id}`
+    }
 
     // Подписка на изменения статусов участников через Supabase Realtime
     useEffect(() => {
@@ -818,8 +884,52 @@ export default function GamesList() {
                                 </div>
                             )}
                             <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '8px' }}>
-                                👥 Зарегистрировано: {eventParticipantsCount[event.id] || 0} {eventParticipantsCount[event.id] === 1 ? 'участник' : eventParticipantsCount[event.id] && eventParticipantsCount[event.id] < 5 ? 'участника' : 'участников'}
+                                👥 Зарегистрировано:{' '}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const isExpanding = !expandedParticipantListIds.has(event.id)
+                                        setExpandedParticipantListIds(prev => {
+                                            const next = new Set(prev)
+                                            if (next.has(event.id)) next.delete(event.id)
+                                            else next.add(event.id)
+                                            return next
+                                        })
+                                        if (isExpanding) loadEventParticipantsList(event.id)
+                                    }}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        padding: 0,
+                                        color: '#1B5E20',
+                                        textDecoration: 'underline',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                    }}
+                                >
+                                    {eventParticipantsCount[event.id] || 0} {eventParticipantsCount[event.id] === 1 ? 'участник' : eventParticipantsCount[event.id] && eventParticipantsCount[event.id] < 5 ? 'участника' : 'участников'}
+                                </button>
                             </div>
+                            {expandedParticipantListIds.has(event.id) && (
+                                <div style={{ marginBottom: '8px', padding: '10px 12px', backgroundColor: '#FFFEF7', borderRadius: '6px', border: '1px solid #EBE8E0' }}>
+                                    {eventParticipantsListLoading[event.id] ? (
+                                        <div style={{ fontSize: '13px', color: '#6B6B69' }}>Загрузка списка...</div>
+                                    ) : (eventParticipantsList[event.id]?.length ? (
+                                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '14px', color: '#1D1D1B' }}>
+                                            {eventParticipantsList[event.id].map((p) => (
+                                                <li key={p.user_id} style={{ marginBottom: '4px' }}>
+                                                    <Link href={`/player/${p.user_id}`} style={{ color: '#1B5E20', textDecoration: 'none', fontWeight: '500' }}>
+                                                        {formatParticipantDisplay(p)}
+                                                    </Link>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <div style={{ fontSize: '13px', color: '#6B6B69' }}>Нет участников с оплатой</div>
+                                    ))}
+                                </div>
+                            )}
                             {event.description && event.description.trim() !== '' && (
                                 <div style={{ marginTop: '8px' }}>
                                     <button
