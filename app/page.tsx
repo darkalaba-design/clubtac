@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Tabs from './components/Tabs'
 import HallOfFame from './components/HallOfFame'
@@ -8,7 +8,7 @@ import TeamsRanking from './components/TeamsRanking'
 import GamesList from './components/GamesList'
 import UserProfile from './components/UserProfile'
 
-export default function HomePage() {
+function HomePageContent() {
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams.get('tab') as 'players' | 'teams' | 'games' | 'profile' | null
   const [tab, setTab] = useState<'players' | 'teams' | 'games' | 'profile'>(
@@ -41,5 +41,17 @@ export default function HomePage() {
       </main>
       <Tabs active={tab} onChange={setTab} />
     </>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: '12px', textAlign: 'center' }}>
+        <p>Загрузка...</p>
+      </div>
+    }>
+      <HomePageContent />
+    </Suspense>
   )
 }
