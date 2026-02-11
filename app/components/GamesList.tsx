@@ -323,14 +323,24 @@ export default function GamesList() {
         }
     }, [eventParticipantsList])
 
-    // Формат: @username - (nickname) - имя фамилия (части опускаем, если нет)
+    // Формат: только nickname пользователя (если есть), без telegram_id, first_name и last_name
     const formatParticipantDisplay = (p: { user_id: number; first_name?: string | null; last_name?: string | null; username?: string | null; nickname?: string | null }) => {
-        const parts: string[] = []
-        if (p.username) parts.push(`@${p.username}`)
-        if (p.nickname) parts.push(`(${p.nickname})`)
+        // Если есть nickname — показываем только его
+        if (p.nickname) {
+            return p.nickname
+        }
+
+        // Fallback, если nickname нет: сначала username, затем имя/фамилия, затем технический идентификатор
+        if (p.username) {
+            return `@${p.username}`
+        }
+
         const namePart = [p.first_name, p.last_name].filter(Boolean).join(' ').trim()
-        if (namePart) parts.push(namePart)
-        return parts.length ? parts.join(' - ') : `Участник #${p.user_id}`
+        if (namePart) {
+            return namePart
+        }
+
+        return `Участник #${p.user_id}`
     }
 
     // Подписка на изменения статусов участников через Supabase Realtime

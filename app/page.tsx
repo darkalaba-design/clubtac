@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Tabs from './components/Tabs'
 import HallOfFame from './components/HallOfFame'
 import TeamsRanking from './components/TeamsRanking'
@@ -8,7 +9,19 @@ import GamesList from './components/GamesList'
 import UserProfile from './components/UserProfile'
 
 export default function HomePage() {
-  const [tab, setTab] = useState<'players' | 'teams' | 'games' | 'profile'>('profile')
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get('tab') as 'players' | 'teams' | 'games' | 'profile' | null
+  const [tab, setTab] = useState<'players' | 'teams' | 'games' | 'profile'>(
+    tabFromUrl && ['players', 'teams', 'games', 'profile'].includes(tabFromUrl) 
+      ? tabFromUrl 
+      : 'profile'
+  )
+
+  useEffect(() => {
+    if (tabFromUrl && ['players', 'teams', 'games', 'profile'].includes(tabFromUrl)) {
+      setTab(tabFromUrl)
+    }
+  }, [tabFromUrl])
 
   return (
     <>
