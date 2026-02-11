@@ -265,7 +265,6 @@ export default function UserProfile() {
                         </p>
                     )}
                     <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                        {user.id && <span>ID: {user.id}</span>}
                         <span>TG: {user.telegram_id}</span>
                         {stats?.stats?.points != null && (
                             <span>Очки: {Math.round(stats.stats.points)}</span>
