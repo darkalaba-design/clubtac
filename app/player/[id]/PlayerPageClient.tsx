@@ -272,24 +272,28 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                 <div
                     style={{
                         backgroundColor: '#FFFFFF',
-                        padding: '16px 12px',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginBottom: '16px',
+                        boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
                         textAlign: 'center',
                     }}
                 >
                     <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Загрузка статистики...</p>
                 </div>
             ) : playerStats?.recentGames && playerStats.recentGames.length > 0 ? (
-                <>
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div
-                        style={{
-                            backgroundColor: '#FFFFFF',
-                            padding: '16px 12px',
-                        }}
-                    >
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            🎮 Последние игры
-                        </h3>
+                <div
+                    style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginBottom: '16px',
+                        boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
+                    }}
+                >
+                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                        🎮 Последние игры
+                    </h3>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             {playerStats.recentGames.map((game, index) => {
                                 const won = didPlayerWin(game)
@@ -333,23 +337,23 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                 )
                             })}
                         </div>
-                    </div>
-                </>
+                </div>
             ) : null}
 
             {/* Лучшие напарники */}
             {!statsLoading && playerStats?.bestPartners && playerStats.bestPartners.length > 0 && (
-                <>
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div
-                        style={{
-                            backgroundColor: '#FFFFFF',
-                            padding: '16px 12px',
-                        }}
-                    >
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            🤝 Лучшие напарники
-                        </h3>
+                <div
+                    style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginBottom: '16px',
+                        boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
+                    }}
+                >
+                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                        🤝 Лучшие напарники
+                    </h3>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             {playerStats.bestPartners.map((partner, index) => (
                                 <div key={partner.name}>
@@ -380,8 +384,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </>
+                </div>
             )}
             </div>
             <Tabs active="players" onChange={handleTabChange} />
