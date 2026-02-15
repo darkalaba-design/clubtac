@@ -65,13 +65,13 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
 
     // Загружаем детальную статистику после загрузки данных игрока
     useEffect(() => {
-        if (!player?.username) return
+        if (!player?.nickname?.trim()) return
 
         const loadStats = async () => {
             setStatsLoading(true)
             try {
                 const params = new URLSearchParams()
-                params.append('username', player.username)
+                params.append('nickname', player.nickname.trim())
 
                 const response = await fetch(`/api/user/stats?${params.toString()}`)
                 if (response.ok) {
@@ -91,7 +91,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         }
 
         loadStats()
-    }, [player?.username])
+    }, [player?.nickname])
 
     if (loading) {
         return (
@@ -155,10 +155,11 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         }
     }
 
-    // Определяем, выиграл ли игрок игру
+    // Определяем, выиграл ли игрок игру (по nickname в играх)
     const didPlayerWin = (game: PlayerStats['recentGames'][0]) => {
-        if (!player?.username) return false
-        const isTeam1 = game.player_1_1 === player.username || game.player_1_2 === player.username
+        const nick = player?.nickname?.trim()
+        if (!nick) return false
+        const isTeam1 = game.player_1_1 === nick || game.player_1_2 === nick
         return isTeam1 ? game.score_1 > game.score_2 : game.score_2 > game.score_1
     }
 
@@ -219,7 +220,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                 {/* Информация */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
-                        {player.username}
+                        {player.nickname?.trim() || '—'}
                     </h2>
                     {player.points != null && (
                         <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
@@ -297,12 +298,13 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             {playerStats.recentGames.map((game, index) => {
                                 const won = didPlayerWin(game)
-                                const isTeam1 = player.username && (game.player_1_1 === player.username || game.player_1_2 === player.username)
+                                const playerNick = player.nickname?.trim()
+                                const isTeam1 = playerNick && (game.player_1_1 === playerNick || game.player_1_2 === playerNick)
                                 const partner = isTeam1
-                                    ? game.player_1_1 === player.username
+                                    ? game.player_1_1 === playerNick
                                         ? game.player_1_2
                                         : game.player_1_1
-                                    : game.player_2_1 === player.username
+                                    : game.player_2_1 === playerNick
                                         ? game.player_2_2
                                         : game.player_2_1
                                 const opponent1 = isTeam1 ? game.player_2_1 : game.player_1_1
@@ -329,7 +331,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                 <div>
-                                                    {player.username} + {partner} <strong>vs</strong> {opponent1} + {opponent2}
+                                                    {(player.nickname?.trim() || '—')} + {partner} <strong>vs</strong> {opponent1} + {opponent2}
                                                 </div>
                                             </div>
                                         </div>

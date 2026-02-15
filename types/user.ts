@@ -3,6 +3,7 @@ export interface User {
     id?: number
     telegram_id: number
     username?: string | null
+    nickname?: string | null
     first_name: string
     last_name?: string | null
     created_at?: string

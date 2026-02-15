@@ -122,7 +122,7 @@ export default function HallOfFame() {
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', color: '#1D1D1B' }}>
-                                            {player.username}
+                                            {player.nickname?.trim() || '—'}
                                         </div>
                                         <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                             Игр: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{player.games_played}</span> | Побед: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{player.wins}</span> | % побед: <span style={{ color: '#2C2C2C', fontWeight: '500' }}>{player.win_rate}%</span>

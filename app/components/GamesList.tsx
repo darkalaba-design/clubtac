@@ -84,15 +84,17 @@ export default function GamesList() {
                     return
                 }
 
-                // Загружаем маппинг имен на ID
+                // Загружаем маппинг nickname → user_id
                 const { data: playersData, error: playersError } = await supabase
                     .from('clubtac_players_hall_of_fame_ranked_v2')
-                    .select('user_id, username')
+                    .select('user_id, nickname')
 
                 if (!playersError && playersData) {
                     const idMap: Record<string, number> = {}
                     playersData.forEach((player: any) => {
-                        idMap[player.username] = player.user_id
+                        if (player.nickname?.trim()) {
+                            idMap[player.nickname.trim()] = player.user_id
+                        }
                     })
                     setPlayerIdMap(idMap)
                 }
@@ -323,23 +325,13 @@ export default function GamesList() {
         }
     }, [eventParticipantsList])
 
-    // Формат: только nickname пользователя (если есть), без telegram_id, first_name и last_name
+    // Формат: только nickname; если нет — имя/фамилия или «Участник #id»
     const formatParticipantDisplay = (p: { user_id: number; first_name?: string | null; last_name?: string | null; username?: string | null; nickname?: string | null }) => {
-        // Если есть nickname — показываем только его
-        if (p.nickname) {
-            return p.nickname
+        if (p.nickname?.trim()) {
+            return p.nickname.trim()
         }
-
-        // Fallback, если nickname нет: сначала username, затем имя/фамилия, затем технический идентификатор
-        if (p.username) {
-            return `@${p.username}`
-        }
-
         const namePart = [p.first_name, p.last_name].filter(Boolean).join(' ').trim()
-        if (namePart) {
-            return namePart
-        }
-
+        if (namePart) return namePart
         return `Участник #${p.user_id}`
     }
 

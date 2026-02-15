@@ -12,6 +12,7 @@ interface UserStats {
         wins: number
         win_rate: number
         points?: number
+        nickname?: string | null
     } | null
     recentGames: Array<{
         game_id: number
@@ -61,8 +62,8 @@ export default function UserProfile() {
                 const params = new URLSearchParams()
                 if (user.telegram_id) {
                     params.append('telegram_id', user.telegram_id.toString())
-                } else if (user.username) {
-                    params.append('username', user.username)
+                } else if (user.nickname) {
+                    params.append('nickname', user.nickname)
                 }
 
                 const response = await fetch(`/api/user/stats?${params.toString()}`)
@@ -191,7 +192,8 @@ export default function UserProfile() {
         )
     }
 
-    const displayName = user.username || user.first_name || 'Пользователь'
+    const userNickname = stats?.stats?.nickname?.trim()
+    const displayName = userNickname || user.first_name || user.last_name || 'Пользователь'
     const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || displayName
 
     // Форматирование даты
@@ -210,10 +212,10 @@ export default function UserProfile() {
         }
     }
 
-    // Определяем, выиграл ли пользователь игру
+    // Определяем, выиграл ли пользователь игру (по nickname в играх)
     const didUserWin = (game: UserStats['recentGames'][0]) => {
-        if (!user.username) return false
-        const isTeam1 = game.player_1_1 === user.username || game.player_1_2 === user.username
+        if (!userNickname) return false
+        const isTeam1 = game.player_1_1 === userNickname || game.player_1_2 === userNickname
         return isTeam1 ? game.score_1 > game.score_2 : game.score_2 > game.score_1
     }
 
@@ -259,9 +261,9 @@ export default function UserProfile() {
                     <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
                         {fullName}
                     </h2>
-                    {user.username && (
+                    {userNickname && (
                         <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>
-                            @{user.username}
+                            {userNickname}
                         </p>
                     )}
                     <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
@@ -353,12 +355,12 @@ export default function UserProfile() {
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             {stats.recentGames.map((game, index) => {
                                 const won = didUserWin(game)
-                                const isTeam1 = user.username && (game.player_1_1 === user.username || game.player_1_2 === user.username)
+                                const isTeam1 = userNickname && (game.player_1_1 === userNickname || game.player_1_2 === userNickname)
                                 const partner = isTeam1
-                                    ? game.player_1_1 === user.username
+                                    ? game.player_1_1 === userNickname
                                         ? game.player_1_2
                                         : game.player_1_1
-                                    : game.player_2_1 === user.username
+                                    : game.player_2_1 === userNickname
                                         ? game.player_2_2
                                         : game.player_2_1
                                 const opponent1 = isTeam1 ? game.player_2_1 : game.player_1_1
@@ -385,7 +387,7 @@ export default function UserProfile() {
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                 <div>
-                                                    Вы + {partner} <strong>vs</strong> {opponent1} + {opponent2}
+                                                    {userNickname} + {partner} <strong>vs</strong> {opponent1} + {opponent2}
                                                 </div>
                                             </div>
                                         </div>

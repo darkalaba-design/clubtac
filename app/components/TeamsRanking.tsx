@@ -119,7 +119,7 @@ export default function TeamsRanking() {
                                                     textDecoration: 'none',
                                                 }}
                                             >
-                                                {team.player_1_username}
+                                                {team.player_1_nickname}
                                             </Link>
                                             <span style={{ margin: '0 4px', color: '#6B6B69' }}>+</span>
                                             <Link
@@ -130,7 +130,7 @@ export default function TeamsRanking() {
                                                     textDecoration: 'none',
                                                 }}
                                             >
-                                                {team.player_2_username}
+                                                {team.player_2_nickname}
                                             </Link>
                                         </div>
                                         <div style={{ fontSize: '12px', color: '#6B6B69' }}>
