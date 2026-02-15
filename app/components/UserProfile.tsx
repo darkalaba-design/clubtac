@@ -135,7 +135,7 @@ export default function UserProfile() {
                         <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold', color: '#6B6B69' }}>
                             —
                         </h2>
-                        <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>@username</p>
+                        <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>—</p>
                         <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
                             <span>Очки: —</span>
                         </div>
@@ -259,11 +259,11 @@ export default function UserProfile() {
                 {/* Информация */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
-                        {fullName}
+                        {userNickname || '—'}
                     </h2>
-                    {userNickname && (
+                    {user.username && (
                         <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>
-                            {userNickname}
+                            @{user.username}
                         </p>
                     )}
                     <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
