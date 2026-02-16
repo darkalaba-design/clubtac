@@ -827,7 +827,7 @@ export default function GamesList() {
                         }}
                     >
                         <div style={{ marginBottom: '12px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', color: '#1D1D1B' }}>
                                 {formatEventDate(event.starts_at)}
                                 {isEventTodayAndNotStarted(event.starts_at) && (
                                     <span style={{
@@ -846,7 +846,7 @@ export default function GamesList() {
                                 )}
                             </div>
                             {event.title && (
-                                <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px', color: '#1D1D1B' }}>
                                     {event.title}
                                 </div>
                             )}
@@ -1382,16 +1382,16 @@ export default function GamesList() {
                             >
                                 <div style={{ flex: 1 }}>
                                     {event && event.starts_at ? (
-                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#1D1D1B' }}>
                                             {formatEventDate(event.starts_at)}
                                         </div>
                                     ) : (
-                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#1D1D1B' }}>
                                             {date}
                                         </div>
                                     )}
                                     {event && event.title && (
-                                        <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>
+                                        <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px', color: '#1D1D1B' }}>
                                             {event.title}
                                         </div>
                                     )}
