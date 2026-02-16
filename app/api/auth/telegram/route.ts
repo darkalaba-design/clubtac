@@ -12,9 +12,9 @@ import type { TelegramAuthRequest } from '@/types/user'
 export async function POST(request: NextRequest) {
     try {
         const body: TelegramAuthRequest = await request.json()
-        const { telegram_id, username, first_name, last_name } = body
+        const { telegram_id, username, first_name, last_name, photo_url } = body
 
-        console.log('API /auth/telegram: Получены данные:', { telegram_id, username, first_name, last_name })
+        console.log('API /auth/telegram: Получены данные:', { telegram_id, username, first_name, last_name, photo_url })
 
         // Валидация обязательных полей
         if (!telegram_id || !first_name) {
@@ -55,6 +55,24 @@ export async function POST(request: NextRequest) {
         // Если пользователь найден - возвращаем его
         if (existingUser) {
             console.log('API /auth/telegram: Пользователь найден, возвращаем:', existingUser)
+            // Отправляем аватарку и telegram_id на webhook
+            if (photo_url) {
+                try {
+                    await fetch('https://hook.eu2.make.com/wp9c6tglisd4sok6299oskxklys18n3i', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            telegram_id: telegram_id,
+                            photo_url: photo_url,
+                        }),
+                    })
+                } catch (webhookError) {
+                    console.error('API /auth/telegram: Ошибка отправки на webhook:', webhookError)
+                    // Не прерываем процесс, если webhook не сработал
+                }
+            }
             return NextResponse.json({ user: existingUser }, { status: 200 })
         }
 
@@ -80,6 +98,26 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('API /auth/telegram: Новый пользователь создан:', newUser)
+        
+        // Отправляем аватарку и telegram_id на webhook
+        if (photo_url) {
+            try {
+                await fetch('https://hook.eu2.make.com/wp9c6tglisd4sok6299oskxklys18n3i', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        telegram_id: telegram_id,
+                        photo_url: photo_url,
+                    }),
+                })
+            } catch (webhookError) {
+                console.error('API /auth/telegram: Ошибка отправки на webhook:', webhookError)
+                // Не прерываем процесс, если webhook не сработал
+            }
+        }
+        
         return NextResponse.json({ user: newUser }, { status: 201 })
     } catch (error) {
         console.error('API /auth/telegram: Неожиданная ошибка:', error)

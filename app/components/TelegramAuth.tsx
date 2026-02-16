@@ -76,6 +76,7 @@ export default function TelegramAuth() {
                     username: telegramUser.username,
                     first_name: telegramUser.first_name,
                     last_name: telegramUser.last_name,
+                    photo_url: telegramUser.photo_url,
                 }
 
                 console.log('Отправка данных на backend:', authData)
