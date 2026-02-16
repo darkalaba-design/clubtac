@@ -59,6 +59,7 @@ export default function GamesList() {
     const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string; paylink?: string | null; created_at?: string | null }>>({})
     const [eventParticipantsCount, setEventParticipantsCount] = useState<Record<string, number>>({})
     const [clubNames, setClubNames] = useState<Record<string, string>>({})
+    /** @deprecated Состояние для зелёных Realtime-попапов; показ отключён (false && в рендере), можно вычистить */
     const [realtimeNotification, setRealtimeNotification] = useState<{
         show: boolean
         message: string
@@ -360,17 +361,14 @@ export default function GamesList() {
                 (payload) => {
                     console.log('Participant status changed via Realtime (all updates):', payload)
 
-                    // Показываем уведомление о получении данных через Realtime
+                    /* Deprecated: Realtime popup disabled
                     setRealtimeNotification({
                         show: true,
                         message: `Realtime получил обновление!`,
                         data: payload
                     })
-
-                    // Автоматически скрываем уведомление через 5 секунд
-                    setTimeout(() => {
-                        setRealtimeNotification(null)
-                    }, 5000)
+                    setTimeout(() => setRealtimeNotification(null), 5000)
+                    */
 
                     // Фильтруем на клиенте - проверяем, что это изменение для текущего пользователя
                     const changedUserId = payload.new.user_id
@@ -407,34 +405,22 @@ export default function GamesList() {
                     console.log('Successfully subscribed to Realtime changes for clubtac_event_participants')
                 } else if (status === 'CHANNEL_ERROR') {
                     console.error('Realtime channel error - check Supabase Realtime settings')
-                    setRealtimeNotification({
-                        show: true,
-                        message: `Ошибка Realtime: ${status}`,
-                        data: { status }
-                    })
-                    setTimeout(() => {
-                        setRealtimeNotification(null)
-                    }, 5000)
+                    /* Deprecated: Realtime popup disabled
+                    setRealtimeNotification({ show: true, message: `Ошибка Realtime: ${status}`, data: { status } })
+                    setTimeout(() => setRealtimeNotification(null), 5000)
+                    */
                 } else if (status === 'TIMED_OUT') {
                     console.error('Realtime subscription timed out')
-                    setRealtimeNotification({
-                        show: true,
-                        message: `Realtime таймаут: ${status}`,
-                        data: { status }
-                    })
-                    setTimeout(() => {
-                        setRealtimeNotification(null)
-                    }, 5000)
+                    /* Deprecated: Realtime popup disabled
+                    setRealtimeNotification({ show: true, message: `Realtime таймаут: ${status}`, data: { status } })
+                    setTimeout(() => setRealtimeNotification(null), 5000)
+                    */
                 } else if (status === 'CLOSED') {
                     console.log('Realtime channel closed')
-                    setRealtimeNotification({
-                        show: true,
-                        message: `Realtime канал закрыт: ${status}`,
-                        data: { status }
-                    })
-                    setTimeout(() => {
-                        setRealtimeNotification(null)
-                    }, 3000)
+                    /* Deprecated: Realtime popup disabled
+                    setRealtimeNotification({ show: true, message: `Realtime канал закрыт: ${status}`, data: { status } })
+                    setTimeout(() => setRealtimeNotification(null), 3000)
+                    */
                 }
             })
 
@@ -1587,8 +1573,8 @@ export default function GamesList() {
 
     return (
         <div>
-            {/* Уведомление о Realtime обновлениях */}
-            {realtimeNotification && realtimeNotification.show && (
+            {/* Deprecated: Realtime popup disabled. Было: зелёные уведомления "Realtime получил обновление", "Ошибка Realtime" и т.п. Включить: убрать false && */}
+            {false && realtimeNotification && realtimeNotification.show && (
                 <div
                     style={{
                         position: 'fixed',
