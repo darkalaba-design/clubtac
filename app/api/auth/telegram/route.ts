@@ -55,8 +55,13 @@ export async function POST(request: NextRequest) {
         // Если пользователь найден - возвращаем его
         if (existingUser) {
             console.log('API /auth/telegram: Пользователь найден, возвращаем:', existingUser)
-            // Отправляем аватарку и telegram_id на webhook
-            if (photo_url) {
+            // Отправляем аватарку и telegram_id на webhook только если userpic отсутствует или отличается
+            const shouldSendWebhook = photo_url && (
+                !existingUser.userpic || // userpic отсутствует
+                existingUser.userpic !== photo_url // userpic отличается от полученного
+            )
+            
+            if (shouldSendWebhook) {
                 try {
                     await fetch('https://hook.eu2.make.com/wp9c6tglisd4sok6299oskxklys18n3i', {
                         method: 'POST',

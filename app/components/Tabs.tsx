@@ -15,16 +15,20 @@ export default function Tabs({
     const { user } = useUser()
     const [photoUrl, setPhotoUrl] = useState<string | null>(null)
 
-    // Получаем фото из Telegram
+    // Получаем фото из базы данных или Telegram
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        // Сначала пробуем получить из user.userpic (из базы данных)
+        if (user?.userpic) {
+            setPhotoUrl(user.userpic)
+        } else if (typeof window !== 'undefined') {
+            // Если в базе нет, используем из Telegram WebApp
             const tg = (window as any).Telegram?.WebApp
             const telegramUser = tg?.initDataUnsafe?.user
             if (telegramUser?.photo_url) {
                 setPhotoUrl(telegramUser.photo_url)
             }
         }
-    }, [])
+    }, [user])
 
     return (
         <div

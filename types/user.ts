@@ -6,6 +6,7 @@ export interface User {
     nickname?: string | null
     first_name: string
     last_name?: string | null
+    userpic?: string | null
     created_at?: string
     updated_at?: string
 }
