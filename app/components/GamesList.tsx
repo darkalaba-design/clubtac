@@ -1574,7 +1574,7 @@ export default function GamesList() {
     return (
         <div>
             {/* Deprecated: Realtime popup disabled. Было: зелёные уведомления "Realtime получил обновление", "Ошибка Realtime" и т.п. Включить: убрать false && */}
-            {false && realtimeNotification && realtimeNotification.show && (
+            {false && realtimeNotification?.show && (
                 <div
                     style={{
                         position: 'fixed',
@@ -1591,9 +1591,9 @@ export default function GamesList() {
                     }}
                 >
                     <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '16px' }}>
-                        🔔 {realtimeNotification.message}
+                        🔔 {realtimeNotification?.message}
                     </div>
-                    {realtimeNotification.data && (
+                    {realtimeNotification?.data && (
                         <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '8px', wordBreak: 'break-word' }}>
                             <details>
                                 <summary style={{ cursor: 'pointer', marginBottom: '4px' }}>Данные</summary>
@@ -1605,7 +1605,7 @@ export default function GamesList() {
                                     overflow: 'auto',
                                     maxHeight: '200px'
                                 }}>
-                                    {JSON.stringify(realtimeNotification.data, null, 2)}
+                                    {JSON.stringify(realtimeNotification?.data, null, 2)}
                                 </pre>
                             </details>
                         </div>
