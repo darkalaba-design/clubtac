@@ -87,7 +87,7 @@ export default function GamesList() {
 
                 // Загружаем маппинг nickname → user_id
                 const { data: playersData, error: playersError } = await supabase
-                    .from('clubtac_players_hall_of_fame_ranked_v2')
+                    .from('clubtac_players_hall_of_fame_v3')
                     .select('user_id, nickname')
 
                 if (!playersError && playersData) {

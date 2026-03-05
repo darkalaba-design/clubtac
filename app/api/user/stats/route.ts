@@ -38,14 +38,14 @@ export async function GET(request: NextRequest) {
             user = userData
             // nickname для фильтрации игр берём из hall_of_fame
             const { data: rankRow } = await supabase
-                .from('clubtac_players_hall_of_fame_ranked_v2')
+                .from('clubtac_players_hall_of_fame_v3')
                 .select('nickname')
                 .eq('user_id', user.id)
                 .single()
             userNickname = rankRow?.nickname?.trim() || null
         } else if (nickname) {
             const { data: rankRow, error: rankError } = await supabase
-                .from('clubtac_players_hall_of_fame_ranked_v2')
+                .from('clubtac_players_hall_of_fame_v3')
                 .select('user_id, nickname')
                 .eq('nickname', nickname.trim())
                 .single()
@@ -70,9 +70,9 @@ export async function GET(request: NextRequest) {
             user = userData
         }
 
-        // Получаем статистику из clubtac_players_hall_of_fame_ranked_v2 по user_id
+        // Получаем статистику из clubtac_players_hall_of_fame_v3 по user_id
         const { data: stats, error: statsError } = await supabase
-            .from('clubtac_players_hall_of_fame_ranked_v2')
+            .from('clubtac_players_hall_of_fame_v3')
             .select('*')
             .eq('user_id', user.id)
             .single()

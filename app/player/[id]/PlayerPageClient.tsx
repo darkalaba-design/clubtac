@@ -37,7 +37,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
             try {
                 const supabase = createClient()
                 const { data, error: queryError } = await supabase
-                    .from('clubtac_players_hall_of_fame_ranked_v2')
+                    .from('clubtac_players_hall_of_fame_v3')
                     .select('*')
                     .eq('user_id', playerId)
                     .single()

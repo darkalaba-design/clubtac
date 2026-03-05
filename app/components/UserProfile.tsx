@@ -223,6 +223,10 @@ export default function UserProfile() {
         return isTeam1 ? game.score_1 > game.score_2 : game.score_2 > game.score_1
     }
 
+    // Очки из clubtac_players_hall_of_fame_v3 (поле может быть points / total_points / rating)
+    const s = stats?.stats as { points?: number; total_points?: number; rating?: number } | undefined
+    const pointsValue = s && (s.points ?? s.total_points ?? s.rating)
+
     return (
         <div>
             {/* Компактный блок с информацией о пользователе */}
@@ -272,9 +276,7 @@ export default function UserProfile() {
                     )}
                     <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
                         <span>TG: {user.telegram_id}</span>
-                        {stats?.stats?.points != null && (
-                            <span>Очки: {Math.round(stats.stats.points)}</span>
-                        )}
+                        <span>Очки: {pointsValue != null ? Math.round(Number(pointsValue)) : '—'}</span>
                     </div>
                 </div>
             </div>
