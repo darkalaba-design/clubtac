@@ -223,9 +223,24 @@ export default function UserProfile() {
         return isTeam1 ? game.score_1 > game.score_2 : game.score_2 > game.score_1
     }
 
-    // Очки из clubtac_players_hall_of_fame_v3 (поле может быть points / total_points / rating)
-    const s = stats?.stats as { points?: number; total_points?: number; rating?: number } | undefined
+    // Показатели из clubtac_players_hall_of_fame_v3 (названия полей могли измениться)
+    const s = stats?.stats as {
+        points?: number
+        total_points?: number
+        rating?: number
+        games_played?: number
+        games?: number
+        total_games?: number
+        wins?: number
+        total_wins?: number
+        win_rate?: number
+        winrate?: number
+        win_percent?: number
+    } | undefined
     const pointsValue = s && (s.points ?? s.total_points ?? s.rating)
+    const gamesPlayedValue = s && (s.games_played ?? s.games ?? s.total_games)
+    const winsValue = s && (s.wins ?? s.total_wins)
+    const winRateValue = s && (s.win_rate ?? s.winrate ?? s.win_percent)
 
     return (
         <div>
@@ -310,19 +325,21 @@ export default function UserProfile() {
                                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{stats.stats.place}</div>
                             </div>
                             <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>{stats.stats.games_played}</div>
+                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
+                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                                {gamesPlayedValue != null ? gamesPlayedValue : '—'}
+                            </div>
                             </div>
                             <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
                                 <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
                                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                    {stats.stats.wins}
+                                    {winsValue != null ? winsValue : '—'}
                                 </div>
                             </div>
                             <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
                                 <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
                                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                    {stats.stats.win_rate}%
+                                    {winRateValue != null ? `${winRateValue}%` : '—'}
                                 </div>
                             </div>
                         </div>

@@ -231,7 +231,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
             </div>
 
             {/* Статистика */}
-            <div
+                <div
                 style={{
                     backgroundColor: '#FFFEF7',
                     borderRadius: '12px',
@@ -242,30 +242,51 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                 <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
                     📊 Статистика
                 </h3>
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(2, 1fr)',
-                        gap: '12px',
-                    }}
-                >
-                    <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{player.place}</div>
-                    </div>
-                    <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>{player.games_played}</div>
-                    </div>
-                    <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>{player.wins}</div>
-                    </div>
-                    <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>{player.win_rate}%</div>
-                    </div>
-                </div>
+                {(() => {
+                    const gamesPlayed =
+                        player.games_played ??
+                        (player as any).games ??
+                        (player as any).total_games
+                    const wins =
+                        player.wins ?? (player as any).total_wins
+                    const winRate =
+                        player.win_rate ??
+                        (player as any).winrate ??
+                        (player as any).win_percent
+
+                    return (
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(2, 1fr)',
+                                gap: '12px',
+                            }}
+                        >
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{player.place}</div>
+                            </div>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                                    {gamesPlayed != null ? gamesPlayed : '—'}
+                                </div>
+                            </div>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                                    {wins != null ? wins : '—'}
+                                </div>
+                            </div>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                                    {winRate != null ? `${winRate}%` : '—'}
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })()}
             </div>
 
             {/* Последние игры */}

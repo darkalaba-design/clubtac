@@ -124,12 +124,48 @@ export default function HallOfFame() {
                                         <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', color: '#1D1D1B' }}>
                                             {player.nickname?.trim() || '—'}
                                         </div>
-                                        <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                            Игр: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{player.games_played}</span> | Побед: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{player.wins}</span> | % побед: <span style={{ color: '#2C2C2C', fontWeight: '500' }}>{player.win_rate}%</span>
-                                            {player.points != null && (
-                                                <> | Очки: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{Math.round(player.points)}</span></>
-                                            )}
-                                        </div>
+                                        {(() => {
+                                            const gamesPlayed =
+                                                player.games_played ??
+                                                (player as any).games ??
+                                                (player as any).total_games
+                                            const wins =
+                                            player.wins ?? (player as any).total_wins
+                                            const winRate =
+                                                player.win_rate ??
+                                                (player as any).winrate ??
+                                                (player as any).win_percent
+                                            const points =
+                                                player.points ??
+                                                (player as any).total_points ??
+                                                (player as any).rating
+
+                                            return (
+                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                    Игр:{' '}
+                                                    <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
+                                                        {gamesPlayed != null ? gamesPlayed : '—'}
+                                                    </span>{' '}
+                                                    | Побед:{' '}
+                                                    <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
+                                                        {wins != null ? wins : '—'}
+                                                    </span>{' '}
+                                                    | % побед:{' '}
+                                                    <span style={{ color: '#2C2C2C', fontWeight: '500' }}>
+                                                        {winRate != null ? `${winRate}%` : '—'}
+                                                    </span>
+                                                    {points != null && (
+                                                        <>
+                                                            {' '}
+                                                            | Очки:{' '}
+                                                            <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
+                                                                {Math.round(Number(points))}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
                                     </div>
                                 </div>
                             </div>
