@@ -72,7 +72,7 @@ export default function HallOfFame() {
 
     return (
         <div>
-            <h3 style={{ margin: '0 12px 12px', fontSize: '18px', fontWeight: 'bold', color: '#1D1D1B' }}>
+            <h3 style={{ margin: '0 12px 8px', fontSize: '16px', fontWeight: 'bold', color: '#1D1D1B' }}>
                 🏆 Рейтинг игроков
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -92,7 +92,7 @@ export default function HallOfFame() {
                             <div
                                 style={{
                                     backgroundColor: '#FFFFFF',
-                                    padding: '16px 12px',
+                                    padding: '8px 12px',
                                     transition: 'background-color 0.2s',
                                 }}
                                 onMouseEnter={(e) => {
@@ -102,26 +102,26 @@ export default function HallOfFame() {
                                     e.currentTarget.style.backgroundColor = '#FFFFFF'
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <div
                                         style={{
-                                            width: '40px',
-                                            height: '40px',
+                                            width: '32px',
+                                            height: '32px',
                                             borderRadius: '50%',
                                             backgroundColor: '#FFE950',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             fontWeight: 'bold',
-                                            fontSize: '16px',
+                                            fontSize: '13px',
                                             flexShrink: 0,
                                             color: '#1D1D1B',
                                         }}
                                     >
                                         #{player.place}
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', color: '#1D1D1B' }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '2px', color: '#1D1D1B' }}>
                                             {player.nickname?.trim() || '—'}
                                         </div>
                                         {(() => {
@@ -141,7 +141,7 @@ export default function HallOfFame() {
                                                 (player as any).rating
 
                                             return (
-                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                <div style={{ fontSize: '11px', color: '#6B6B69' }}>
                                                     Игр:{' '}
                                                     <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
                                                         {gamesPlayed != null ? gamesPlayed : '—'}
