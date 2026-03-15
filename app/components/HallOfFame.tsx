@@ -25,7 +25,15 @@ export default function HallOfFame() {
                     return
                 }
 
-                setPlayers(data || [])
+                const filtered = (data || []).filter((player: any) => {
+                    const gamesPlayed =
+                        player.games_played ??
+                        (player as any).games ??
+                        (player as any).total_games
+                    return gamesPlayed && Number(gamesPlayed) > 0
+                })
+
+                setPlayers(filtered)
             } catch (err) {
                 console.error('Error loading players:', err)
                 setError(err instanceof Error ? err.message : 'Unknown error')
@@ -92,7 +100,7 @@ export default function HallOfFame() {
                             <div
                                 style={{
                                     backgroundColor: '#FFFFFF',
-                                    padding: '8px 12px',
+                                    padding: '4px 12px',
                                     transition: 'background-color 0.2s',
                                 }}
                                 onMouseEnter={(e) => {
@@ -107,7 +115,7 @@ export default function HallOfFame() {
                                         style={{
                                             width: '32px',
                                             height: '32px',
-                                            borderRadius: '50%',
+                                            borderRadius: '8px',
                                             backgroundColor: '#FFE950',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -121,9 +129,6 @@ export default function HallOfFame() {
                                         #{player.place}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '2px', color: '#1D1D1B' }}>
-                                            {player.nickname?.trim() || '—'}
-                                        </div>
                                         {(() => {
                                             const gamesPlayed =
                                                 player.games_played ??
@@ -131,38 +136,57 @@ export default function HallOfFame() {
                                                 (player as any).total_games
                                             const wins =
                                             player.wins ?? (player as any).total_wins
-                                            const winRate =
-                                                player.win_rate ??
-                                                (player as any).winrate ??
-                                                (player as any).win_percent
                                             const points =
                                                 player.points ??
                                                 (player as any).total_points ??
                                                 (player as any).rating
 
                                             return (
-                                                <div style={{ fontSize: '11px', color: '#6B6B69' }}>
-                                                    Игр:{' '}
-                                                    <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
-                                                        {gamesPlayed != null ? gamesPlayed : '—'}
-                                                    </span>{' '}
-                                                    | Побед:{' '}
-                                                    <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
-                                                        {wins != null ? wins : '—'}
-                                                    </span>{' '}
-                                                    | % побед:{' '}
-                                                    <span style={{ color: '#2C2C2C', fontWeight: '500' }}>
-                                                        {winRate != null ? `${winRate}%` : '—'}
-                                                    </span>
-                                                    {points != null && (
-                                                        <>
-                                                            {' '}
-                                                            | Очки:{' '}
-                                                            <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
-                                                                {Math.round(Number(points))}
-                                                            </span>
-                                                        </>
-                                                    )}
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        gap: '8px',
+                                                    }}
+                                                >
+                                                    <div
+                                                        style={{
+                                                            fontSize: '14px',
+                                                            fontWeight: 'bold',
+                                                            color: '#1D1D1B',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap',
+                                                        }}
+                                                    >
+                                                        {player.nickname?.trim() || '—'}
+                                                    </div>
+                                                    <div
+                                                        style={{
+                                                            fontSize: '11px',
+                                                            color: '#6B6B69',
+                                                            textAlign: 'right',
+                                                            whiteSpace: 'nowrap',
+                                                        }}
+                                                    >
+                                                        Побед:{' '}
+                                                        <span style={{ color: '#1D1D1B', fontWeight: 700 }}>
+                                                            {wins != null ? wins : '—'}
+                                                        </span>{' '}
+                                                        из{' '}
+                                                        <span style={{ color: '#6B6B69', fontWeight: 400 }}>
+                                                            {gamesPlayed != null ? gamesPlayed : '—'}
+                                                        </span>
+                                                        {points != null && (
+                                                            <>
+                                                                {'. '}Очки:{' '}
+                                                                <span style={{ color: '#1D1D1B', fontWeight: 700 }}>
+                                                                    {Math.round(Number(points))}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )
                                         })()}
