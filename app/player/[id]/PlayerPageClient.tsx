@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Tabs from '../../components/Tabs'
@@ -31,6 +32,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
     const [error, setError] = useState<string | null>(null)
     const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
+    const [playerIdMap, setPlayerIdMap] = useState<Record<string, number>>({})
 
     useEffect(() => {
         const load = async () => {
@@ -62,6 +64,54 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
             load()
         }
     }, [playerId])
+
+    // Загружаем маппинг nickname → user_id для игроков из последних игр
+    useEffect(() => {
+        const loadIds = async () => {
+            if (!playerStats?.recentGames || playerStats.recentGames.length === 0) return
+
+            const nicknames = new Set<string>()
+            const currentNick = player?.nickname?.trim()
+
+            if (currentNick) {
+                nicknames.add(currentNick)
+            }
+
+            playerStats.recentGames.forEach((game) => {
+                ;[game.player_1_1, game.player_1_2, game.player_2_1, game.player_2_2].forEach((name) => {
+                    const n = name?.trim()
+                    if (n) {
+                        nicknames.add(n)
+                    }
+                })
+            })
+
+            if (nicknames.size === 0) return
+
+            try {
+                const supabase = createClient()
+                const { data, error } = await supabase
+                    .from('clubtac_players_hall_of_fame_v3')
+                    .select('user_id, nickname')
+                    .in('nickname', Array.from(nicknames))
+
+                if (!error && data) {
+                    const map: Record<string, number> = {}
+                    data.forEach((row: any) => {
+                        const n = row.nickname?.trim()
+                        if (n) {
+                            map[n] = row.user_id
+                        }
+                    })
+                    setPlayerIdMap(map)
+                }
+            } catch (err) {
+                console.error('Error loading playerIdMap for player page:', err)
+            }
+        }
+
+        loadIds()
+    }, [playerStats?.recentGames, player?.nickname])
 
     // Загружаем детальную статистику после загрузки данных игрока
     useEffect(() => {
@@ -163,10 +213,34 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         return isTeam1 ? game.score_1 > game.score_2 : game.score_2 > game.score_1
     }
 
+    const renderPlayerName = (name: string | null | undefined) => {
+        const n = name?.trim()
+        if (!n) return '—'
+        const id = playerIdMap[n]
+        if (!id) return n
+        return (
+            <Link
+                href={`/player/${id}`}
+                className="link-player"
+                style={{
+                    color: '#1D1D1B',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                }}
+                onClick={(e) => {
+                    // Не переписываем returnUrl при переходах между страницами игроков
+                    e.stopPropagation()
+                }}
+            >
+                {n}
+            </Link>
+        )
+    }
+
     return (
         <>
             <div style={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: '81px' }}>
-            {/* Кнопка назад */}
+            {/* Кнопка назад — обычный шаг назад по истории */}
             <button
                 onClick={() => router.back()}
                 style={{
@@ -350,11 +424,13 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                                 </div>
                                                 <div style={{ fontSize: '12px', color: '#6B6B69' }}>{formatDate(game.created_at)}</div>
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                <div>
-                                                    {(player.nickname?.trim() || '—')} + {partner} <strong>vs</strong> {opponent1} + {opponent2}
+                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                    <div>
+                                                        {renderPlayerName(player.nickname)} + {renderPlayerName(partner)}{' '}
+                                                        <strong>vs</strong> {renderPlayerName(opponent1)} +{' '}
+                                                        {renderPlayerName(opponent2)}
+                                                    </div>
                                                 </div>
-                                            </div>
                                         </div>
                                     </div>
                                 )

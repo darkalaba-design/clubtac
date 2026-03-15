@@ -88,15 +88,15 @@ export default function TeamsRanking() {
                             <div
                                 style={{
                                     backgroundColor: '#FFFFFF',
-                                    padding: '16px 12px',
+                                    padding: '8px 12px',
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <div
                                         style={{
                                             width: '40px',
                                             height: '40px',
-                                            borderRadius: '50%',
+                                            borderRadius: '8px',
                                             backgroundColor: '#FFE950',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -110,7 +110,7 @@ export default function TeamsRanking() {
                                         #{team.rank}
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>
+                                        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '2px' }}>
                                             <Link
                                                 href={`/player/${team.player_1_id}`}
                                                 className="link-player"

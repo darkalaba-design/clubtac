@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useUser } from '../contexts/UserContext'
 
@@ -35,7 +36,11 @@ type GamesTab = 'announcements' | 'past'
 
 export default function GamesList() {
     const { user } = useUser()
-    const [activeTab, setActiveTab] = useState<GamesTab>('announcements')
+    const searchParams = useSearchParams()
+    const gamesTabFromUrl = (searchParams.get('gamesTab') as GamesTab | null)
+    const [activeTab, setActiveTab] = useState<GamesTab>(
+        gamesTabFromUrl === 'past' ? 'past' : 'announcements'
+    )
     const [games, setGames] = useState<Game[]>([])
     const [events, setEvents] = useState<Event[]>([])
     const [pastEvents, setPastEvents] = useState<Event[]>([])
@@ -65,6 +70,15 @@ export default function GamesList() {
         message: string
         data?: any
     } | null>(null)
+
+    // Синхронизируем активный таб с URL (gamesTab) при изменении searchParams
+    useEffect(() => {
+        if (gamesTabFromUrl === 'past') {
+            setActiveTab('past')
+        } else if (gamesTabFromUrl === 'announcements') {
+            setActiveTab('announcements')
+        }
+    }, [gamesTabFromUrl])
 
     // Загружаем прошедшие игры
     useEffect(() => {
@@ -907,7 +921,10 @@ export default function GamesList() {
                                         <ul style={{ margin: 0, paddingLeft: '0px', fontSize: '14px', color: '#1D1D1B' }}>
                                             {eventParticipantsList[event.id].map((p) => (
                                                 <li key={p.user_id} style={{ marginBottom: '4px' }}>
-                                                    <Link href={`/player/${p.user_id}`} style={{ color: '#1B5E20', textDecoration: 'none', fontWeight: '500' }}>
+                                                    <Link
+                                                        href={`/player/${p.user_id}`}
+                                                        style={{ color: '#1B5E20', textDecoration: 'none', fontWeight: '500' }}
+                                                    >
                                                         {formatParticipantDisplay(p)}
                                                     </Link>
                                                 </li>
@@ -1647,8 +1664,8 @@ export default function GamesList() {
                     marginBottom: '16px',
                 }}
             >
-                <button
-                    onClick={() => setActiveTab('announcements')}
+                    <button
+                        onClick={() => setActiveTab('announcements')}
                     style={{
                         flex: 1,
                         padding: '12px',
@@ -1664,7 +1681,7 @@ export default function GamesList() {
                 >
                     Анонсы
                 </button>
-                <button
+                    <button
                     onClick={() => setActiveTab('past')}
                     style={{
                         flex: 1,
