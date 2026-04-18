@@ -237,7 +237,9 @@ export default function UserProfile() {
     // Определяем, выиграл ли пользователь игру (по nickname в играх)
     const didUserWin = (game: UserStats['recentGames'][0]) => {
         if (!userNickname) return false
-        const isTeam1 = game.player_1_1 === userNickname || game.player_1_2 === userNickname
+        const n = (s: string | undefined | null) => (s ?? '').trim()
+        const un = userNickname
+        const isTeam1 = n(game.player_1_1) === un || n(game.player_1_2) === un
         return isTeam1 ? game.score_1 > game.score_2 : game.score_2 > game.score_1
     }
 
@@ -404,6 +406,123 @@ export default function UserProfile() {
                 </>
             )}
 
+            {/* Игры и напарники сразу под статистикой; пустой ответ API не скрывает блоки (раньше казалось, что в Mini App их «нет»). */}
+            {!statsLoading && (
+                <>
+                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                            🎮 Последние игры
+                        </h3>
+                        {(stats?.recentGames?.length ?? 0) > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                {stats!.recentGames!.map((game, index) => {
+                                    const won = didUserWin(game)
+                                    const n = (s: string | undefined | null) => (s ?? '').trim()
+                                    const un = userNickname ?? ''
+                                    const isTeam1 =
+                                        !!un && (n(game.player_1_1) === un || n(game.player_1_2) === un)
+                                    const partner = isTeam1
+                                        ? n(game.player_1_1) === un
+                                            ? game.player_1_2
+                                            : game.player_1_1
+                                        : n(game.player_2_1) === un
+                                          ? game.player_2_2
+                                          : game.player_2_1
+                                    const opponent1 = isTeam1 ? game.player_2_1 : game.player_1_1
+                                    const opponent2 = isTeam1 ? game.player_2_2 : game.player_1_2
+
+                                    return (
+                                        <div key={game.game_id}>
+                                            {index > 0 && (
+                                                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                                            )}
+                                            <div
+                                                style={{
+                                                    backgroundColor: '#FFFFFF',
+                                                    padding: '12px 0',
+                                                    borderLeft: `4px solid ${won ? '#1B5E20' : '#B71C1C'}`,
+                                                    paddingLeft: '12px',
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        marginBottom: '8px',
+                                                    }}
+                                                >
+                                                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                                                        {won ? '✅ Победа' : '❌ Поражение'} {game.score_1} :{' '}
+                                                        {game.score_2}
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                        {formatDate(game.created_at)}
+                                                    </div>
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                    <div>
+                                                        {userNickname} + {partner}{' '}
+                                                        <strong>vs</strong> {opponent1} + {opponent2}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ) : (
+                            <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
+                        )}
+                    </div>
+
+                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                            🤝 Лучшие напарники
+                        </h3>
+                        {(stats?.bestPartners?.length ?? 0) > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                {stats!.bestPartners!.map((partner, index) => (
+                                    <div key={partner.name}>
+                                        {index > 0 && (
+                                            <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                                        )}
+                                        <div
+                                            style={{
+                                                backgroundColor: '#FFFFFF',
+                                                padding: '12px 0',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                            }}
+                                        >
+                                            <div>
+                                                <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                                                    {index === 0 && '🥇'} {index === 1 && '🥈'} {index === 2 && '🥉'}{' '}
+                                                    {partner.name}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                    {partner.games} игр, {partner.wins} побед
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2C2C2C' }}>
+                                                {partner.winRate}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>
+                                Нет данных. Список появляется при не менее 3 совместных играх с одним напарником.
+                            </p>
+                        )}
+                    </div>
+                </>
+            )}
+
             {/* Реферальная программа — после статистики, заметная карточка */}
             <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
             <div
@@ -496,113 +615,6 @@ export default function UserProfile() {
                     </div>
                 )}
             </div>
-
-            {/* Последние игры */}
-            {stats?.recentGames && stats.recentGames.length > 0 && (
-                <>
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div
-                        style={{
-                            backgroundColor: '#FFFFFF',
-                            padding: '16px 12px',
-                        }}
-                    >
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            🎮 Последние игры
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            {stats.recentGames.map((game, index) => {
-                                const won = didUserWin(game)
-                                const isTeam1 = userNickname && (game.player_1_1 === userNickname || game.player_1_2 === userNickname)
-                                const partner = isTeam1
-                                    ? game.player_1_1 === userNickname
-                                        ? game.player_1_2
-                                        : game.player_1_1
-                                    : game.player_2_1 === userNickname
-                                        ? game.player_2_2
-                                        : game.player_2_1
-                                const opponent1 = isTeam1 ? game.player_2_1 : game.player_1_1
-                                const opponent2 = isTeam1 ? game.player_2_2 : game.player_1_2
-
-                                return (
-                                    <div key={game.game_id}>
-                                        {index > 0 && (
-                                            <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                                        )}
-                                        <div
-                                            style={{
-                                                backgroundColor: '#FFFFFF',
-                                                padding: '12px 0',
-                                                borderLeft: `4px solid ${won ? '#1B5E20' : '#B71C1C'}`,
-                                                paddingLeft: '12px',
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                                <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                                                    {won ? '✅ Победа' : '❌ Поражение'} {game.score_1} : {game.score_2}
-                                                </div>
-                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>{formatDate(game.created_at)}</div>
-                                            </div>
-                                            <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                <div>
-                                                    {userNickname} + {partner} <strong>vs</strong> {opponent1} + {opponent2}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
-                </>
-            )}
-
-            {/* Лучшие напарники */}
-            {stats?.bestPartners && stats.bestPartners.length > 0 && (
-                <>
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div
-                        style={{
-                            backgroundColor: '#FFFFFF',
-                            padding: '16px 12px',
-                        }}
-                    >
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            🤝 Лучшие напарники
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            {stats.bestPartners.map((partner, index) => (
-                                <div key={partner.name}>
-                                    {index > 0 && (
-                                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                                    )}
-                                    <div
-                                        style={{
-                                            backgroundColor: '#FFFFFF',
-                                            padding: '12px 0',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        <div>
-                                            <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                                                {index === 0 && '🥇'} {index === 1 && '🥈'} {index === 2 && '🥉'} {partner.name}
-                                            </div>
-                                            <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                {partner.games} игр, {partner.wins} побед
-                                            </div>
-                                        </div>
-                                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2C2C2C' }}>
-                                            {partner.winRate}%
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </>
-            )}
         </div>
     )
 }
