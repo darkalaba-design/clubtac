@@ -100,7 +100,10 @@ export default function UserProfile() {
         }
 
         loadStats()
-    }, [user, setUser])
+        // Не зависеть от целого `user`: после ответа /api/user/stats вызывается
+        // setUser(data.user) — новый объект по ссылке, иначе эффект зацикливается
+        // и «Загрузка статистики» не исчезает.
+    }, [user?.id, user?.telegram_id, user?.nickname, setUser])
 
     if (loading) {
         return (
