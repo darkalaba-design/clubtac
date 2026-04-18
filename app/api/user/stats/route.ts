@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
         const supabase = createClient()
 
         let user: any = null
+        /** Ник в games_summary должен совпадать с этой строкой (как в hall_of_fame / профиле) */
         let userNickname: string | null = null
 
         if (telegramId) {
@@ -36,13 +37,6 @@ export async function GET(request: NextRequest) {
                 )
             }
             user = userData
-            // nickname для фильтрации игр берём из hall_of_fame
-            const { data: rankRow } = await supabase
-                .from('clubtac_players_hall_of_fame_v3')
-                .select('nickname')
-                .eq('user_id', user.id)
-                .single()
-            userNickname = rankRow?.nickname?.trim() || null
         } else if (nickname) {
             const { data: rankRow, error: rankError } = await supabase
                 .from('clubtac_players_hall_of_fame_v3')
@@ -77,6 +71,20 @@ export async function GET(request: NextRequest) {
             .eq('user_id', user.id)
             .single()
 
+        if (!userNickname) {
+            const fromHall = (stats as { nickname?: string | null } | null)?.nickname?.trim()
+            const fromUser = user?.nickname?.trim()
+            userNickname = fromHall || fromUser || null
+        }
+
+        const cellNick = (v: string | null | undefined) => (v ?? '').trim()
+        const rowHasPlayer = (game: Record<string, unknown>) =>
+            !!userNickname &&
+            (cellNick(game.player_1_1 as string) === userNickname ||
+                cellNick(game.player_1_2 as string) === userNickname ||
+                cellNick(game.player_2_1 as string) === userNickname ||
+                cellNick(game.player_2_2 as string) === userNickname)
+
         // Получаем последние игры пользователя (до 10)
         const { data: allGames, error: gamesError } = await supabase
             .from('games_summary')
@@ -86,16 +94,7 @@ export async function GET(request: NextRequest) {
 
         let recentGames: any[] = []
         if (!gamesError && allGames && userNickname) {
-            recentGames = allGames
-                .filter((game) => {
-                    return (
-                        game.player_1_1 === userNickname ||
-                        game.player_1_2 === userNickname ||
-                        game.player_2_1 === userNickname ||
-                        game.player_2_2 === userNickname
-                    )
-                })
-                .slice(0, 10)
+            recentGames = allGames.filter(rowHasPlayer).slice(0, 10)
         }
 
         let bestPartners: any[] = []
@@ -106,18 +105,18 @@ export async function GET(request: NextRequest) {
                 let isPlayer1 = false
                 let partner = null
 
-                if (game.player_1_1 === userNickname) {
+                if (cellNick(game.player_1_1) === userNickname) {
                     isPlayer1 = true
-                    partner = game.player_1_2
-                } else if (game.player_1_2 === userNickname) {
+                    partner = cellNick(game.player_1_2)
+                } else if (cellNick(game.player_1_2) === userNickname) {
                     isPlayer1 = true
-                    partner = game.player_1_1
-                } else if (game.player_2_1 === userNickname) {
+                    partner = cellNick(game.player_1_1)
+                } else if (cellNick(game.player_2_1) === userNickname) {
                     isPlayer1 = false
-                    partner = game.player_2_2
-                } else if (game.player_2_2 === userNickname) {
+                    partner = cellNick(game.player_2_2)
+                } else if (cellNick(game.player_2_2) === userNickname) {
                     isPlayer1 = false
-                    partner = game.player_2_1
+                    partner = cellNick(game.player_2_1)
                 }
 
                 if (partner) {
