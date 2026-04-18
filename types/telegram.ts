@@ -12,6 +12,8 @@ export interface TelegramUser {
 export interface TelegramWebApp {
     initDataUnsafe: {
         user?: TelegramUser
+        /** Параметр из ссылки t.me/bot?startapp=VALUE */
+        start_param?: string
     }
     ready: () => void
     expand: () => void

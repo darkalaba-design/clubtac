@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useUser } from '../contexts/UserContext'
 import type { User } from '@/types/user'
 
@@ -30,16 +31,27 @@ interface UserStats {
         wins: number
         winRate: number
     }>
+    referralLink?: string | null
+    invitedCount?: number
+    inviter?: {
+        id: number
+        first_name: string
+        last_name?: string | null
+        nickname?: string | null
+        username?: string | null
+        telegram_id: number
+    } | null
 }
 
 /**
  * Компонент для отображения профиля залогиненного пользователя
  */
 export default function UserProfile() {
-    const { user, loading } = useUser()
+    const { user, loading, setUser } = useUser()
     const [stats, setStats] = useState<UserStats | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
     const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+    const [copyDone, setCopyDone] = useState(false)
 
     // Получаем фото из базы данных или Telegram
     useEffect(() => {
@@ -74,6 +86,9 @@ export default function UserProfile() {
                 if (response.ok) {
                     const data = await response.json()
                     setStats(data)
+                    if (data.user) {
+                        setUser(data.user as User)
+                    }
                 } else {
                     console.error('Ошибка загрузки статистики:', await response.text())
                 }
@@ -85,7 +100,7 @@ export default function UserProfile() {
         }
 
         loadStats()
-    }, [user])
+    }, [user, setUser])
 
     if (loading) {
         return (
@@ -242,6 +257,30 @@ export default function UserProfile() {
     const winsValue = s && (s.wins ?? s.total_wins)
     const winRateValue = s && (s.win_rate ?? s.winrate ?? s.win_percent)
 
+    const botUsername =
+        typeof process !== 'undefined'
+            ? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME?.replace(/^@/, '')?.trim() || ''
+            : ''
+    const refUser = (stats?.user as User | undefined) ?? user ?? undefined
+    const referralShareLink =
+        stats?.referralLink ??
+        (botUsername && refUser?.referral_code
+            ? `https://t.me/${botUsername}?startapp=${encodeURIComponent(refUser.referral_code)}`
+            : null)
+    const invitedTotal = stats && typeof stats.invitedCount === 'number' ? stats.invitedCount : null
+    const inviterRow = stats?.inviter
+
+    const handleCopyReferral = async () => {
+        if (!referralShareLink) return
+        try {
+            await navigator.clipboard.writeText(referralShareLink)
+            setCopyDone(true)
+            setTimeout(() => setCopyDone(false), 2000)
+        } catch {
+            setCopyDone(false)
+        }
+    }
+
     return (
         <div>
             {/* Компактный блок с информацией о пользователе */}
@@ -325,10 +364,10 @@ export default function UserProfile() {
                                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{stats.stats.place}</div>
                             </div>
                             <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                {gamesPlayedValue != null ? gamesPlayedValue : '—'}
-                            </div>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                                    {gamesPlayedValue != null ? gamesPlayedValue : '—'}
+                                </div>
                             </div>
                             <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
                                 <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
@@ -361,6 +400,99 @@ export default function UserProfile() {
                     </div>
                 </>
             )}
+
+            {/* Реферальная программа — после статистики, заметная карточка */}
+            <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+            <div
+                id="referral-block"
+                style={{
+                    margin: '12px',
+                    padding: '16px 14px',
+                    backgroundColor: '#FFF9E6',
+                    borderRadius: '12px',
+                    border: '2px solid #FFDF00',
+                    boxShadow: '0 2px 8px rgba(29,29,27,0.06)',
+                }}
+            >
+                <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '18px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                    🔗 Пригласить друзей
+                </h3>
+                {!botUsername && (
+                    <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
+                        Добавьте в окружение переменную{' '}
+                        <code style={{ fontSize: '12px' }}>NEXT_PUBLIC_TELEGRAM_BOT_USERNAME</code> (имя бота без @) и
+                        пересоберите приложение — без этого ссылку не собрать.
+                    </p>
+                )}
+                {botUsername && !refUser?.referral_code && !statsLoading && (
+                    <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
+                        Реферальный код появится после миграции БД и повторного входа. Закройте Mini App и откройте снова.
+                    </p>
+                )}
+                {referralShareLink && (
+                    <>
+                        <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#6B6B69' }}>Ваша ссылка</p>
+                        <div
+                            style={{
+                                fontSize: '12px',
+                                wordBreak: 'break-all',
+                                color: '#1D1D1B',
+                                marginBottom: '8px',
+                                padding: '8px',
+                                backgroundColor: '#FFFFFF',
+                                borderRadius: '6px',
+                                border: '1px solid #EBE8E0',
+                            }}
+                        >
+                            {referralShareLink}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleCopyReferral}
+                            style={{
+                                padding: '8px 14px',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                border: 'none',
+                                borderRadius: '8px',
+                                backgroundColor: '#FFDF00',
+                                color: '#1D1D1B',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            {copyDone ? 'Скопировано' : 'Копировать ссылку'}
+                        </button>
+                    </>
+                )}
+                <p style={{ margin: '12px 0 0', fontSize: '14px', color: '#1D1D1B' }}>
+                    Приглашено:{' '}
+                    <strong>{invitedTotal !== null ? invitedTotal : statsLoading ? '…' : '—'}</strong>
+                </p>
+                {inviterRow && (
+                    <div style={{ marginTop: '12px' }}>
+                        <p style={{ margin: '0 0 6px', fontSize: '13px', color: '#6B6B69' }}>Вас пригласил</p>
+                        <Link
+                            href={`/player/${inviterRow.id}`}
+                            style={{
+                                fontSize: '15px',
+                                fontWeight: 'bold',
+                                color: '#1B5E20',
+                                textDecoration: 'none',
+                            }}
+                        >
+                            {inviterRow.nickname?.trim() ||
+                                [inviterRow.first_name, inviterRow.last_name].filter(Boolean).join(' ') ||
+                                inviterRow.username ||
+                                `Игрок #${inviterRow.id}`}
+                        </Link>
+                        {inviterRow.username && (
+                            <span style={{ fontSize: '13px', color: '#6B6B69', marginLeft: '8px' }}>
+                                @{inviterRow.username}
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* Последние игры */}
             {stats?.recentGames && stats.recentGames.length > 0 && (

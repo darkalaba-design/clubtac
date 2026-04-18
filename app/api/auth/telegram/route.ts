@@ -1,10 +1,20 @@
+import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/api'
 import type { TelegramAuthRequest } from '@/types/user'
 
+async function generateUniqueReferralCode(supabase: ReturnType<typeof createClient>): Promise<string> {
+    for (let i = 0; i < 30; i++) {
+        const candidate = randomBytes(5).toString('hex')
+        const { data } = await supabase.from('clubtac_users').select('id').eq('referral_code', candidate).maybeSingle()
+        if (!data) return candidate
+    }
+    throw new Error('Could not generate unique referral_code')
+}
+
 /**
  * API endpoint для аутентификации через Telegram Mini App
- * 
+ *
  * TODO: Добавить проверку подписи initData для безопасности
  * Проверка должна валидировать, что данные действительно пришли от Telegram
  * Используя секретный ключ бота и алгоритм проверки подписи Telegram
@@ -12,9 +22,16 @@ import type { TelegramAuthRequest } from '@/types/user'
 export async function POST(request: NextRequest) {
     try {
         const body: TelegramAuthRequest = await request.json()
-        const { telegram_id, username, first_name, last_name, photo_url } = body
+        const { telegram_id, username, first_name, last_name, photo_url, referral_code: incomingReferralRaw } = body
 
-        console.log('API /auth/telegram: Получены данные:', { telegram_id, username, first_name, last_name, photo_url })
+        console.log('API /auth/telegram: Получены данные:', {
+            telegram_id,
+            username,
+            first_name,
+            last_name,
+            photo_url,
+            has_referral: !!incomingReferralRaw,
+        })
 
         // Валидация обязательных полей
         if (!telegram_id || !first_name) {
@@ -25,11 +42,9 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Подключение к Supabase
         const supabase = createClient()
         console.log('API /auth/telegram: Supabase клиент создан')
 
-        // Поиск существующего пользователя по telegram_id
         console.log('API /auth/telegram: Поиск пользователя с telegram_id:', telegram_id)
         const { data: existingUser, error: findError } = await supabase
             .from('clubtac_users')
@@ -43,8 +58,6 @@ export async function POST(request: NextRequest) {
         })
 
         if (findError && findError.code !== 'PGRST116') {
-            // PGRST116 - это "not found", это нормально
-            // Другие ошибки - это проблемы
             console.error('API /auth/telegram: Ошибка при поиске пользователя:', findError)
             return NextResponse.json(
                 { error: 'Ошибка при поиске пользователя', details: findError.message },
@@ -52,15 +65,32 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Если пользователь найден - возвращаем его
         if (existingUser) {
             console.log('API /auth/telegram: Пользователь найден, возвращаем:', existingUser)
-            // Отправляем аватарку и telegram_id на webhook только если userpic отсутствует или отличается
+
+            // Миграция без backfill в БД: догенерируем referral_code при отсутствии
+            if (!existingUser.referral_code) {
+                try {
+                    const code = await generateUniqueReferralCode(supabase)
+                    const { data: updated, error: upErr } = await supabase
+                        .from('clubtac_users')
+                        .update({ referral_code: code })
+                        .eq('id', existingUser.id)
+                        .select()
+                        .single()
+                    if (!upErr && updated) {
+                        Object.assign(existingUser, updated)
+                    }
+                } catch (e) {
+                    console.error('API /auth/telegram: не удалось выставить referral_code существующему:', e)
+                }
+            }
+
             const shouldSendWebhook = photo_url && (
-                !existingUser.userpic || // userpic отсутствует
-                existingUser.userpic !== photo_url // userpic отличается от полученного
+                !existingUser.userpic ||
+                existingUser.userpic !== photo_url
             )
-            
+
             if (shouldSendWebhook) {
                 try {
                     await fetch('https://hook.eu2.make.com/wp9c6tglisd4sok6299oskxklys18n3i', {
@@ -75,13 +105,28 @@ export async function POST(request: NextRequest) {
                     })
                 } catch (webhookError) {
                     console.error('API /auth/telegram: Ошибка отправки на webhook:', webhookError)
-                    // Не прерываем процесс, если webhook не сработал
                 }
             }
             return NextResponse.json({ user: existingUser }, { status: 200 })
         }
 
-        // Если пользователь не найден - создаём нового
+        const incomingRef =
+            typeof incomingReferralRaw === 'string' ? incomingReferralRaw.trim().toLowerCase() : ''
+
+        let referredByUserId: number | null = null
+        if (incomingRef) {
+            const { data: inviter } = await supabase
+                .from('clubtac_users')
+                .select('id, telegram_id')
+                .eq('referral_code', incomingRef)
+                .maybeSingle()
+            if (inviter && inviter.telegram_id !== telegram_id) {
+                referredByUserId = inviter.id
+            }
+        }
+
+        const ownReferralCode = await generateUniqueReferralCode(supabase)
+
         console.log('API /auth/telegram: Пользователь не найден, создаём нового')
         const { data: newUser, error: createError } = await supabase
             .from('clubtac_users')
@@ -90,6 +135,8 @@ export async function POST(request: NextRequest) {
                 username: username || null,
                 first_name,
                 last_name: last_name || null,
+                referral_code: ownReferralCode,
+                referred_by_user_id: referredByUserId,
             })
             .select()
             .single()
@@ -103,8 +150,7 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('API /auth/telegram: Новый пользователь создан:', newUser)
-        
-        // Отправляем аватарку и telegram_id на webhook
+
         if (photo_url) {
             try {
                 await fetch('https://hook.eu2.make.com/wp9c6tglisd4sok6299oskxklys18n3i', {
@@ -119,10 +165,9 @@ export async function POST(request: NextRequest) {
                 })
             } catch (webhookError) {
                 console.error('API /auth/telegram: Ошибка отправки на webhook:', webhookError)
-                // Не прерываем процесс, если webhook не сработал
             }
         }
-        
+
         return NextResponse.json({ user: newUser }, { status: 201 })
     } catch (error) {
         console.error('API /auth/telegram: Неожиданная ошибка:', error)
@@ -135,4 +180,3 @@ export async function POST(request: NextRequest) {
         )
     }
 }
-

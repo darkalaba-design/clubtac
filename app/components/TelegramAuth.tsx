@@ -54,11 +54,13 @@ export default function TelegramAuth() {
                 webApp.ready()
 
                 const telegramUser = webApp.initDataUnsafe?.user
+                const startParam = webApp.initDataUnsafe?.start_param
 
                 console.log('Telegram WebApp данные:', {
                     hasWebApp: !!webApp,
                     hasInitData: !!webApp.initDataUnsafe,
                     hasUser: !!telegramUser,
+                    start_param: startParam,
                     user: telegramUser,
                     initDataUnsafe: webApp.initDataUnsafe,
                 })
@@ -77,6 +79,7 @@ export default function TelegramAuth() {
                     first_name: telegramUser.first_name,
                     last_name: telegramUser.last_name,
                     photo_url: telegramUser.photo_url,
+                    referral_code: startParam?.trim() || undefined,
                 }
 
                 console.log('Отправка данных на backend:', authData)

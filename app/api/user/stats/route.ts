@@ -147,13 +147,53 @@ export async function GET(request: NextRequest) {
                 .slice(0, 3); // Топ 3
         }
 
+        const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME?.replace(/^@/, '') || ''
+        const code = user.referral_code as string | null | undefined
+        const referralLink =
+            botUsername && code ? `https://t.me/${botUsername}?startapp=${encodeURIComponent(code)}` : null
+
+        const { count: invitedCountRaw } = await supabase
+            .from('clubtac_users')
+            .select('id', { count: 'exact', head: true })
+            .eq('referred_by_user_id', user.id)
+        const invitedCount = invitedCountRaw ?? 0
+
+        let inviter: {
+            id: number
+            first_name: string
+            last_name?: string | null
+            nickname?: string | null
+            username?: string | null
+            telegram_id: number
+        } | null = null
+        if (user.referred_by_user_id) {
+            const { data: inviterRow } = await supabase
+                .from('clubtac_users')
+                .select('id, first_name, last_name, nickname, username, telegram_id')
+                .eq('id', user.referred_by_user_id)
+                .maybeSingle()
+            if (inviterRow) {
+                inviter = inviterRow as {
+                    id: number
+                    first_name: string
+                    last_name?: string | null
+                    nickname?: string | null
+                    username?: string | null
+                    telegram_id: number
+                }
+            }
+        }
+
         const body = {
             user,
             stats: stats || null,
             recentGames,
             bestPartners,
-        };
-        return NextResponse.json(body);
+            referralLink,
+            invitedCount,
+            inviter,
+        }
+        return NextResponse.json(body)
     } catch (error) {
         console.error('API /user/stats: Ошибка:', error)
         return NextResponse.json(
