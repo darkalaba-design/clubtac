@@ -15,7 +15,7 @@ function HomePageContent() {
   const [tab, setTab] = useState<'players' | 'teams' | 'games' | 'profile'>(
     tabFromUrl && ['players', 'teams', 'games', 'profile'].includes(tabFromUrl) 
       ? tabFromUrl 
-      : 'profile'
+      : 'games'
   )
 
   useEffect(() => {

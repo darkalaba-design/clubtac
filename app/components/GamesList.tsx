@@ -30,6 +30,8 @@ interface Event {
     status: 'scheduled' | 'finished' | 'cancelled' | 'canceled'
     created_at: string
     description?: string | null
+    /** URL горизонтальной обложки; пусто — не показываем */
+    cover?: string | null
 }
 
 type GamesTab = 'announcements' | 'past'
@@ -139,7 +141,7 @@ export default function GamesList() {
                 // События, которые ещё не начались: starts_at > сейчас (включая сегодняшние с будущим временем)
                 const { data: allEvents, error: allEventsError } = await supabase
                     .from('clubtac_events')
-                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description')
+                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover')
                     .gt('starts_at', now)
                     .order('starts_at', { ascending: true })
 
@@ -470,7 +472,7 @@ export default function GamesList() {
                 // Загружаем завершенные события
                 const { data: finishedEvents, error: eventsError } = await supabase
                     .from('clubtac_events')
-                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at')
+                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, cover')
                     .eq('status', 'finished')
                     .lt('starts_at', now)
                     .order('starts_at', { ascending: false })
@@ -821,11 +823,33 @@ export default function GamesList() {
                         style={{
                             backgroundColor: isEventTodayAndNotStarted(event.starts_at) ? '#F5FAF5' : '#FFFFFF',
                             borderRadius: '8px',
-                            padding: '16px',
+                            overflow: 'hidden',
                             boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
                             border: (event.status === 'cancelled' || event.status === 'canceled') ? '2px solid #B71C1C' : isEventTodayAndNotStarted(event.starts_at) ? '1px solid #C8E6C9' : undefined,
                         }}
                     >
+                        {event.cover?.trim() ? (
+                            <div
+                                style={{
+                                    width: '100%',
+                                    aspectRatio: '2 / 1',
+                                    maxHeight: 200,
+                                    backgroundColor: '#EBE8E0',
+                                }}
+                            >
+                                <img
+                                    src={event.cover.trim()}
+                                    alt={event.title ? `Обложка: ${event.title}` : 'Обложка мероприятия'}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        display: 'block',
+                                    }}
+                                />
+                            </div>
+                        ) : null}
+                        <div style={{ padding: '16px' }}>
                         <div style={{ marginBottom: '12px' }}>
                             <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', color: '#1D1D1B' }}>
                                 {formatEventDate(event.starts_at)}
@@ -1301,6 +1325,7 @@ export default function GamesList() {
                                 </button>
                             )
                         })()}
+                        </div>
                     </div>
                 ))}
             </div>
@@ -1370,6 +1395,28 @@ export default function GamesList() {
                                 overflow: 'hidden',
                             }}
                         >
+                            {event?.cover?.trim() ? (
+                                <div
+                                    style={{
+                                        width: '100%',
+                                        aspectRatio: '2 / 1',
+                                        maxHeight: 160,
+                                        backgroundColor: '#EBE8E0',
+                                    }}
+                                >
+                                    <img
+                                        src={event.cover.trim()}
+                                        alt={event.title ? `Обложка: ${event.title}` : 'Обложка мероприятия'}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            display: 'block',
+                                            pointerEvents: 'none',
+                                        }}
+                                    />
+                                </div>
+                            ) : null}
                             {/* Заголовок карточки (кликабельный) */}
                             <div
                                 onClick={() => toggleDate(date)}

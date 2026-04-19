@@ -1,5 +1,13 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Clubtac — мероприятия (`clubtac_events`)
+
+В таблице **`clubtac_events`** есть необязательное поле **`cover`**:
+
+- **Назначение:** обложка мероприятия (как правило URL картинки), которую заполняют из админки; генерация/загрузка может идти через **Make**.
+- **Пустое значение:** поле может быть `NULL` или пустой строкой — **в карточке мероприятия изображение не показываем**, только остальной контент.
+- **Клиент:** из этого поля берём картинку и показываем её **обложкой карточки** события, когда значение задано.
+
 ## Getting Started
 
 First, run the development server:

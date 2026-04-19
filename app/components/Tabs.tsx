@@ -47,42 +47,26 @@ export default function Tabs({
             }}
         >
             <button
-                onClick={() => onChange('profile')}
+                onClick={() => onChange('games')}
                 style={{
                     flex: 1,
-                    fontWeight: active === 'profile' ? 'bold' : 'normal',
+                    fontWeight: active === 'games' ? 'bold' : 'normal',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
                     padding: '8px',
                     border: 'none',
-                    borderBottom: active === 'profile' ? '3px solid #FFDF00' : '3px solid transparent',
+                    borderBottom: active === 'games' ? '3px solid #FFDF00' : '3px solid transparent',
                     background: 'transparent',
                     cursor: 'pointer',
-                    color: active === 'profile' ? '#1D1D1B' : '#6B6B69',
-                    position: 'relative',
-                    zIndex: 1,
+                    color: active === 'games' ? '#1D1D1B' : '#6B6B69',
                 }}
             >
-                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                    {user && photoUrl ? (
-                        <img
-                            src={photoUrl}
-                            alt="Profile"
-                            style={{
-                                width: '26px',
-                                height: '26px',
-                                borderRadius: '50%',
-                                objectFit: 'cover',
-                                pointerEvents: 'none',
-                            }}
-                        />
-                    ) : (
-                        <span style={{ fontSize: '26px', pointerEvents: 'none' }}>👤</span>
-                    )}
+                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '26px' }}>🎮</span>
                 </div>
-                <span style={{ fontSize: '10px', pointerEvents: 'none' }}>Профиль</span>
+                <span style={{ fontSize: '10px' }}>Игры</span>
             </button>
 
             <button
@@ -132,26 +116,42 @@ export default function Tabs({
             </button>
 
             <button
-                onClick={() => onChange('games')}
+                onClick={() => onChange('profile')}
                 style={{
                     flex: 1,
-                    fontWeight: active === 'games' ? 'bold' : 'normal',
+                    fontWeight: active === 'profile' ? 'bold' : 'normal',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
                     padding: '8px',
                     border: 'none',
-                    borderBottom: active === 'games' ? '3px solid #FFDF00' : '3px solid transparent',
+                    borderBottom: active === 'profile' ? '3px solid #FFDF00' : '3px solid transparent',
                     background: 'transparent',
                     cursor: 'pointer',
-                    color: active === 'games' ? '#1D1D1B' : '#6B6B69',
+                    color: active === 'profile' ? '#1D1D1B' : '#6B6B69',
+                    position: 'relative',
+                    zIndex: 1,
                 }}
             >
-                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: '26px' }}>🎮</span>
+                <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                    {user && photoUrl ? (
+                        <img
+                            src={photoUrl}
+                            alt="Профиль"
+                            style={{
+                                width: '26px',
+                                height: '26px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                pointerEvents: 'none',
+                            }}
+                        />
+                    ) : (
+                        <span style={{ fontSize: '26px', pointerEvents: 'none' }}>👤</span>
+                    )}
                 </div>
-                <span style={{ fontSize: '10px' }}>Игры</span>
+                <span style={{ fontSize: '10px', pointerEvents: 'none' }}>Профиль</span>
             </button>
         </div>
     )
