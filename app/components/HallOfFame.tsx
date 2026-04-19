@@ -109,125 +109,142 @@ export default function HallOfFame() {
         )
     }
 
-    return (
-        <div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {players.map((player, index) => {
-                    const gamesPlayed =
-                        player.games_played ??
-                        (player as any).games ??
-                        (player as any).total_games
-                    const wins =
-                        player.wins ?? (player as any).total_wins
-                    const points =
-                        player.points ??
-                        (player as any).total_points ??
-                        (player as any).rating
+    const topTen = players.slice(0, 10)
+    const rest = players.slice(10)
 
-                    const isCurrentUser =
-                        user && typeof user.id !== 'undefined' && player.user_id === user.id
+    const renderPlayerRow = (player: any, indexInSection: number, rowDividerColor = '#EBE8E0') => {
+        const gamesPlayed =
+            player.games_played ?? (player as any).games ?? (player as any).total_games
+        const wins = player.wins ?? (player as any).total_wins
+        const points =
+            player.points ?? (player as any).total_points ?? (player as any).rating
 
-                    return (
-                        <div key={player.user_id}>
-                            {index > 0 && (
-                                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                            )}
-                            <Link
-                                href={`/player/${player.user_id}`}
-                                className="link-player hall-rating-row"
+        const isCurrentUser = user && typeof user.id !== 'undefined' && player.user_id === user.id
+        const placeNum = Number(player.place)
+        const placeMedal =
+            placeNum === 1 ? '🥇 ' : placeNum === 2 ? '🥈 ' : placeNum === 3 ? '🥉 ' : null
+
+        return (
+            <div key={player.user_id}>
+                {indexInSection > 0 && <div style={{ height: '1px', backgroundColor: rowDividerColor }} />}
+                <Link
+                    href={`/player/${player.user_id}`}
+                    className="link-player hall-rating-row"
+                    style={{
+                        textDecoration: 'none',
+                        color: 'inherit',
+                        display: 'block',
+                    }}
+                >
+                    <div
+                        style={{
+                            backgroundColor: isCurrentUser ? '#FFF4C2' : 'transparent',
+                            padding: '4px 12px',
+                            transition: 'background-color 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = isCurrentUser ? '#FFECA0' : '#FFFEF7'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = isCurrentUser ? '#FFF4C2' : 'transparent'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div
                                 style={{
-                                    textDecoration: 'none',
-                                    color: 'inherit',
-                                    display: 'block',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '8px',
+                                    backgroundColor: '#FFE950',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: 'bold',
+                                    fontSize: '13px',
+                                    flexShrink: 0,
+                                    color: '#1D1D1B',
                                 }}
                             >
+                                #{player.place}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
                                 <div
                                     style={{
-                                        backgroundColor: isCurrentUser ? '#FFF4C2' : '#FFFFFF',
-                                        padding: '4px 12px',
-                                        transition: 'background-color 0.2s',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = isCurrentUser ? '#FFECA0' : '#FFFEF7'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = isCurrentUser ? '#FFF4C2' : '#FFFFFF'
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: '8px',
                                     }}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div
-                                            style={{
-                                                width: '32px',
-                                                height: '32px',
-                                                borderRadius: '8px',
-                                                backgroundColor: '#FFE950',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontWeight: 'bold',
-                                                fontSize: '13px',
-                                                flexShrink: 0,
-                                                color: '#1D1D1B',
-                                            }}
-                                        >
-                                            #{player.place}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    gap: '8px',
-                                                }}
-                                            >
-                                                <div
-                                                    className="hall-rating-row__title"
-                                                    style={{
-                                                        fontSize: '14px',
-                                                        fontWeight: 'bold',
-                                                        color: isCurrentUser ? '#B05C00' : '#1D1D1B',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap',
-                                                    }}
-                                                >
-                                                    {displayPublicNickname(player.nickname, player.takoff)}
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        fontSize: '11px',
-                                                        color: '#6B6B69',
-                                                        textAlign: 'right',
-                                                        whiteSpace: 'nowrap',
-                                                    }}
-                                                >
-                                                    Побед:{' '}
-                                                    <span style={{ color: '#1D1D1B', fontWeight: 700 }}>
-                                                        {wins != null ? wins : '—'}
-                                                    </span>{' '}
-                                                    из{' '}
-                                                    <span style={{ color: '#6B6B69', fontWeight: 400 }}>
-                                                        {gamesPlayed != null ? gamesPlayed : '—'}
-                                                    </span>
-                                                    {points != null && (
-                                                        <>
-                                                            {'. '}Очки:{' '}
-                                                            <span style={{ color: '#1D1D1B', fontWeight: 700 }}>
-                                                                {Math.round(Number(points))}
-                                                            </span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div
+                                        className="hall-rating-row__title"
+                                        style={{
+                                            fontSize: '14px',
+                                            fontWeight: 'bold',
+                                            color: isCurrentUser ? '#B05C00' : '#1D1D1B',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        {placeMedal}
+                                        {displayPublicNickname(player.nickname, player.takoff)}
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: '11px',
+                                            color: '#6B6B69',
+                                            textAlign: 'right',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        Побед:{' '}
+                                        <span style={{ color: '#1D1D1B', fontWeight: 700 }}>
+                                            {wins != null ? wins : '—'}
+                                        </span>{' '}
+                                        из{' '}
+                                        <span style={{ color: '#6B6B69', fontWeight: 400 }}>
+                                            {gamesPlayed != null ? gamesPlayed : '—'}
+                                        </span>
+                                        {points != null && (
+                                            <>
+                                                {'. '}Очки:{' '}
+                                                <span style={{ color: '#1D1D1B', fontWeight: 700 }}>
+                                                    {Math.round(Number(points))}
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
-                            </Link>
+                            </div>
                         </div>
-                    )
-                })}
+                    </div>
+                </Link>
             </div>
+        )
+    }
+
+    return (
+        <div>
+            <div
+                style={{
+                    margin: '0 12px',
+                    backgroundColor: '#FFF9E6',
+                    border: '1px solid #FFE950',
+                    borderRadius: '12px',
+                    padding: '8px 0',
+                    boxShadow: '0 2px 12px rgba(29, 29, 27, 0.06)',
+                }}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {topTen.map((player, index) => renderPlayerRow(player, index, '#FFE950'))}
+                </div>
+            </div>
+            {rest.length > 0 && (
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column' }}>
+                    {rest.map((player, index) => renderPlayerRow(player, index))}
+                </div>
+            )}
         </div>
     )
 }
