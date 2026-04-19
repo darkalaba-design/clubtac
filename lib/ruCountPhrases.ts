@@ -2,26 +2,17 @@
  * Склонение существительных после числа (1 игра, 2 игры, 5 игр, 11 игр…).
  * @see https://unicode.org/cldr/charts/supplemental/language_plural_rules.html#ru
  */
-export function countRu(n: number): number {
-    return Math.floor(Math.abs(Number(n)) || 0)
-}
-
-/** Склонение существительного по уже целому неотрицательному числу k */
-function pluralRuNoun(k: number, one: string, few: string, many: string): string {
+function formatWithNoun(n: number, one: string, few: string, many: string): string {
+    const k = Math.floor(Math.abs(Number(n)) || 0)
     const abs = k % 100
     const d10 = abs % 10
     if (d10 === 1 && abs !== 11) {
-        return one
+        return `${k} ${one}`
     }
     if (d10 >= 2 && d10 <= 4 && (abs < 10 || abs > 20)) {
-        return few
+        return `${k} ${few}`
     }
-    return many
-}
-
-function formatWithNoun(n: number, one: string, few: string, many: string): string {
-    const k = countRu(n)
-    return `${k} ${pluralRuNoun(k, one, few, many)}`
+    return `${k} ${many}`
 }
 
 /** «7 игр», «1 игра», «3 игры» */
@@ -37,14 +28,4 @@ export function formatWinsRu(n: number): string {
 /** «7 игр • 7 побед» — для строк под парами в рейтингах */
 export function formatGamesWinsLine(games: number, wins: number): string {
     return `${formatGamesRu(games)} • ${formatWinsRu(wins)}`
-}
-
-/** Только существительное: «игра» / «игры» / «игр» */
-export function gamesNounRu(n: number): string {
-    return pluralRuNoun(countRu(n), 'игра', 'игры', 'игр')
-}
-
-/** Только существительное: «победа» / «победы» / «побед» */
-export function winsNounRu(n: number): string {
-    return pluralRuNoun(countRu(n), 'победа', 'победы', 'побед')
 }

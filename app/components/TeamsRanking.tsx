@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { countRu, gamesNounRu, winsNounRu } from '@/lib/ruCountPhrases'
+import { formatGamesWinsLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname } from '@/lib/takoff'
 
 export default function TeamsRanking() {
@@ -106,8 +106,6 @@ export default function TeamsRanking() {
         const rankNum = Number(team.rank)
         const rankMedal =
             rankNum === 1 ? '🥇 ' : rankNum === 2 ? '🥈 ' : rankNum === 3 ? '🥉 ' : null
-        const gamesPlayed = Number(team.games_played) || 0
-        const winsCount = Number(team.wins) || 0
 
         return (
             <div key={`${team.player_1_id}-${team.player_2_id}`}>
@@ -184,9 +182,7 @@ export default function TeamsRanking() {
                                     fontWeight: 400,
                                 }}
                             >
-                                <span style={{ color: '#1D1D1B' }}>{countRu(gamesPlayed)}</span> {gamesNounRu(gamesPlayed)}
-                                <span style={{ margin: '0 4px', color: '#A3A2A0' }}>•</span>
-                                <span style={{ color: '#1D1D1B' }}>{countRu(winsCount)}</span> {winsNounRu(winsCount)}
+                                {formatGamesWinsLine(Number(team.games_played) || 0, Number(team.wins) || 0)}
                             </div>
                         </div>
                     </div>
