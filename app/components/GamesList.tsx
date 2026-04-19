@@ -509,15 +509,15 @@ export default function GamesList() {
         }
     }
 
-    // Форматирование даты для анонсов (27 января, ВТ. 16.00)
+    // Форматирование даты для анонсов (27 января, ВТ. 16:00) — day+month вместе, чтобы месяц был в род. падеже
     const formatEventDate = (dateString: string) => {
         try {
             const date = new Date(dateString)
-            const day = date.getDate()
-            const month = date.toLocaleDateString('ru-RU', { month: 'long' })
-            const weekday = date.toLocaleDateString('ru-RU', { weekday: 'short' }).toUpperCase()
+            const dayMonth = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+            const weekdayRaw = date.toLocaleDateString('ru-RU', { weekday: 'short' })
+            const weekday = weekdayRaw.replace(/\.$/, '').toUpperCase()
             const time = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', hour12: false })
-            return `${day} ${month}, ${weekday}. ${time}`
+            return `${dayMonth}, ${weekday}. ${time}`
         } catch {
             return dateString
         }
@@ -851,40 +851,66 @@ export default function GamesList() {
                         ) : null}
                         <div style={{ padding: '16px' }}>
                         <div style={{ marginBottom: '12px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', color: '#1D1D1B' }}>
-                                {formatEventDate(event.starts_at)}
-                                {isEventTodayAndNotStarted(event.starts_at) && (
-                                    <span style={{
-                                        fontSize: '12px',
-                                        color: '#1B5E20',
-                                        fontWeight: '600',
-                                        backgroundColor: '#C8E6C9',
-                                        padding: '4px 10px',
-                                        borderRadius: '6px',
-                                    }}>
-                                        Сегодня
-                                    </span>
-                                )}
-                                {(event.status === 'cancelled' || event.status === 'canceled') && (
-                                    <span style={{ fontSize: '11px', color: '#B71C1C', fontWeight: '600' }}>Отменено</span>
-                                )}
+                            <div
+                                style={{
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    marginBottom: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '8px',
+                                    flexWrap: 'wrap',
+                                    color: '#1D1D1B',
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
+                                    {formatEventDate(event.starts_at)}
+                                    {isEventTodayAndNotStarted(event.starts_at) && (
+                                        <span
+                                            style={{
+                                                fontSize: '12px',
+                                                color: '#1B5E20',
+                                                fontWeight: '600',
+                                                backgroundColor: '#C8E6C9',
+                                                padding: '4px 10px',
+                                                borderRadius: '6px',
+                                            }}
+                                        >
+                                            Сегодня
+                                        </span>
+                                    )}
+                                    {(event.status === 'cancelled' || event.status === 'canceled') && (
+                                        <span style={{ fontSize: '11px', color: '#B71C1C', fontWeight: '600' }}>Отменено</span>
+                                    )}
+                                </div>
+                                {event.price !== null ? (
+                                    <div
+                                        style={{
+                                            fontSize: '14px',
+                                            flexShrink: 0,
+                                            marginLeft: 'auto',
+                                            ...(isEventTodayAndNotStarted(event.starts_at) && event.price > 0
+                                                ? { color: '#B71C1C', fontWeight: 'bold' }
+                                                : { color: '#6B6B69' }),
+                                        }}
+                                    >
+                                        {event.price === 0
+                                            ? 'Бесплатно'
+                                            : isEventTodayAndNotStarted(event.starts_at)
+                                              ? `${Math.round(event.price * 1.4)} ₽`
+                                              : `${event.price} ₽`}
+                                    </div>
+                                ) : null}
                             </div>
                             {event.title && (
                                 <div style={{ fontSize: '22px', fontWeight: '600', lineHeight: '1.25', marginBottom: '8px', color: '#1D1D1B' }}>
                                     {event.title}
                                 </div>
                             )}
-                            <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '8px' }}>
-                                {getEventTypeName(event.type)}
-                            </div>
                             {event.address && (
                                 <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
                                     📍 {event.address}
-                                </div>
-                            )}
-                            {event.club_id && (
-                                <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
-                                    🏢 {clubNames[event.club_id] || `Клуб ID: ${event.club_id}`}
                                 </div>
                             )}
                             {event.duration_minutes && (
@@ -892,50 +918,62 @@ export default function GamesList() {
                                     ⏱️ Длительность: {event.duration_minutes} мин.
                                 </div>
                             )}
-                            {event.price !== null && (
-                                <div style={{
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '12px',
+                                    flexWrap: 'wrap',
                                     fontSize: '14px',
-                                    marginBottom: '4px',
-                                    ...(isEventTodayAndNotStarted(event.starts_at) && event.price > 0
-                                        ? { color: '#B71C1C', fontWeight: 'bold' }
-                                        : { color: '#6B6B69' }
-                                    ),
-                                }}>
-                                    💰 {event.price === 0
-                                        ? 'Бесплатно'
-                                        : isEventTodayAndNotStarted(event.starts_at)
-                                            ? `Цена: ${Math.round(event.price * 1.4)} ₽`
-                                            : `Цена: ${event.price} ₽`
-                                    }
+                                    marginBottom: '8px',
+                                    color: '#6B6B69',
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                    <span aria-hidden>👥</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const isExpanding = !expandedParticipantListIds.has(event.id)
+                                            setExpandedParticipantListIds(prev => {
+                                                const next = new Set(prev)
+                                                if (next.has(event.id)) next.delete(event.id)
+                                                else next.add(event.id)
+                                                return next
+                                            })
+                                            if (isExpanding) loadEventParticipantsList(event.id)
+                                        }}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            padding: 0,
+                                            color: '#1B5E20',
+                                            textDecoration: 'underline',
+                                            cursor: 'pointer',
+                                            fontSize: '14px',
+                                            fontWeight: '500',
+                                        }}
+                                    >
+                                        {eventParticipantsCount[event.id] || 0}{' '}
+                                        {eventParticipantsCount[event.id] === 1
+                                            ? 'участник'
+                                            : eventParticipantsCount[event.id] && eventParticipantsCount[event.id] < 5
+                                              ? 'участника'
+                                              : 'участников'}
+                                    </button>
                                 </div>
-                            )}
-                            <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '8px' }}>
-                                👥 Зарегистрировано:{' '}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const isExpanding = !expandedParticipantListIds.has(event.id)
-                                        setExpandedParticipantListIds(prev => {
-                                            const next = new Set(prev)
-                                            if (next.has(event.id)) next.delete(event.id)
-                                            else next.add(event.id)
-                                            return next
-                                        })
-                                        if (isExpanding) loadEventParticipantsList(event.id)
-                                    }}
+                                <span
                                     style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        padding: 0,
-                                        color: '#1B5E20',
-                                        textDecoration: 'underline',
-                                        cursor: 'pointer',
-                                        fontSize: '14px',
-                                        fontWeight: '500',
+                                        fontSize: '12px',
+                                        color: '#6B6B69',
+                                        fontWeight: 'normal',
+                                        flexShrink: 0,
+                                        marginLeft: 'auto',
                                     }}
                                 >
-                                    {eventParticipantsCount[event.id] || 0} {eventParticipantsCount[event.id] === 1 ? 'участник' : eventParticipantsCount[event.id] && eventParticipantsCount[event.id] < 5 ? 'участника' : 'участников'}
-                                </button>
+                                    {getEventTypeName(event.type)}
+                                </span>
                             </div>
                             {expandedParticipantListIds.has(event.id) && (
                                 <div style={{ marginBottom: '8px', padding: '10px 12px', backgroundColor: '#FFFEF7', borderRadius: '6px', border: '1px solid #EBE8E0' }}>
@@ -959,7 +997,7 @@ export default function GamesList() {
                                     ))}
                                 </div>
                             )}
-                            {event.description && event.description.trim() !== '' && (
+                            {(event.description?.trim() || event.club_id) && (
                                 <div style={{ marginTop: '8px' }}>
                                     <button
                                         type="button"
@@ -986,8 +1024,24 @@ export default function GamesList() {
                                         {expandedDescriptionIds.has(event.id) ? 'Свернуть' : 'Подробнее'}
                                     </button>
                                     {expandedDescriptionIds.has(event.id) && (
-                                        <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#FFFEF7', borderRadius: '8px', fontSize: '14px', color: '#6B6B69', whiteSpace: 'pre-wrap' }}>
-                                            {event.description}
+                                        <div
+                                            style={{
+                                                marginTop: '8px',
+                                                padding: '12px',
+                                                backgroundColor: '#FFFEF7',
+                                                borderRadius: '8px',
+                                                fontSize: '14px',
+                                                color: '#6B6B69',
+                                            }}
+                                        >
+                                            {event.description?.trim() ? (
+                                                <div style={{ whiteSpace: 'pre-wrap', marginBottom: event.club_id ? '12px' : 0 }}>
+                                                    {event.description}
+                                                </div>
+                                            ) : null}
+                                            {event.club_id && (
+                                                <div>🏢 {clubNames[event.club_id] || `Клуб ID: ${event.club_id}`}</div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -1432,8 +1486,33 @@ export default function GamesList() {
                             >
                                 <div style={{ flex: 1 }}>
                                     {event && event.starts_at ? (
-                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#1D1D1B' }}>
-                                            {formatEventDate(event.starts_at)}
+                                        <div
+                                            style={{
+                                                fontSize: '14px',
+                                                fontWeight: 'bold',
+                                                marginBottom: '8px',
+                                                color: '#1D1D1B',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: '8px',
+                                                flexWrap: 'wrap',
+                                            }}
+                                        >
+                                            <span style={{ minWidth: 0 }}>{formatEventDate(event.starts_at)}</span>
+                                            {event.type ? (
+                                                <span
+                                                    style={{
+                                                        fontSize: '12px',
+                                                        color: '#6B6B69',
+                                                        fontWeight: 'normal',
+                                                        flexShrink: 0,
+                                                        marginLeft: 'auto',
+                                                    }}
+                                                >
+                                                    {getEventTypeName(event.type)}
+                                                </span>
+                                            ) : null}
                                         </div>
                                     ) : (
                                         <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#1D1D1B' }}>
@@ -1443,11 +1522,6 @@ export default function GamesList() {
                                     {event && event.title && (
                                         <div style={{ fontSize: '22px', fontWeight: '600', lineHeight: '1.25', marginBottom: '8px', color: '#1D1D1B' }}>
                                             {event.title}
-                                        </div>
-                                    )}
-                                    {event && event.type && (
-                                        <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '8px' }}>
-                                            {getEventTypeName(event.type)}
                                         </div>
                                     )}
                                     {event && event.address && (
