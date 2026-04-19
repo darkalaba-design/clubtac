@@ -32,9 +32,10 @@ export function validateWebAppInitData(
         return { ok: false, error: 'В initData нет hash' }
     }
 
+    // Для HMAC по токену бота в строку входят все поля, кроме hash (в т.ч. signature, если клиент его прислал).
     const pairs: [string, string][] = []
     sp.forEach((value, key) => {
-        if (key !== 'hash' && key !== 'signature') {
+        if (key !== 'hash') {
             pairs.push([key, value])
         }
     })
