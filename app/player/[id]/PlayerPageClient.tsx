@@ -80,11 +80,9 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         }
     }, [playerId])
 
-    // Загружаем маппинг nickname → user_id для игроков из последних игр
+    // Загружаем маппинг nickname → user_id для последних игр и лучших напарников
     useEffect(() => {
         const loadIds = async () => {
-            if (!playerStats?.recentGames || playerStats.recentGames.length === 0) return
-
             const nicknames = new Set<string>()
             const currentNick = player?.nickname?.trim()
 
@@ -92,13 +90,20 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                 nicknames.add(currentNick)
             }
 
-            playerStats.recentGames.forEach((game) => {
+            playerStats?.recentGames?.forEach((game) => {
                 ;[game.player_1_1, game.player_1_2, game.player_2_1, game.player_2_2].forEach((name) => {
                     const n = name?.trim()
                     if (n) {
                         nicknames.add(n)
                     }
                 })
+            })
+
+            playerStats?.bestPartners?.forEach((p) => {
+                const n = p.name?.trim()
+                if (n) {
+                    nicknames.add(n)
+                }
             })
 
             if (nicknames.size === 0) return
@@ -126,7 +131,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         }
 
         loadIds()
-    }, [playerStats?.recentGames, player?.nickname])
+    }, [playerStats?.recentGames, playerStats?.bestPartners, player?.nickname])
 
     // Загружаем детальную статистику после загрузки данных игрока
     useEffect(() => {
@@ -503,7 +508,10 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                     >
                                         <div>
                                             <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                                                {index === 0 && '🥇'} {index === 1 && '🥈'} {index === 2 && '🥉'} {partner.name}
+                                                {index === 0 && '🥇 '}
+                                                {index === 1 && '🥈 '}
+                                                {index === 2 && '🥉 '}
+                                                {renderPlayerName(partner.name)}
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                 {partner.games} игр, {partner.wins} побед

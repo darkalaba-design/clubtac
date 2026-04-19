@@ -172,26 +172,32 @@ export default function UserProfile() {
     }, [user?.id, user?.telegram_id, user?.nickname, setUser])
 
     const settingsFooter = (
-        <div style={{ marginTop: '28px', marginBottom: '24px', padding: '0 12px' }}>
+        <div
+            style={{
+                marginTop: '28px',
+                marginBottom: '24px',
+                padding: '0 12px',
+                display: 'flex',
+                justifyContent: 'flex-end',
+            }}
+        >
             <button
                 type="button"
+                aria-label="Настройки"
                 onClick={() => setSettingsOpen(true)}
                 style={{
-                    width: '100%',
-                    maxWidth: '400px',
-                    margin: '0 auto',
-                    display: 'block',
-                    padding: '10px 16px',
-                    fontSize: '14px',
-                    fontWeight: 600,
+                    padding: '10px',
+                    margin: 0,
+                    fontSize: '22px',
+                    lineHeight: 1,
                     color: '#1D1D1B',
-                    backgroundColor: '#FFFFFF',
-                    border: '2px solid #1D1D1B',
-                    borderRadius: '10px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '8px',
                     cursor: 'pointer',
                 }}
             >
-                ⚙ Настройки
+                ⚙
             </button>
         </div>
     )
@@ -367,116 +373,116 @@ export default function UserProfile() {
     if (!user) {
         return (
             <>
-            <div>
-                <div
-                    style={{
-                        backgroundColor: '#FFF9E6',
-                        borderRadius: '8px',
-                        padding: '8px 12px',
-                        marginBottom: '12px',
-                        fontSize: '13px',
-                        color: '#1D1D1B',
-                    }}
-                >
-                    Пользователь не определён — откройте приложение через{' '}
-                    <a
-                        href="https://core.telegram.org/bots/webapps"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                            color: '#1565C0',
-                            fontWeight: 600,
-                            textDecoration: 'underline',
-                        }}
-                    >
-                        Telegram Mini App
-                    </a>
-                    .
-                </div>
-                {/* Блок профиля — пустые данные */}
-                <div
-                    style={{
-                        backgroundColor: '#FFFFFF',
-                        padding: '16px 12px',
-                        display: 'flex',
-                        gap: '16px',
-                        alignItems: 'center',
-                    }}
-                >
+                <div>
                     <div
                         style={{
-                            width: '80px',
-                            height: '80px',
-                            borderRadius: '50%',
-                            backgroundColor: '#EBE8E0',
+                            backgroundColor: '#FFF9E6',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            marginBottom: '12px',
+                            fontSize: '13px',
+                            color: '#1D1D1B',
+                        }}
+                    >
+                        Пользователь не определён — откройте приложение через{' '}
+                        <a
+                            href="https://core.telegram.org/bots/webapps"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                color: '#1565C0',
+                                fontWeight: 600,
+                                textDecoration: 'underline',
+                            }}
+                        >
+                            Telegram Mini App
+                        </a>
+                        .
+                    </div>
+                    {/* Блок профиля — пустые данные */}
+                    <div
+                        style={{
+                            backgroundColor: '#FFFFFF',
+                            padding: '16px 12px',
                             display: 'flex',
+                            gap: '16px',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
                         }}
                     >
-                        <span style={{ fontSize: '32px' }}>👤</span>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold', color: '#6B6B69' }}>
-                            —
-                        </h2>
-                        <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>—</p>
-                        <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                            <span>Очки: —</span>
+                        <div
+                            style={{
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '50%',
+                                backgroundColor: '#EBE8E0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                            }}
+                        >
+                            <span style={{ fontSize: '32px' }}>👤</span>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold', color: '#6B6B69' }}>
+                                —
+                            </h2>
+                            <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>—</p>
+                            <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
+                                <span>Очки: —</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                {/* Статистика — пустые значения */}
-                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
-                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                        📊 Статистика
-                    </h3>
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
-                            gap: '12px',
-                        }}
-                    >
-                        <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
-                        </div>
-                        <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
-                        </div>
-                        <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
-                        </div>
-                        <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
-                            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
+                    {/* Статистика — пустые значения */}
+                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                            📊 Статистика
+                        </h3>
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(2, 1fr)',
+                                gap: '12px',
+                            }}
+                        >
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
+                            </div>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
+                            </div>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
+                            </div>
+                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
+                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
+                            </div>
                         </div>
                     </div>
+                    {/* Последние игры — пусто */}
+                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                            🎮 Последние игры
+                        </h3>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
+                    </div>
+                    {/* Лучшие напарники — пусто */}
+                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                            🤝 Лучшие напарники
+                        </h3>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
+                    </div>
                 </div>
-                {/* Последние игры — пусто */}
-                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
-                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                        🎮 Последние игры
-                    </h3>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
-                </div>
-                {/* Лучшие напарники — пусто */}
-                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
-                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                        🤝 Лучшие напарники
-                    </h3>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
-                </div>
-            </div>
-            {settingsFooter}
-            {settingsModal}
+                {settingsFooter}
+                {settingsModal}
             </>
         )
     }
@@ -555,153 +561,205 @@ export default function UserProfile() {
 
     return (
         <>
-        <div>
-            {/* Компактный блок с информацией о пользователе */}
-            <div
-                style={{
-                    backgroundColor: '#FFFFFF',
-                    padding: '16px 12px',
-                    display: 'flex',
-                    gap: '16px',
-                    alignItems: 'center',
-                }}
-            >
-                {/* Фото */}
+            <div>
+                {/* Компактный блок с информацией о пользователе */}
                 <div
                     style={{
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '50%',
-                        backgroundColor: '#EBE8E0',
+                        backgroundColor: '#FFFFFF',
+                        padding: '16px 12px',
                         display: 'flex',
+                        gap: '16px',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                        flexShrink: 0,
                     }}
                 >
-                    {photoUrl && !user.takoff ? (
-                        <img
-                            src={photoUrl}
-                            alt={fullName}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                    ) : (
-                        <span style={{ fontSize: '32px' }}>👤</span>
-                    )}
-                </div>
-
-                {/* Информация */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
-                        {displayPublicNickname(userNickname, user.takoff)}
-                    </h2>
-                    {user.username && !user.takoff && (
-                        <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>
-                            @{user.username}
-                        </p>
-                    )}
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                        <span>TG: {user.telegram_id}</span>
-                        <span>Очки: {pointsValue != null ? Math.round(Number(pointsValue)) : '—'}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Статистика */}
-            {statsLoading ? (
-                <div style={{ textAlign: 'center', padding: '20px' }}>
-                    <p>Загрузка статистики...</p>
-                </div>
-            ) : stats?.stats ? (
-                <>
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                    {/* Фото */}
                     <div
                         style={{
-                            backgroundColor: '#FFFFFF',
-                            padding: '16px 12px',
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            backgroundColor: '#EBE8E0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            flexShrink: 0,
                         }}
                     >
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            📊 Статистика
-                        </h3>
+                        {photoUrl && !user.takoff ? (
+                            <img
+                                src={photoUrl}
+                                alt={fullName}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <span style={{ fontSize: '32px' }}>👤</span>
+                        )}
+                    </div>
+
+                    {/* Информация */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
+                            {displayPublicNickname(userNickname, user.takoff)}
+                        </h2>
+                        {user.username && !user.takoff && (
+                            <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>
+                                @{user.username}
+                            </p>
+                        )}
+                        <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
+                            <span>TG: {user.telegram_id}</span>
+                            <span>Очки: {pointsValue != null ? Math.round(Number(pointsValue)) : '—'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Статистика */}
+                {statsLoading ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                        <p>Загрузка статистики...</p>
+                    </div>
+                ) : stats?.stats ? (
+                    <>
+                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                         <div
                             style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(2, 1fr)',
-                                gap: '12px',
+                                backgroundColor: '#FFFFFF',
+                                padding: '16px 12px',
                             }}
                         >
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{stats.stats.place}</div>
-                            </div>
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                    {gamesPlayedValue != null ? gamesPlayedValue : '—'}
+                            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                                📊 Статистика
+                            </h3>
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(2, 1fr)',
+                                    gap: '12px',
+                                }}
+                            >
+                                <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
+                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{stats.stats.place}</div>
                                 </div>
-                            </div>
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                    {winsValue != null ? winsValue : '—'}
+                                <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
+                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                                        {gamesPlayedValue != null ? gamesPlayedValue : '—'}
+                                    </div>
                                 </div>
-                            </div>
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                    {winRateValue != null ? `${winRateValue}%` : '—'}
+                                <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
+                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                                        {winsValue != null ? winsValue : '—'}
+                                    </div>
+                                </div>
+                                <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
+                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                                        {winRateValue != null ? `${winRateValue}%` : '—'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </>
-            ) : (
-                <>
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div
-                        style={{
-                            backgroundColor: '#FFF9E6',
-                            padding: '16px 12px',
-                            textAlign: 'center',
-                        }}
-                    >
-                        <p style={{ margin: 0, color: '#1D1D1B' }}>
-                            Статистика недоступна. Возможно, вы ещё не играли.
-                        </p>
-                    </div>
-                </>
-            )}
+                    </>
+                ) : (
+                    <>
+                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                        <div
+                            style={{
+                                backgroundColor: '#FFF9E6',
+                                padding: '16px 12px',
+                                textAlign: 'center',
+                            }}
+                        >
+                            <p style={{ margin: 0, color: '#1D1D1B' }}>
+                                Статистика недоступна. Возможно, вы ещё не играли.
+                            </p>
+                        </div>
+                    </>
+                )}
 
-            {/* Игры и напарники сразу под статистикой; пустой ответ API не скрывает блоки (раньше казалось, что в Mini App их «нет»). */}
-            {!statsLoading && (
-                <>
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            🎮 Последние игры
-                        </h3>
-                        {(stats?.recentGames?.length ?? 0) > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                {stats!.recentGames!.map((game, index) => {
-                                    const won = didUserWin(game)
-                                    const n = (s: string | undefined | null) => (s ?? '').trim()
-                                    const un = userNickname ?? ''
-                                    const isTeam1 =
-                                        !!un && (n(game.player_1_1) === un || n(game.player_1_2) === un)
-                                    const partner = isTeam1
-                                        ? n(game.player_1_1) === un
-                                            ? game.player_1_2
-                                            : game.player_1_1
-                                        : n(game.player_2_1) === un
-                                          ? game.player_2_2
-                                          : game.player_2_1
-                                    const opponent1 = isTeam1 ? game.player_2_1 : game.player_1_1
-                                    const opponent2 = isTeam1 ? game.player_2_2 : game.player_1_2
+                {/* Игры и напарники сразу под статистикой; пустой ответ API не скрывает блоки (раньше казалось, что в Mini App их «нет»). */}
+                {!statsLoading && (
+                    <>
+                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                        <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                                🎮 Последние игры
+                            </h3>
+                            {(stats?.recentGames?.length ?? 0) > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    {stats!.recentGames!.map((game, index) => {
+                                        const won = didUserWin(game)
+                                        const n = (s: string | undefined | null) => (s ?? '').trim()
+                                        const un = userNickname ?? ''
+                                        const isTeam1 =
+                                            !!un && (n(game.player_1_1) === un || n(game.player_1_2) === un)
+                                        const partner = isTeam1
+                                            ? n(game.player_1_1) === un
+                                                ? game.player_1_2
+                                                : game.player_1_1
+                                            : n(game.player_2_1) === un
+                                                ? game.player_2_2
+                                                : game.player_2_1
+                                        const opponent1 = isTeam1 ? game.player_2_1 : game.player_1_1
+                                        const opponent2 = isTeam1 ? game.player_2_2 : game.player_1_2
 
-                                    return (
-                                        <div key={game.game_id}>
+                                        return (
+                                            <div key={game.game_id}>
+                                                {index > 0 && (
+                                                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                                                )}
+                                                <div
+                                                    style={{
+                                                        backgroundColor: '#FFFFFF',
+                                                        padding: '12px 0',
+                                                        borderLeft: `4px solid ${won ? '#1B5E20' : '#B71C1C'}`,
+                                                        paddingLeft: '12px',
+                                                    }}
+                                                >
+                                                    <div
+                                                        style={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            marginBottom: '8px',
+                                                        }}
+                                                    >
+                                                        <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                                                            {won ? '✅ Победа' : '❌ Поражение'} {game.score_1} :{' '}
+                                                            {game.score_2}
+                                                        </div>
+                                                        <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                            {formatDate(game.created_at)}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                        <div>
+                                                            {user.takoff ? TAKOFF_PUBLIC_NAME : userNickname} + {partner}{' '}
+                                                            <strong>vs</strong> {opponent1} + {opponent2}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            ) : (
+                                <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
+                            )}
+                        </div>
+
+                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                        <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+                                🤝 Лучшие напарники
+                            </h3>
+                            {(stats?.bestPartners?.length ?? 0) > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    {stats!.bestPartners!.map((partner, index) => (
+                                        <div key={partner.name}>
                                             {index > 0 && (
                                                 <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                                             )}
@@ -709,183 +767,131 @@ export default function UserProfile() {
                                                 style={{
                                                     backgroundColor: '#FFFFFF',
                                                     padding: '12px 0',
-                                                    borderLeft: `4px solid ${won ? '#1B5E20' : '#B71C1C'}`,
-                                                    paddingLeft: '12px',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
                                                 }}
                                             >
-                                                <div
-                                                    style={{
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        marginBottom: '8px',
-                                                    }}
-                                                >
-                                                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                                                        {won ? '✅ Победа' : '❌ Поражение'} {game.score_1} :{' '}
-                                                        {game.score_2}
+                                                <div>
+                                                    <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                                                        {index === 0 && '🥇'} {index === 1 && '🥈'} {index === 2 && '🥉'}{' '}
+                                                        {partner.name}
                                                     </div>
                                                     <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                        {formatDate(game.created_at)}
+                                                        {partner.games} игр, {partner.wins} побед
                                                     </div>
                                                 </div>
-                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                    <div>
-                                                        {user.takoff ? TAKOFF_PUBLIC_NAME : userNickname} + {partner}{' '}
-                                                        <strong>vs</strong> {opponent1} + {opponent2}
-                                                    </div>
+                                                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2C2C2C' }}>
+                                                    {partner.winRate}%
                                                 </div>
                                             </div>
                                         </div>
-                                    )
-                                })}
-                            </div>
-                        ) : (
-                            <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
-                        )}
-                    </div>
-
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            🤝 Лучшие напарники
-                        </h3>
-                        {(stats?.bestPartners?.length ?? 0) > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                {stats!.bestPartners!.map((partner, index) => (
-                                    <div key={partner.name}>
-                                        {index > 0 && (
-                                            <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                                        )}
-                                        <div
-                                            style={{
-                                                backgroundColor: '#FFFFFF',
-                                                padding: '12px 0',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                            }}
-                                        >
-                                            <div>
-                                                <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                                                    {index === 0 && '🥇'} {index === 1 && '🥈'} {index === 2 && '🥉'}{' '}
-                                                    {partner.name}
-                                                </div>
-                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                    {partner.games} игр, {partner.wins} побед
-                                                </div>
-                                            </div>
-                                            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2C2C2C' }}>
-                                                {partner.winRate}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>
-                                Нет данных. Список появляется при не менее 3 совместных играх с одним напарником.
-                            </p>
-                        )}
-                    </div>
-                </>
-            )}
-
-            {/* Реферальная программа — после статистики, заметная карточка */}
-            <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-            <div
-                id="referral-block"
-                style={{
-                    margin: '12px',
-                    padding: '16px 14px',
-                    backgroundColor: '#FFF9E6',
-                    borderRadius: '12px',
-                    border: '2px solid #FFDF00',
-                    boxShadow: '0 2px 8px rgba(29,29,27,0.06)',
-                }}
-            >
-                <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '18px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                    🔗 Пригласить друзей
-                </h3>
-                {!botUsername && (
-                    <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
-                        Добавьте в окружение переменную{' '}
-                        <code style={{ fontSize: '12px' }}>NEXT_PUBLIC_TELEGRAM_BOT_USERNAME</code> (имя бота без @) и
-                        пересоберите приложение — без этого ссылку не собрать.
-                    </p>
-                )}
-                {botUsername && !refUser?.referral_code && !statsLoading && (
-                    <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
-                        Реферальный код появится после миграции БД и повторного входа. Закройте Mini App и откройте снова.
-                    </p>
-                )}
-                {referralShareLink && (
-                    <>
-                        <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#6B6B69' }}>Ваша ссылка</p>
-                        <div
-                            style={{
-                                fontSize: '12px',
-                                wordBreak: 'break-all',
-                                color: '#1D1D1B',
-                                marginBottom: '8px',
-                                padding: '8px',
-                                backgroundColor: '#FFFFFF',
-                                borderRadius: '6px',
-                                border: '1px solid #EBE8E0',
-                            }}
-                        >
-                            {referralShareLink}
+                                    ))}
+                                </div>
+                            ) : (
+                                <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>
+                                    Нет данных. Список появляется при не менее 3 совместных играх с одним напарником.
+                                </p>
+                            )}
                         </div>
-                        <button
-                            type="button"
-                            onClick={handleCopyReferral}
-                            style={{
-                                padding: '8px 14px',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                border: 'none',
-                                borderRadius: '8px',
-                                backgroundColor: '#FFDF00',
-                                color: '#1D1D1B',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            {copyDone ? 'Скопировано' : 'Копировать ссылку'}
-                        </button>
                     </>
                 )}
-                <p style={{ margin: '12px 0 0', fontSize: '14px', color: '#1D1D1B' }}>
-                    Приглашено:{' '}
-                    <strong>{invitedTotal !== null ? invitedTotal : statsLoading ? '…' : '—'}</strong>
-                </p>
-                {inviterRow && (
-                    <div style={{ marginTop: '12px' }}>
-                        <p style={{ margin: '0 0 6px', fontSize: '13px', color: '#6B6B69' }}>Вас пригласил</p>
-                        <Link
-                            href={`/player/${inviterRow.id}`}
-                            style={{
-                                fontSize: '15px',
-                                fontWeight: 'bold',
-                                color: '#1B5E20',
-                                textDecoration: 'none',
-                            }}
-                        >
-                            {inviterRow.nickname?.trim() ||
-                                [inviterRow.first_name, inviterRow.last_name].filter(Boolean).join(' ') ||
-                                inviterRow.username ||
-                                `Игрок #${inviterRow.id}`}
-                        </Link>
-                        {inviterRow.username && (
-                            <span style={{ fontSize: '13px', color: '#6B6B69', marginLeft: '8px' }}>
-                                @{inviterRow.username}
-                            </span>
-                        )}
-                    </div>
-                )}
+
+                {/* Реферальная программа — после статистики, заметная карточка */}
+                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                <div
+                    id="referral-block"
+                    style={{
+                        margin: '12px',
+                        padding: '16px 14px',
+                        backgroundColor: '#FFF9E6',
+                        borderRadius: '12px',
+                        border: '2px solid #FFDF00',
+                        boxShadow: '0 2px 8px rgba(29,29,27,0.06)',
+                    }}
+                >
+                    <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '18px', fontWeight: 'bold', color: '#1D1D1B' }}>
+                        🔗 Пригласить друзей
+                    </h3>
+                    {!botUsername && (
+                        <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
+                            Добавьте в окружение переменную{' '}
+                            <code style={{ fontSize: '12px' }}>NEXT_PUBLIC_TELEGRAM_BOT_USERNAME</code> (имя бота без @) и
+                            пересоберите приложение — без этого ссылку не собрать.
+                        </p>
+                    )}
+                    {botUsername && !refUser?.referral_code && !statsLoading && (
+                        <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
+                            Реферальный код появится после миграции БД и повторного входа. Закройте Mini App и откройте снова.
+                        </p>
+                    )}
+                    {referralShareLink && (
+                        <>
+                            <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#6B6B69' }}>Ваша ссылка</p>
+                            <div
+                                style={{
+                                    fontSize: '12px',
+                                    wordBreak: 'break-all',
+                                    color: '#1D1D1B',
+                                    marginBottom: '8px',
+                                    padding: '8px',
+                                    backgroundColor: '#FFFFFF',
+                                    borderRadius: '6px',
+                                    border: '1px solid #EBE8E0',
+                                }}
+                            >
+                                {referralShareLink}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleCopyReferral}
+                                style={{
+                                    padding: '8px 14px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    backgroundColor: '#FFDF00',
+                                    color: '#1D1D1B',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                {copyDone ? 'Скопировано' : 'Копировать ссылку'}
+                            </button>
+                        </>
+                    )}
+                    <p style={{ margin: '12px 0 0', fontSize: '14px', color: '#1D1D1B' }}>
+                        Приглашено:{' '}
+                        <strong>{invitedTotal !== null ? invitedTotal : statsLoading ? '…' : '—'}</strong>
+                    </p>
+                    {inviterRow && (
+                        <div style={{ marginTop: '12px' }}>
+                            <p style={{ margin: '0 0 6px', fontSize: '13px', color: '#6B6B69' }}>Вас пригласил</p>
+                            <Link
+                                href={`/player/${inviterRow.id}`}
+                                style={{
+                                    fontSize: '15px',
+                                    fontWeight: 'bold',
+                                    color: '#1B5E20',
+                                    textDecoration: 'none',
+                                }}
+                            >
+                                {inviterRow.nickname?.trim() ||
+                                    [inviterRow.first_name, inviterRow.last_name].filter(Boolean).join(' ') ||
+                                    inviterRow.username ||
+                                    `Игрок #${inviterRow.id}`}
+                            </Link>
+                            {inviterRow.username && (
+                                <span style={{ fontSize: '13px', color: '#6B6B69', marginLeft: '8px' }}>
+                                    @{inviterRow.username}
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
-        {settingsFooter}
-        {settingsModal}
+            {settingsFooter}
+            {settingsModal}
         </>
     )
 }
