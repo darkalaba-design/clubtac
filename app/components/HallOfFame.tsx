@@ -5,12 +5,14 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { displayPublicNickname } from '@/lib/takoff'
 import { useUser } from '../contexts/UserContext'
+import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 
 export default function HallOfFame() {
     const [players, setPlayers] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const { user } = useUser()
+    const getMedalPrefix = useSoloLeaderMedalPrefix()
 
     useEffect(() => {
         const load = async () => {
@@ -120,9 +122,6 @@ export default function HallOfFame() {
             player.points ?? (player as any).total_points ?? (player as any).rating
 
         const isCurrentUser = user && typeof user.id !== 'undefined' && player.user_id === user.id
-        const placeNum = Number(player.place)
-        const placeMedal =
-            placeNum === 1 ? '🥇 ' : placeNum === 2 ? '🥈 ' : placeNum === 3 ? '🥉 ' : null
 
         return (
             <div key={player.user_id}>
@@ -187,7 +186,7 @@ export default function HallOfFame() {
                                             whiteSpace: 'nowrap',
                                         }}
                                     >
-                                        {placeMedal}
+                                        {getMedalPrefix(player.user_id)}
                                         {displayPublicNickname(player.nickname, player.takoff)}
                                     </div>
                                     <div

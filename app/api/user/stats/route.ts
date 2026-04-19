@@ -175,7 +175,28 @@ export async function GET(request: NextRequest) {
                 }))
                 .filter((p) => p.games >= 3) // Минимум 3 игры вместе
                 .sort((a, b) => b.winRate - a.winRate)
-                .slice(0, 3); // Топ 3
+                .slice(0, 3) // Топ 3
+        }
+
+        if (bestPartners.length > 0) {
+            const names = [...new Set(bestPartners.map((p: { name: string }) => p.name.trim()))].filter(Boolean)
+            if (names.length > 0) {
+                const { data: hallRows } = await supabase
+                    .from('clubtac_players_hall_of_fame_v3')
+                    .select('user_id, nickname')
+                    .in('nickname', names)
+                const nickToUserId: Record<string, number> = {}
+                if (hallRows) {
+                    for (const row of hallRows as { user_id: number; nickname?: string | null }[]) {
+                        const nk = (row.nickname ?? '').trim()
+                        if (nk) nickToUserId[nk] = Number(row.user_id)
+                    }
+                }
+                bestPartners = bestPartners.map((p: { name: string; games: number; wins: number; winRate: number }) => ({
+                    ...p,
+                    user_id: nickToUserId[p.name.trim()] ?? null,
+                }))
+            }
         }
 
         const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME?.replace(/^@/, '') || ''

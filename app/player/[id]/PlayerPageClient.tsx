@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { formatGamesWinsLine } from '@/lib/ruCountPhrases'
+import { formatPointsRu, formatWinsGamesLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import Tabs from '../../components/Tabs'
+import { useSoloLeaderMedalPrefix } from '../../contexts/SoloLeaderRanksContext'
 
 interface PlayerStats {
     recentGames: Array<{
@@ -24,11 +25,13 @@ interface PlayerStats {
         games: number
         wins: number
         winRate: number
+        user_id?: number | null
     }>
 }
 
 export default function PlayerPageClient({ playerId }: { playerId: string }) {
     const router = useRouter()
+    const getMedalPrefix = useSoloLeaderMedalPrefix()
     const [player, setPlayer] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -262,6 +265,10 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         }
     }
 
+    const rankPlaceNum = Number(player.place)
+    const placeMedalPrefix =
+        rankPlaceNum === 1 ? '🥇 ' : rankPlaceNum === 2 ? '🥈 ' : rankPlaceNum === 3 ? '🥉 ' : ''
+
     // Определяем, выиграл ли игрок игру (по nickname в играх)
     const didPlayerWin = (game: PlayerStats['recentGames'][0]) => {
         const nick = player?.nickname?.trim()
@@ -289,6 +296,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                     e.stopPropagation()
                 }}
             >
+                {getMedalPrefix(id)}
                 {n}
             </Link>
         )
@@ -361,16 +369,30 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                 }}
                             />
                         ) : (
-                            <>#{player.place}</>
+                            <span
+                                style={{
+                                    textAlign: 'center',
+                                    fontWeight: 'bold',
+                                    fontSize: placeMedalPrefix ? '20px' : '24px',
+                                    lineHeight: 1.1,
+                                }}
+                            >
+                                {placeMedalPrefix}#{player.place}
+                            </span>
                         )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
+                            {getMedalPrefix(
+                                (player as { user_id?: number }).user_id ?? Number(playerId)
+                            )}
                             {displayPublicNickname(player.nickname, player.takoff)}
                         </h2>
                         {player.points != null && (
                             <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                                <span>Очки: {Math.round(player.points)}</span>
+                                <span style={{ color: '#1D1D1B', fontWeight: 500 }}>
+                                    {formatPointsRu(Math.round(Number(player.points)))}
+                                </span>
                             </div>
                         )}
                     </div>
@@ -418,7 +440,9 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                             }}
                         >
                             <div style={statCard}>
-                                <div style={statValueStyle}>#{player.place}</div>
+                                <div style={statValueStyle}>
+                                    {placeMedalPrefix}#{player.place}
+                                </div>
                                 <div style={statLabelStyle}>Место в рейтинге</div>
                             </div>
                             <div style={statCard}>
@@ -579,18 +603,19 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                     >
                                         <div>
                                             <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                                                {index === 0 && '🥇 '}
-                                                {index === 1 && '🥈 '}
-                                                {index === 2 && '🥉 '}
                                                 {renderPlayerName(partner.name)}
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
-                                                    {formatGamesWinsLine(
-                                                        Number(partner.games) || 0,
-                                                        Number(partner.wins) || 0
-                                                    )}
-                                                </span>
+                                            <div
+                                                style={{
+                                                    fontSize: '12px',
+                                                    color: '#A3A2A0',
+                                                    fontWeight: 400,
+                                                }}
+                                            >
+                                                {formatWinsGamesLine(
+                                                    Number(partner.wins) || 0,
+                                                    Number(partner.games) || 0
+                                                )}
                                             </div>
                                         </div>
                                         <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2C2C2C' }}>

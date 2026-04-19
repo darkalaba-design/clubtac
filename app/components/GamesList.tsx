@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { formatGamesRu } from '@/lib/ruCountPhrases'
 import { useUser } from '../contexts/UserContext'
+import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 
 interface Game {
     game_id: number
@@ -39,6 +40,7 @@ type GamesTab = 'announcements' | 'past'
 
 export default function GamesList() {
     const { user } = useUser()
+    const getMedalPrefix = useSoloLeaderMedalPrefix()
     const searchParams = useSearchParams()
     const gamesTabFromUrl = (searchParams.get('gamesTab') as GamesTab | null)
     const [activeTab, setActiveTab] = useState<GamesTab>(
@@ -1001,6 +1003,7 @@ export default function GamesList() {
                                                             className="link-player"
                                                             style={{ color: '#1B5E20', textDecoration: 'none', fontWeight: '500' }}
                                                         >
+                                                            {getMedalPrefix(p.user_id)}
                                                             {formatParticipantDisplay(p)}
                                                         </Link>
                                                     </li>
@@ -1612,6 +1615,7 @@ export default function GamesList() {
                                                                         lineHeight: '14px',
                                                                     }}
                                                                 >
+                                                                    {getMedalPrefix(playerIdMap[game.player_1_1])}
                                                                     {game.player_1_1}
                                                                 </Link>
                                                             ) : (
@@ -1632,6 +1636,7 @@ export default function GamesList() {
                                                                         lineHeight: '14px',
                                                                     }}
                                                                 >
+                                                                    {getMedalPrefix(playerIdMap[game.player_1_2])}
                                                                     {game.player_1_2}
                                                                 </Link>
                                                             ) : (
@@ -1694,6 +1699,7 @@ export default function GamesList() {
                                                                         lineHeight: '14px',
                                                                     }}
                                                                 >
+                                                                    {getMedalPrefix(playerIdMap[game.player_2_1])}
                                                                     {game.player_2_1}
                                                                 </Link>
                                                             ) : (
@@ -1714,6 +1720,7 @@ export default function GamesList() {
                                                                         lineHeight: '14px',
                                                                     }}
                                                                 >
+                                                                    {getMedalPrefix(playerIdMap[game.player_2_2])}
                                                                     {game.player_2_2}
                                                                 </Link>
                                                             ) : (

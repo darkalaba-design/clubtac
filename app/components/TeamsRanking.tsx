@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { formatGamesWinsLine } from '@/lib/ruCountPhrases'
+import { formatWinsGamesLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname } from '@/lib/takoff'
+import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 
 export default function TeamsRanking() {
+    const getMedalPrefix = useSoloLeaderMedalPrefix()
     const [teams, setTeams] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -103,10 +105,6 @@ export default function TeamsRanking() {
     const rest = teams.slice(10)
 
     const renderTeamRow = (team: any, indexInSection: number, rowDividerColor = '#EBE8E0') => {
-        const rankNum = Number(team.rank)
-        const rankMedal =
-            rankNum === 1 ? '🥇 ' : rankNum === 2 ? '🥈 ' : rankNum === 3 ? '🥉 ' : null
-
         return (
             <div key={`${team.player_1_id}-${team.player_2_id}`}>
                 {indexInSection > 0 && <div style={{ height: '1px', backgroundColor: rowDividerColor }} />}
@@ -152,7 +150,6 @@ export default function TeamsRanking() {
                                     whiteSpace: 'nowrap',
                                 }}
                             >
-                                {rankMedal}
                                 <Link
                                     href={`/player/${team.player_1_id}`}
                                     className="link-player"
@@ -161,6 +158,7 @@ export default function TeamsRanking() {
                                         textDecoration: 'none',
                                     }}
                                 >
+                                    {getMedalPrefix(team.player_1_id)}
                                     {displayPublicNickname(team.player_1_nickname, team.player_1_takoff)}
                                 </Link>
                                 <span style={{ margin: '0 4px', color: '#6B6B69' }}>+</span>
@@ -172,6 +170,7 @@ export default function TeamsRanking() {
                                         textDecoration: 'none',
                                     }}
                                 >
+                                    {getMedalPrefix(team.player_2_id)}
                                     {displayPublicNickname(team.player_2_nickname, team.player_2_takoff)}
                                 </Link>
                             </div>
@@ -182,7 +181,7 @@ export default function TeamsRanking() {
                                     fontWeight: 400,
                                 }}
                             >
-                                {formatGamesWinsLine(Number(team.games_played) || 0, Number(team.wins) || 0)}
+                                {formatWinsGamesLine(Number(team.wins) || 0, Number(team.games_played) || 0)}
                             </div>
                         </div>
                     </div>

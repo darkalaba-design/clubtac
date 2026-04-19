@@ -25,7 +25,17 @@ export function formatWinsRu(n: number): string {
     return formatWithNoun(n, 'победа', 'победы', 'побед')
 }
 
+/** «13115 очков», «1 очко», «3 очка» */
+export function formatPointsRu(n: number): string {
+    return formatWithNoun(n, 'очко', 'очка', 'очков')
+}
+
 /** «7 игр • 7 побед» — для строк под парами в рейтингах */
 export function formatGamesWinsLine(games: number, wins: number): string {
     return `${formatGamesRu(games)} • ${formatWinsRu(wins)}`
+}
+
+/** «7 побед • 7 игр» — рейтинг команд (сначала победы) */
+export function formatWinsGamesLine(wins: number, games: number): string {
+    return `${formatWinsRu(wins)} • ${formatGamesRu(games)}`
 }

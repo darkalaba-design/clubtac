@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { formatGamesWinsLine } from '@/lib/ruCountPhrases'
+import { formatPointsRu, formatWinsGamesLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import { useUser } from '../contexts/UserContext'
+import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 import type { User } from '@/types/user'
 
 interface UserStats {
@@ -32,6 +33,7 @@ interface UserStats {
         games: number
         wins: number
         winRate: number
+        user_id?: number | null
     }>
     referralLink?: string | null
     invitedCount?: number
@@ -51,6 +53,7 @@ interface UserStats {
  */
 export default function UserProfile() {
     const { user, loading, setUser } = useUser()
+    const getMedalPrefix = useSoloLeaderMedalPrefix()
     const [stats, setStats] = useState<UserStats | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
     const [gamesMoreLoading, setGamesMoreLoading] = useState(false)
@@ -348,12 +351,12 @@ export default function UserProfile() {
                 <div style={{ flex: 1, overflow: 'auto', padding: '16px 12px' }}>
                     {!user ? (
                         <p style={{ margin: 0, fontSize: '15px', color: '#6B6B69' }}>
-                            Войдите через Telegram Mini App, чтобы менять настройки.
+                            Войдите через Telegram Mini App, чтобы открыть настройку приватности в рейтинге.
                         </p>
                     ) : (
                         <>
                             <p style={{ margin: '0 0 16px', fontSize: '15px', color: '#6B6B69' }}>
-                                Здесь появятся другие опции. Пока доступна одна.
+                                Скрытие ника и фото в общих списках.
                             </p>
                             <div
                                 style={{
@@ -662,6 +665,7 @@ export default function UserProfile() {
                     {/* Информация */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
+                            {getMedalPrefix(user.id)}
                             {displayPublicNickname(userNickname, user.takoff)}
                         </h2>
                         {user.username && !user.takoff && (
@@ -671,7 +675,13 @@ export default function UserProfile() {
                         )}
                         <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
                             <span>TG: {user.telegram_id}</span>
-                            <span>Очки: {pointsValue != null ? Math.round(Number(pointsValue)) : '—'}</span>
+                            {pointsValue != null ? (
+                                <span style={{ color: '#1D1D1B', fontWeight: 500 }}>
+                                    {formatPointsRu(Math.round(Number(pointsValue)))}
+                                </span>
+                            ) : (
+                                <span>Очки: —</span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -835,18 +845,34 @@ export default function UserProfile() {
                                             >
                                                 <div>
                                                     <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                                                        {index === 0 && '🥇 '}
-                                                        {index === 1 && '🥈 '}
-                                                        {index === 2 && '🥉 '}
-                                                        {partner.name}
+                                                        {partner.user_id ? (
+                                                            <Link
+                                                                href={`/player/${partner.user_id}`}
+                                                                className="link-player"
+                                                                style={{
+                                                                    color: '#1D1D1B',
+                                                                    textDecoration: 'none',
+                                                                    fontWeight: 'bold',
+                                                                }}
+                                                            >
+                                                                {getMedalPrefix(partner.user_id)}
+                                                                {partner.name}
+                                                            </Link>
+                                                        ) : (
+                                                            partner.name
+                                                        )}
                                                     </div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                        <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
-                                                            {formatGamesWinsLine(
-                                                                Number(partner.games) || 0,
-                                                                Number(partner.wins) || 0
-                                                            )}
-                                                        </span>
+                                                    <div
+                                                        style={{
+                                                            fontSize: '12px',
+                                                            color: '#A3A2A0',
+                                                            fontWeight: 400,
+                                                        }}
+                                                    >
+                                                        {formatWinsGamesLine(
+                                                            Number(partner.wins) || 0,
+                                                            Number(partner.games) || 0
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2C2C2C' }}>
@@ -944,6 +970,7 @@ export default function UserProfile() {
                                     textDecoration: 'none',
                                 }}
                             >
+                                {getMedalPrefix(inviterRow.id)}
                                 {inviterRow.nickname?.trim() ||
                                     [inviterRow.first_name, inviterRow.last_name].filter(Boolean).join(' ') ||
                                     inviterRow.username ||
