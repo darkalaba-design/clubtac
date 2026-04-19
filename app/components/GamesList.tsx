@@ -931,39 +931,41 @@ export default function GamesList() {
                                     color: '#6B6B69',
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                    <span aria-hidden>👥</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const isExpanding = !expandedParticipantListIds.has(event.id)
-                                            setExpandedParticipantListIds(prev => {
-                                                const next = new Set(prev)
-                                                if (next.has(event.id)) next.delete(event.id)
-                                                else next.add(event.id)
-                                                return next
-                                            })
-                                            if (isExpanding) loadEventParticipantsList(event.id)
-                                        }}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            padding: 0,
-                                            color: '#1B5E20',
-                                            textDecoration: 'underline',
-                                            cursor: 'pointer',
-                                            fontSize: '14px',
-                                            fontWeight: '500',
-                                        }}
-                                    >
-                                        {eventParticipantsCount[event.id] || 0}{' '}
-                                        {eventParticipantsCount[event.id] === 1
-                                            ? 'участник'
-                                            : eventParticipantsCount[event.id] && eventParticipantsCount[event.id] < 5
-                                              ? 'участника'
-                                              : 'участников'}
-                                    </button>
-                                </div>
+                                {(eventParticipantsCount[event.id] || 0) > 0 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                        <span aria-hidden>👥</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const isExpanding = !expandedParticipantListIds.has(event.id)
+                                                setExpandedParticipantListIds(prev => {
+                                                    const next = new Set(prev)
+                                                    if (next.has(event.id)) next.delete(event.id)
+                                                    else next.add(event.id)
+                                                    return next
+                                                })
+                                                if (isExpanding) loadEventParticipantsList(event.id)
+                                            }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                padding: 0,
+                                                color: '#1B5E20',
+                                                textDecoration: 'underline',
+                                                cursor: 'pointer',
+                                                fontSize: '14px',
+                                                fontWeight: '500',
+                                            }}
+                                        >
+                                            {eventParticipantsCount[event.id] || 0}{' '}
+                                            {eventParticipantsCount[event.id] === 1
+                                                ? 'участник'
+                                                : eventParticipantsCount[event.id] && eventParticipantsCount[event.id] < 5
+                                                  ? 'участника'
+                                                  : 'участников'}
+                                        </button>
+                                    </div>
+                                )}
                                 <span
                                     style={{
                                         fontSize: '12px',
@@ -976,29 +978,37 @@ export default function GamesList() {
                                     {getEventTypeName(event.type)}
                                 </span>
                             </div>
-                            {expandedParticipantListIds.has(event.id) && (
-                                <div style={{ marginBottom: '8px', padding: '10px 12px', backgroundColor: '#FFFEF7', borderRadius: '6px', border: '1px solid #EBE8E0' }}>
-                                    {eventParticipantsListLoading[event.id] ? (
-                                        <div style={{ fontSize: '13px', color: '#6B6B69' }}>Загрузка списка...</div>
-                                    ) : (eventParticipantsList[event.id]?.length ? (
-                                        <ul style={{ margin: 0, paddingLeft: '0px', fontSize: '14px', color: '#1D1D1B' }}>
-                                            {eventParticipantsList[event.id].map((p) => (
-                                                <li key={p.user_id} style={{ marginBottom: '4px' }}>
-                                                    <Link
-                                                        href={`/player/${p.user_id}`}
-                                                        className="link-player"
-                                                        style={{ color: '#1B5E20', textDecoration: 'none', fontWeight: '500' }}
-                                                    >
-                                                        {formatParticipantDisplay(p)}
-                                                    </Link>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <div style={{ fontSize: '13px', color: '#6B6B69' }}>Нет участников с оплатой</div>
-                                    ))}
-                                </div>
-                            )}
+                            {expandedParticipantListIds.has(event.id) &&
+                                (eventParticipantsListLoading[event.id] ||
+                                    (eventParticipantsList[event.id]?.length ?? 0) > 0) && (
+                                    <div
+                                        style={{
+                                            marginBottom: '8px',
+                                            padding: '10px 12px',
+                                            backgroundColor: '#FFFEF7',
+                                            borderRadius: '6px',
+                                            border: '1px solid #EBE8E0',
+                                        }}
+                                    >
+                                        {eventParticipantsListLoading[event.id] ? (
+                                            <div style={{ fontSize: '13px', color: '#6B6B69' }}>Загрузка списка...</div>
+                                        ) : (
+                                            <ul style={{ margin: 0, paddingLeft: '0px', fontSize: '14px', color: '#1D1D1B' }}>
+                                                {eventParticipantsList[event.id]!.map((p) => (
+                                                    <li key={p.user_id} style={{ marginBottom: '4px' }}>
+                                                        <Link
+                                                            href={`/player/${p.user_id}`}
+                                                            className="link-player"
+                                                            style={{ color: '#1B5E20', textDecoration: 'none', fontWeight: '500' }}
+                                                        >
+                                                            {formatParticipantDisplay(p)}
+                                                        </Link>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
                             {(event.description?.trim() || event.club_id) && (
                                 <div style={{ marginTop: '8px' }}>
                                     <button
