@@ -37,8 +37,6 @@ export default function Tabs({
                 bottom: 0,
                 left: 0,
                 right: 0,
-                display: 'flex',
-                gap: 0,
                 backgroundColor: '#FFFFFF',
                 borderTop: '1px solid #EBE8E0',
                 boxShadow: '0 -2px 12px rgba(29,29,27,0.06)',
@@ -46,6 +44,17 @@ export default function Tabs({
                 padding: '8px 0',
             }}
         >
+            <div
+                style={{
+                    maxWidth: 'var(--app-max-width, 850px)',
+                    width: '100%',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                    display: 'flex',
+                    gap: 0,
+                    minWidth: 0,
+                }}
+            >
             <button
                 onClick={() => onChange('games')}
                 style={{
@@ -153,6 +162,7 @@ export default function Tabs({
                 </div>
                 <span style={{ fontSize: '10px', pointerEvents: 'none' }}>Профиль</span>
             </button>
+            </div>
         </div>
     )
 }

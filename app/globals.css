@@ -12,6 +12,8 @@
   --text-muted: #6B6B69;
   --divider: #EBE8E0;
   --border: #E5E2DC;
+  /* Узкая колонка на широких экранах (мини-приложение / мобильный вид) */
+  --app-max-width: 850px;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -33,6 +35,7 @@
 
 html {
   min-height: 100%;
+  background-color: var(--background);
 }
 
 body {
@@ -40,9 +43,22 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background-color: #FFFFFF;
+  margin: 0;
+  background-color: var(--background);
   color: #1D1D1B;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Центрированная колонка: на телефоне на всю ширину, на широком экране не шире 850px */
+.layout-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--app-max-width);
+  margin-inline: auto;
+  min-height: 0;
+  background-color: var(--background);
 }
 
 .layout-content {
@@ -50,7 +66,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background-color: #FFFFFF;
+  background-color: var(--background);
   color: #1D1D1B;
 }
 

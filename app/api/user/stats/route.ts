@@ -3,17 +3,18 @@ import { createClient } from '@/lib/supabase/api'
 
 /**
  * API endpoint для получения статистики пользователя
- * Принимает telegram_id или nickname
+ * Принимает telegram_id, user_id (id в clubtac_users) или nickname
  */
 export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams
         const telegramId = searchParams.get('telegram_id')
+        const userIdParam = searchParams.get('user_id')
         const nickname = searchParams.get('nickname')
 
-        if (!telegramId && !nickname) {
+        if (!telegramId && !nickname && !userIdParam) {
             return NextResponse.json(
-                { error: 'telegram_id или nickname обязательны' },
+                { error: 'telegram_id, user_id или nickname обязательны' },
                 { status: 400 }
             )
         }
@@ -29,6 +30,23 @@ export async function GET(request: NextRequest) {
                 .from('clubtac_users')
                 .select('*')
                 .eq('telegram_id', parseInt(telegramId))
+                .single()
+            if (userError || !userData) {
+                return NextResponse.json(
+                    { error: 'Пользователь не найден' },
+                    { status: 404 }
+                )
+            }
+            user = userData
+        } else if (userIdParam) {
+            const uid = Number.parseInt(userIdParam, 10)
+            if (!Number.isFinite(uid) || uid <= 0) {
+                return NextResponse.json({ error: 'Некорректный user_id' }, { status: 400 })
+            }
+            const { data: userData, error: userError } = await supabase
+                .from('clubtac_users')
+                .select('*')
+                .eq('id', uid)
                 .single()
             if (userError || !userData) {
                 return NextResponse.json(
@@ -85,16 +103,30 @@ export async function GET(request: NextRequest) {
                 cellNick(game.player_2_1 as string) === userNickname ||
                 cellNick(game.player_2_2 as string) === userNickname)
 
-        // Получаем последние игры пользователя (до 10)
+        const rawGamesLimit = searchParams.get('recent_games_limit')
+        let recentGamesLimit = 3
+        if (rawGamesLimit != null) {
+            const n = Number.parseInt(rawGamesLimit, 10)
+            if (Number.isFinite(n)) {
+                recentGamesLimit = Math.min(100, Math.max(1, n))
+            }
+        }
+
+        // Берём запас строк: игрок может редко попадать в последние N матчей общего списка
+        const summaryFetchLimit = Math.min(1000, Math.max(200, recentGamesLimit * 8))
+
         const { data: allGames, error: gamesError } = await supabase
             .from('games_summary')
             .select('*')
             .order('created_at', { ascending: false })
-            .limit(100) // Берем больше, чтобы потом отфильтровать
+            .limit(summaryFetchLimit)
 
         let recentGames: any[] = []
+        let recentGamesHasMore = false
         if (!gamesError && allGames && userNickname) {
-            recentGames = allGames.filter(rowHasPlayer).slice(0, 10)
+            const filtered = allGames.filter(rowHasPlayer)
+            recentGames = filtered.slice(0, recentGamesLimit)
+            recentGamesHasMore = filtered.length > recentGamesLimit
         }
 
         let bestPartners: any[] = []
@@ -187,6 +219,7 @@ export async function GET(request: NextRequest) {
             user,
             stats: stats || null,
             recentGames,
+            recentGamesHasMore,
             bestPartners,
             referralLink,
             invitedCount,

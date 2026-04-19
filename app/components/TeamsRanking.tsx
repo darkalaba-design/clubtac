@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { countRu, gamesNounRu, winsNounRu } from '@/lib/ruCountPhrases'
 import { displayPublicNickname } from '@/lib/takoff'
 
 export default function TeamsRanking() {
@@ -98,75 +99,123 @@ export default function TeamsRanking() {
         )
     }
 
-    return (
-        <div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {teams.map((team, index) => {
-                    const winRate = team.games_played > 0 ? Math.round((team.wins / team.games_played) * 100) : 0
+    const topTen = teams.slice(0, 10)
+    const rest = teams.slice(10)
 
-                    return (
-                        <div key={`${team.player_1_id}-${team.player_2_id}`}>
-                            {index > 0 && (
-                                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                            )}
+    const renderTeamRow = (team: any, indexInSection: number, rowDividerColor = '#EBE8E0') => {
+        const rankNum = Number(team.rank)
+        const rankMedal =
+            rankNum === 1 ? '🥇 ' : rankNum === 2 ? '🥈 ' : rankNum === 3 ? '🥉 ' : null
+        const gamesPlayed = Number(team.games_played) || 0
+        const winsCount = Number(team.wins) || 0
+
+        return (
+            <div key={`${team.player_1_id}-${team.player_2_id}`}>
+                {indexInSection > 0 && <div style={{ height: '1px', backgroundColor: rowDividerColor }} />}
+                <div
+                    style={{
+                        backgroundColor: 'transparent',
+                        padding: '8px 12px',
+                        transition: 'background-color 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#FFFEF7'
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div
+                            style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '8px',
+                                backgroundColor: '#FFE950',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold',
+                                fontSize: '16px',
+                                flexShrink: 0,
+                                color: '#1D1D1B',
+                            }}
+                        >
+                            #{team.rank}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                             <div
                                 style={{
-                                    backgroundColor: '#FFFFFF',
-                                    padding: '8px 12px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    marginBottom: '2px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div
-                                        style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: '8px',
-                                            backgroundColor: '#FFE950',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontWeight: 'bold',
-                                            fontSize: '16px',
-                                            flexShrink: 0,
-                                            color: '#1D1D1B',
-                                        }}
-                                    >
-                                        #{team.rank}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '2px' }}>
-                                            <Link
-                                                href={`/player/${team.player_1_id}`}
-                                                className="link-player"
-                                                style={{
-                                                    color: '#1D1D1B',
-                                                    textDecoration: 'none',
-                                                }}
-                                            >
-                                                {displayPublicNickname(team.player_1_nickname, team.player_1_takoff)}
-                                            </Link>
-                                            <span style={{ margin: '0 4px', color: '#6B6B69' }}>+</span>
-                                            <Link
-                                                href={`/player/${team.player_2_id}`}
-                                                className="link-player"
-                                                style={{
-                                                    color: '#1D1D1B',
-                                                    textDecoration: 'none',
-                                                }}
-                                            >
-                                                {displayPublicNickname(team.player_2_nickname, team.player_2_takoff)}
-                                            </Link>
-                                        </div>
-                                        <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                            Игр: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{team.games_played}</span> | Побед: <span style={{ color: '#1D1D1B', fontWeight: '500' }}>{team.wins}</span> | % побед: <span style={{ color: '#2C2C2C', fontWeight: '500' }}>{winRate}%</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                {rankMedal}
+                                <Link
+                                    href={`/player/${team.player_1_id}`}
+                                    className="link-player"
+                                    style={{
+                                        color: '#1D1D1B',
+                                        textDecoration: 'none',
+                                    }}
+                                >
+                                    {displayPublicNickname(team.player_1_nickname, team.player_1_takoff)}
+                                </Link>
+                                <span style={{ margin: '0 4px', color: '#6B6B69' }}>+</span>
+                                <Link
+                                    href={`/player/${team.player_2_id}`}
+                                    className="link-player"
+                                    style={{
+                                        color: '#1D1D1B',
+                                        textDecoration: 'none',
+                                    }}
+                                >
+                                    {displayPublicNickname(team.player_2_nickname, team.player_2_takoff)}
+                                </Link>
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: '12px',
+                                    color: '#A3A2A0',
+                                    fontWeight: 400,
+                                }}
+                            >
+                                <span style={{ color: '#1D1D1B' }}>{countRu(gamesPlayed)}</span> {gamesNounRu(gamesPlayed)}
+                                <span style={{ margin: '0 4px', color: '#A3A2A0' }}>•</span>
+                                <span style={{ color: '#1D1D1B' }}>{countRu(winsCount)}</span> {winsNounRu(winsCount)}
                             </div>
                         </div>
-                    )
-                })}
+                    </div>
+                </div>
             </div>
+        )
+    }
+
+    return (
+        <div>
+            <div
+                style={{
+                    margin: '0 12px',
+                    backgroundColor: '#FFF9E6',
+                    border: '1px solid #FFE950',
+                    borderRadius: '12px',
+                    padding: '8px 0',
+                    boxShadow: '0 2px 12px rgba(29, 29, 27, 0.06)',
+                }}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {topTen.map((team, index) => renderTeamRow(team, index, '#FFE950'))}
+                </div>
+            </div>
+            {rest.length > 0 && (
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column' }}>
+                    {rest.map((team, index) => renderTeamRow(team, index))}
+                </div>
+            )}
         </div>
     )
 }

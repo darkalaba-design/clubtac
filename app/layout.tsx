@@ -38,11 +38,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <UserProvider>
-          <TelegramAuth />
-          <div className="layout-content">
-            {children}
+          <div className="layout-shell">
+            <TelegramAuth />
+            <div className="layout-content">{children}</div>
+            <Footer />
           </div>
-          <Footer />
         </UserProvider>
       </body>
     </html>

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { formatGamesRu } from '@/lib/ruCountPhrases'
 import { useUser } from '../contexts/UserContext'
 
 interface Game {
@@ -1549,7 +1550,7 @@ export default function GamesList() {
                                         </div>
                                     )}
                                     <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '8px' }}>
-                                        Игр: {dateGames.length}
+                                        {formatGamesRu(dateGames.length)}
                                     </div>
                                 </div>
                                 <div

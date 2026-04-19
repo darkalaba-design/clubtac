@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { formatGamesWinsLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import { useUser } from '../contexts/UserContext'
 import type { User } from '@/types/user'
@@ -34,6 +35,7 @@ interface UserStats {
     }>
     referralLink?: string | null
     invitedCount?: number
+    recentGamesHasMore?: boolean
     inviter?: {
         id: number
         first_name: string
@@ -51,11 +53,41 @@ export default function UserProfile() {
     const { user, loading, setUser } = useUser()
     const [stats, setStats] = useState<UserStats | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
+    const [gamesMoreLoading, setGamesMoreLoading] = useState(false)
     const [photoUrl, setPhotoUrl] = useState<string | null>(null)
     const [copyDone, setCopyDone] = useState(false)
     const [takoffSaving, setTakoffSaving] = useState(false)
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [settingsEntered, setSettingsEntered] = useState(false)
+
+    const sectionCard: React.CSSProperties = {
+        backgroundColor: '#FFFFFF',
+        borderRadius: '12px',
+        padding: '16px',
+        marginBottom: '16px',
+        boxShadow: '0 2px 16px rgba(29, 29, 27, 0.06)',
+    }
+
+    const statCardCell = {
+        backgroundColor: '#FFDF00',
+        borderRadius: '10px',
+        padding: '14px 12px',
+        textAlign: 'center' as const,
+    }
+    const statValueStyle = {
+        fontSize: '36px',
+        fontWeight: 'bold' as const,
+        color: '#1D1D1B',
+        lineHeight: 1.1,
+        letterSpacing: '-0.02em',
+    }
+    const statLabelStyle = {
+        fontSize: '12px',
+        color: '#1D1D1B',
+        marginTop: '6px',
+        fontWeight: 600,
+        opacity: 0.85,
+    }
 
     useEffect(() => {
         if (!settingsOpen) {
@@ -147,6 +179,7 @@ export default function UserProfile() {
                 } else if (user.nickname) {
                     params.append('nickname', user.nickname)
                 }
+                params.append('recent_games_limit', '3')
 
                 const response = await fetch(`/api/user/stats?${params.toString()}`)
                 if (response.ok) {
@@ -170,6 +203,38 @@ export default function UserProfile() {
         // setUser(data.user) — новый объект по ссылке, иначе эффект зацикливается
         // и «Загрузка статистики» не исчезает.
     }, [user?.id, user?.telegram_id, user?.nickname, setUser])
+
+    const loadMoreProfileGames = async () => {
+        if (!user || !stats?.recentGamesHasMore || gamesMoreLoading) return
+        if (!user.telegram_id && !user.nickname) return
+        setGamesMoreLoading(true)
+        try {
+            const params = new URLSearchParams()
+            if (user.telegram_id) {
+                params.append('telegram_id', user.telegram_id.toString())
+            } else {
+                params.append('nickname', user.nickname!)
+            }
+            params.append('recent_games_limit', String((stats.recentGames?.length ?? 0) + 10))
+            const response = await fetch(`/api/user/stats?${params.toString()}`)
+            if (response.ok) {
+                const data = await response.json()
+                setStats((prev) =>
+                    prev
+                        ? {
+                              ...prev,
+                              recentGames: data.recentGames || [],
+                              recentGamesHasMore: !!data.recentGamesHasMore,
+                          }
+                        : null
+                )
+            }
+        } catch (e) {
+            console.error('Ошибка подгрузки игр:', e)
+        } finally {
+            setGamesMoreLoading(false)
+        }
+    }
 
     const settingsFooter = (
         <div
@@ -402,7 +467,7 @@ export default function UserProfile() {
                     {/* Блок профиля — пустые данные */}
                     <div
                         style={{
-                            backgroundColor: '#FFFFFF',
+                            ...sectionCard,
                             padding: '16px 12px',
                             display: 'flex',
                             gap: '16px',
@@ -434,11 +499,7 @@ export default function UserProfile() {
                         </div>
                     </div>
                     {/* Статистика — пустые значения */}
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            📊 Статистика
-                        </h3>
+                    <div style={sectionCard}>
                         <div
                             style={{
                                 display: 'grid',
@@ -446,35 +507,42 @@ export default function UserProfile() {
                                 gap: '12px',
                             }}
                         >
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
+                            <div style={statCardCell}>
+                                <div style={statValueStyle}>—</div>
+                                <div style={statLabelStyle}>Место в рейтинге</div>
                             </div>
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
+                            <div style={statCardCell}>
+                                <div style={statValueStyle}>—</div>
+                                <div style={statLabelStyle}>Игр сыграно</div>
                             </div>
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
+                            <div style={statCardCell}>
+                                <div style={statValueStyle}>—</div>
+                                <div style={statLabelStyle}>Победы</div>
                             </div>
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>—</div>
+                            <div style={statCardCell}>
+                                <div style={{ ...statValueStyle, textAlign: 'center' }}>
+                                    —
+                                    <div
+                                        style={{
+                                            ...statLabelStyle,
+                                            marginTop: '4px',
+                                        }}
+                                    >
+                                        % побед
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     {/* Последние игры — пусто */}
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                    <div style={sectionCard}>
                         <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
                             🎮 Последние игры
                         </h3>
                         <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
                     </div>
                     {/* Лучшие напарники — пусто */}
-                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                    <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                    <div style={sectionCard}>
                         <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
                             🤝 Лучшие напарники
                         </h3>
@@ -559,7 +627,7 @@ export default function UserProfile() {
                 {/* Компактный блок с информацией о пользователе */}
                 <div
                     style={{
-                        backgroundColor: '#FFFFFF',
+                        ...sectionCard,
                         padding: '16px 12px',
                         display: 'flex',
                         gap: '16px',
@@ -610,75 +678,57 @@ export default function UserProfile() {
 
                 {/* Статистика */}
                 {statsLoading ? (
-                    <div style={{ textAlign: 'center', padding: '20px' }}>
-                        <p>Загрузка статистики...</p>
+                    <div style={{ ...sectionCard, textAlign: 'center' }}>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Загрузка статистики...</p>
                     </div>
                 ) : stats?.stats ? (
-                    <>
-                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
+                    <div style={sectionCard}>
                         <div
                             style={{
-                                backgroundColor: '#FFFFFF',
-                                padding: '16px 12px',
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(2, 1fr)',
+                                gap: '12px',
                             }}
                         >
-                            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                                📊 Статистика
-                            </h3>
-                            <div
-                                style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(2, 1fr)',
-                                    gap: '12px',
-                                }}
-                            >
-                                <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
-                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{stats.stats.place}</div>
-                                </div>
-                                <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
-                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                        {gamesPlayedValue != null ? gamesPlayedValue : '—'}
-                                    </div>
-                                </div>
-                                <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
-                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                        {winsValue != null ? winsValue : '—'}
-                                    </div>
-                                </div>
-                                <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                    <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
-                                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                        {winRateValue != null ? `${winRateValue}%` : '—'}
+                            <div style={statCardCell}>
+                                <div style={statValueStyle}>#{stats.stats.place}</div>
+                                <div style={statLabelStyle}>Место в рейтинге</div>
+                            </div>
+                            <div style={statCardCell}>
+                                <div style={statValueStyle}>{gamesPlayedValue != null ? gamesPlayedValue : '—'}</div>
+                                <div style={statLabelStyle}>Игр сыграно</div>
+                            </div>
+                            <div style={statCardCell}>
+                                <div style={statValueStyle}>{winsValue != null ? winsValue : '—'}</div>
+                                <div style={statLabelStyle}>Победы</div>
+                            </div>
+                            <div style={statCardCell}>
+                                <div style={{ ...statValueStyle, textAlign: 'center' }}>
+                                    {winRateValue != null ? Math.round(Number(winRateValue)) : '—'}
+                                    <div
+                                        style={{
+                                            ...statLabelStyle,
+                                            marginTop: '4px',
+                                        }}
+                                    >
+                                        % побед
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </>
+                    </div>
                 ) : (
-                    <>
-                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                        <div
-                            style={{
-                                backgroundColor: '#FFF9E6',
-                                padding: '16px 12px',
-                                textAlign: 'center',
-                            }}
-                        >
-                            <p style={{ margin: 0, color: '#1D1D1B' }}>
-                                Статистика недоступна. Возможно, вы ещё не играли.
-                            </p>
-                        </div>
-                    </>
+                    <div style={{ ...sectionCard, backgroundColor: '#FFF9E6', border: '1px solid #FFE950', textAlign: 'center' }}>
+                        <p style={{ margin: 0, color: '#1D1D1B' }}>
+                            Статистика недоступна. Возможно, вы ещё не играли.
+                        </p>
+                    </div>
                 )}
 
                 {/* Игры и напарники сразу под статистикой; пустой ответ API не скрывает блоки (раньше казалось, что в Mini App их «нет»). */}
                 {!statsLoading && (
                     <>
-                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                        <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                        <div style={sectionCard}>
                             <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
                                 🎮 Последние игры
                             </h3>
@@ -709,8 +759,6 @@ export default function UserProfile() {
                                                     style={{
                                                         backgroundColor: '#FFFFFF',
                                                         padding: '12px 0',
-                                                        borderLeft: `4px solid ${won ? '#1B5E20' : '#B71C1C'}`,
-                                                        paddingLeft: '12px',
                                                     }}
                                                 >
                                                     <div
@@ -741,10 +789,31 @@ export default function UserProfile() {
                             ) : (
                                 <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
                             )}
+                            {stats?.recentGamesHasMore && (stats?.recentGames?.length ?? 0) > 0 && (
+                                <button
+                                    type="button"
+                                    disabled={gamesMoreLoading}
+                                    onClick={loadMoreProfileGames}
+                                    style={{
+                                        marginTop: '8px',
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        background: 'transparent',
+                                        border: '1px solid #EBE8E0',
+                                        borderRadius: '6px',
+                                        color: '#1D1D1B',
+                                        cursor: gamesMoreLoading ? 'wait' : 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        opacity: gamesMoreLoading ? 0.65 : 1,
+                                    }}
+                                >
+                                    {gamesMoreLoading ? 'Загрузка…' : 'Показать ещё'}
+                                </button>
+                            )}
                         </div>
 
-                        <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                        <div style={{ backgroundColor: '#FFFFFF', padding: '16px 12px' }}>
+                        <div style={sectionCard}>
                             <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
                                 🤝 Лучшие напарники
                             </h3>
@@ -766,11 +835,18 @@ export default function UserProfile() {
                                             >
                                                 <div>
                                                     <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                                                        {index === 0 && '🥇'} {index === 1 && '🥈'} {index === 2 && '🥉'}{' '}
+                                                        {index === 0 && '🥇 '}
+                                                        {index === 1 && '🥈 '}
+                                                        {index === 2 && '🥉 '}
                                                         {partner.name}
                                                     </div>
                                                     <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                        {partner.games} игр, {partner.wins} побед
+                                                        <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
+                                                            {formatGamesWinsLine(
+                                                                Number(partner.games) || 0,
+                                                                Number(partner.wins) || 0
+                                                            )}
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2C2C2C' }}>
@@ -790,11 +866,10 @@ export default function UserProfile() {
                 )}
 
                 {/* Реферальная программа — после статистики, заметная карточка */}
-                <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
                 <div
                     id="referral-block"
                     style={{
-                        margin: '12px',
+                        margin: '16px 12px 12px',
                         padding: '16px 14px',
                         backgroundColor: '#FFF9E6',
                         borderRadius: '12px',

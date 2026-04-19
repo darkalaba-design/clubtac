@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { formatGamesWinsLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import Tabs from '../../components/Tabs'
 
@@ -33,6 +34,8 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
     const [error, setError] = useState<string | null>(null)
     const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
+    const [recentGamesHasMore, setRecentGamesHasMore] = useState(false)
+    const [gamesMoreLoading, setGamesMoreLoading] = useState(false)
     const [playerIdMap, setPlayerIdMap] = useState<Record<string, number>>({})
 
     useEffect(() => {
@@ -133,15 +136,21 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         loadIds()
     }, [playerStats?.recentGames, playerStats?.bestPartners, player?.nickname])
 
-    // Загружаем детальную статистику после загрузки данных игрока
+    // Детальная статистика по user_id (надёжнее, чем nickname: совпадение строки с hall_of_fame / дубликаты ников)
     useEffect(() => {
-        if (!player?.nickname?.trim()) return
+        if (!player) return
+        const uid = Number(playerId)
+        if (!Number.isFinite(uid) || uid <= 0) return
+        const rowUserId = (player as { user_id?: number }).user_id
+        if (rowUserId != null && Number(rowUserId) !== uid) return
 
         const loadStats = async () => {
             setStatsLoading(true)
+            setRecentGamesHasMore(false)
             try {
                 const params = new URLSearchParams()
-                params.append('nickname', player.nickname.trim())
+                params.append('user_id', String(Math.trunc(uid)))
+                params.append('recent_games_limit', '3')
 
                 const response = await fetch(`/api/user/stats?${params.toString()}`)
                 if (response.ok) {
@@ -150,8 +159,13 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                         recentGames: data.recentGames || [],
                         bestPartners: data.bestPartners || [],
                     })
+                    setRecentGamesHasMore(!!data.recentGamesHasMore)
+                } else if (response.status === 404) {
+                    setPlayerStats({ recentGames: [], bestPartners: [] })
+                    setRecentGamesHasMore(false)
                 } else {
-                    console.error('Ошибка загрузки статистики:', await response.text())
+                    const body = await response.text()
+                    console.error('Ошибка загрузки статистики:', body)
                 }
             } catch (error) {
                 console.error('Ошибка при загрузке статистики:', error)
@@ -161,7 +175,8 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         }
 
         loadStats()
-    }, [player?.nickname])
+        // Только `playerId` и `user_id` строки — не весь `player`, иначе после «Показать ещё» сбросится список при любом обновлении объекта
+    }, [playerId, (player as { user_id?: number } | null)?.user_id])
 
     if (loading) {
         return (
@@ -203,6 +218,34 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                 </div>
             </div>
         )
+    }
+
+    const loadMorePlayerGames = async () => {
+        if (!player || !recentGamesHasMore || gamesMoreLoading) return
+        const uid = Number(playerId)
+        if (!Number.isFinite(uid) || uid <= 0) return
+        const rowUserId = (player as { user_id?: number }).user_id
+        if (rowUserId != null && Number(rowUserId) !== uid) return
+        const next = (playerStats?.recentGames?.length ?? 0) + 10
+        setGamesMoreLoading(true)
+        try {
+            const params = new URLSearchParams()
+            params.append('user_id', String(Math.trunc(uid)))
+            params.append('recent_games_limit', String(next))
+            const response = await fetch(`/api/user/stats?${params.toString()}`)
+            if (response.ok) {
+                const data = await response.json()
+                setPlayerStats((prev) => ({
+                    recentGames: data.recentGames || [],
+                    bestPartners: prev?.bestPartners ?? data.bestPartners ?? [],
+                }))
+                setRecentGamesHasMore(!!data.recentGamesHasMore)
+            }
+        } catch (e) {
+            console.error('Ошибка подгрузки игр:', e)
+        } finally {
+            setGamesMoreLoading(false)
+        }
     }
 
     const handleTabChange = (tab: 'players' | 'teams' | 'games' | 'profile') => {
@@ -260,12 +303,13 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                 style={{
                     display: 'inline-block',
                     marginBottom: '16px',
+                    marginLeft: '12px',
                     color: '#1D1D1B',
                     textDecoration: 'none',
                     fontSize: '14px',
                     background: 'none',
                     border: 'none',
-                    padding: 0,
+                    padding: '4px 0',
                     cursor: 'pointer',
                     textAlign: 'left',
                 }}
@@ -386,8 +430,17 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                 <div style={statLabelStyle}>Победы</div>
                             </div>
                             <div style={statCard}>
-                                <div style={statValueStyle}>{winRate != null ? winRate : '—'}</div>
-                                <div style={statLabelStyle}>% побед</div>
+                                <div style={{ ...statValueStyle, textAlign: 'center' }}>
+                                    {winRate != null ? Math.round(Number(winRate)) : '—'}
+                                    <div
+                                        style={{
+                                            ...statLabelStyle,
+                                            marginTop: '4px',
+                                        }}
+                                    >
+                                        % побед
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )
@@ -470,6 +523,28 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                 )
                             })}
                         </div>
+                    {recentGamesHasMore && (
+                        <button
+                            type="button"
+                            disabled={gamesMoreLoading}
+                            onClick={loadMorePlayerGames}
+                            style={{
+                                marginTop: '8px',
+                                width: '100%',
+                                padding: '8px 12px',
+                                background: 'transparent',
+                                border: '1px solid #EBE8E0',
+                                borderRadius: '6px',
+                                color: '#1D1D1B',
+                                cursor: gamesMoreLoading ? 'wait' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                opacity: gamesMoreLoading ? 0.65 : 1,
+                            }}
+                        >
+                            {gamesMoreLoading ? 'Загрузка…' : 'Показать ещё'}
+                        </button>
+                    )}
                 </div>
             ) : null}
 
@@ -510,7 +585,12 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                                 {renderPlayerName(partner.name)}
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                {partner.games} игр, {partner.wins} побед
+                                                <span style={{ color: '#1D1D1B', fontWeight: '500' }}>
+                                                    {formatGamesWinsLine(
+                                                        Number(partner.games) || 0,
+                                                        Number(partner.wins) || 0
+                                                    )}
+                                                </span>
                                             </div>
                                         </div>
                                         <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2C2C2C' }}>
