@@ -491,17 +491,11 @@ export default function UserProfile() {
     const displayName = userNickname || user.first_name || user.last_name || 'Пользователь'
     const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || displayName
 
-    // Форматирование даты
+    // Дата: «13 апреля»
     const formatDate = (dateString: string) => {
         try {
             const date = new Date(dateString)
-            return date.toLocaleDateString('ru-RU', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-            })
+            return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
         } catch {
             return dateString
         }
@@ -731,9 +725,7 @@ export default function UserProfile() {
                                                             {won ? '✅ Победа' : '❌ Поражение'} {game.score_1} :{' '}
                                                             {game.score_2}
                                                         </div>
-                                                        <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                            {formatDate(game.created_at)}
-                                                        </div>
+                                                        <div className="date-muted">{formatDate(game.created_at)}</div>
                                                     </div>
                                                     <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                         <div>
@@ -869,6 +861,7 @@ export default function UserProfile() {
                             <p style={{ margin: '0 0 6px', fontSize: '13px', color: '#6B6B69' }}>Вас пригласил</p>
                             <Link
                                 href={`/player/${inviterRow.id}`}
+                                className="link-player"
                                 style={{
                                     fontSize: '15px',
                                     fontWeight: 'bold',

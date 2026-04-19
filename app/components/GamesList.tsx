@@ -816,7 +816,7 @@ export default function GamesList() {
         }
 
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {events.map((event) => (
                     <div
                         key={event.id}
@@ -985,6 +985,7 @@ export default function GamesList() {
                                                 <li key={p.user_id} style={{ marginBottom: '4px' }}>
                                                     <Link
                                                         href={`/player/${p.user_id}`}
+                                                        className="link-player"
                                                         style={{ color: '#1B5E20', textDecoration: 'none', fontWeight: '500' }}
                                                     >
                                                         {formatParticipantDisplay(p)}
@@ -1434,7 +1435,7 @@ export default function GamesList() {
         }
 
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {Object.entries(gamesByDate).map(([date, dateData]) => {
                     const isExpanded = expandedDates.has(date)
                     const event = dateData.event

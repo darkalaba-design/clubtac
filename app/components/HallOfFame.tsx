@@ -134,6 +134,7 @@ export default function HallOfFame() {
                             )}
                             <Link
                                 href={`/player/${player.user_id}`}
+                                className="link-player hall-rating-row"
                                 style={{
                                     textDecoration: 'none',
                                     color: 'inherit',
@@ -181,6 +182,7 @@ export default function HallOfFame() {
                                                 }}
                                             >
                                                 <div
+                                                    className="hall-rating-row__title"
                                                     style={{
                                                         fontSize: '14px',
                                                         fontWeight: 'bold',

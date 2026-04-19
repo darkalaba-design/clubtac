@@ -209,17 +209,11 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         router.push(`/?tab=${tab}`)
     }
 
-    // Форматирование даты
+    // Дата: «13 апреля»
     const formatDate = (dateString: string) => {
         try {
             const date = new Date(dateString)
-            return date.toLocaleDateString('ru-RU', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-            })
+            return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
         } catch {
             return dateString
         }
@@ -259,7 +253,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
 
     return (
         <>
-            <div style={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: '81px' }}>
+            <div style={{ padding: '12px 0 81px', flex: 1, display: 'flex', flexDirection: 'column' }}>
             {/* Кнопка назад — обычный шаг назад по истории */}
             <button
                 onClick={() => router.back()}
@@ -279,76 +273,65 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                 ← Назад
             </button>
 
-            {/* Компактный блок с информацией об игроке */}
+            {/* Статистика (включая шапку профиля) */}
             <div
                 style={{
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: '12px',
                     padding: '16px',
                     marginBottom: '16px',
-                    boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
-                    display: 'flex',
-                    gap: '16px',
-                    alignItems: 'center',
                 }}
             >
-                {/* Аватар с местом */}
                 <div
                     style={{
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FFE950',
                         display: 'flex',
+                        gap: '16px',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                        fontWeight: 'bold',
-                        fontSize: '24px',
+                        marginBottom: '16px',
+                        paddingBottom: '16px',
+                        borderBottom: '1px solid #EBE8E0',
                     }}
                 >
-                    {player.userpic?.trim() && !player.takoff ? (
-                        <img
-                            src={player.userpic.trim()}
-                            alt={player.nickname?.trim() ? `Фото: ${player.nickname.trim()}` : 'Фото игрока'}
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                display: 'block',
-                            }}
-                        />
-                    ) : (
-                        <>#{player.place}</>
-                    )}
+                    <div
+                        style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            backgroundColor: '#FFE950',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                            fontWeight: 'bold',
+                            fontSize: '24px',
+                        }}
+                    >
+                        {player.userpic?.trim() && !player.takoff ? (
+                            <img
+                                src={player.userpic.trim()}
+                                alt={player.nickname?.trim() ? `Фото: ${player.nickname.trim()}` : 'Фото игрока'}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block',
+                                }}
+                            />
+                        ) : (
+                            <>#{player.place}</>
+                        )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
+                            {displayPublicNickname(player.nickname, player.takoff)}
+                        </h2>
+                        {player.points != null && (
+                            <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
+                                <span>Очки: {Math.round(player.points)}</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {/* Информация */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
-                        {displayPublicNickname(player.nickname, player.takoff)}
-                    </h2>
-                    {player.points != null && (
-                        <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                            <span>Очки: {Math.round(player.points)}</span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Статистика */}
-                <div
-                style={{
-                    backgroundColor: '#FFFEF7',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    marginBottom: '16px',
-                }}
-            >
-                <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                    📊 Статистика
-                </h3>
                 {(() => {
                     const gamesPlayed =
                         player.games_played ??
@@ -361,6 +344,27 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                         (player as any).winrate ??
                         (player as any).win_percent
 
+                    const statCard = {
+                        backgroundColor: '#FFDF00',
+                        borderRadius: '10px',
+                        padding: '14px 12px',
+                        textAlign: 'center' as const,
+                    }
+                    const statValueStyle = {
+                        fontSize: '36px',
+                        fontWeight: 'bold' as const,
+                        color: '#1D1D1B',
+                        lineHeight: 1.1,
+                        letterSpacing: '-0.02em',
+                    }
+                    const statLabelStyle = {
+                        fontSize: '12px',
+                        color: '#1D1D1B',
+                        marginTop: '6px',
+                        fontWeight: 600,
+                        opacity: 0.85,
+                    }
+
                     return (
                         <div
                             style={{
@@ -369,27 +373,21 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                 gap: '12px',
                             }}
                         >
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Место в рейтинге</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>#{player.place}</div>
+                            <div style={statCard}>
+                                <div style={statValueStyle}>#{player.place}</div>
+                                <div style={statLabelStyle}>Место в рейтинге</div>
                             </div>
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Игр сыграно</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                    {gamesPlayed != null ? gamesPlayed : '—'}
-                                </div>
+                            <div style={statCard}>
+                                <div style={statValueStyle}>{gamesPlayed != null ? gamesPlayed : '—'}</div>
+                                <div style={statLabelStyle}>Игр сыграно</div>
                             </div>
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>Победы</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                    {wins != null ? wins : '—'}
-                                </div>
+                            <div style={statCard}>
+                                <div style={statValueStyle}>{wins != null ? wins : '—'}</div>
+                                <div style={statLabelStyle}>Победы</div>
                             </div>
-                            <div style={{ backgroundColor: '#FFDF00', padding: '12px', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '12px', color: '#1D1D1B', marginBottom: '4px' }}>% побед</div>
-                                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                                    {winRate != null ? `${winRate}%` : '—'}
-                                </div>
+                            <div style={statCard}>
+                                <div style={statValueStyle}>{winRate != null ? winRate : '—'}</div>
+                                <div style={statLabelStyle}>% побед</div>
                             </div>
                         </div>
                     )
@@ -447,15 +445,13 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                             style={{
                                                 backgroundColor: '#FFFFFF',
                                                 padding: '12px 0',
-                                                borderLeft: `4px solid ${won ? '#1B5E20' : '#B71C1C'}`,
-                                                paddingLeft: '12px',
                                             }}
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                                 <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
                                                     {won ? '✅ Победа' : '❌ Поражение'} {game.score_1} : {game.score_2}
                                                 </div>
-                                                <div style={{ fontSize: '12px', color: '#6B6B69' }}>{formatDate(game.created_at)}</div>
+                                                <div className="date-muted">{formatDate(game.created_at)}</div>
                                             </div>
                                                 <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                     <div>
