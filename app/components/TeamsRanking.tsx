@@ -126,7 +126,7 @@ export default function TeamsRanking() {
                             style={{
                                 width: '40px',
                                 height: '40px',
-                                borderRadius: '8px',
+                                borderRadius: '50%',
                                 backgroundColor: '#FFE950',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -137,7 +137,7 @@ export default function TeamsRanking() {
                                 color: '#1D1D1B',
                             }}
                         >
-                            #{team.rank}
+                            {team.rank}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <div

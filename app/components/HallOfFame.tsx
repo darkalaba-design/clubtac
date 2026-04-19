@@ -150,7 +150,7 @@ export default function HallOfFame() {
                                 style={{
                                     width: '32px',
                                     height: '32px',
-                                    borderRadius: '8px',
+                                    borderRadius: '50%',
                                     backgroundColor: '#FFE950',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -161,7 +161,7 @@ export default function HallOfFame() {
                                     color: '#1D1D1B',
                                 }}
                             >
-                                #{player.place}
+                                {player.place}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div
