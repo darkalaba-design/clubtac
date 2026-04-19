@@ -115,9 +115,6 @@ export default function HallOfFame() {
     const rest = players.slice(10)
 
     const renderPlayerRow = (player: any, indexInSection: number, rowDividerColor = '#EBE8E0') => {
-        const gamesPlayed =
-            player.games_played ?? (player as any).games ?? (player as any).total_games
-        const wins = player.wins ?? (player as any).total_wins
         const points =
             player.points ?? (player as any).total_points ?? (player as any).rating
 
@@ -197,22 +194,10 @@ export default function HallOfFame() {
                                             whiteSpace: 'nowrap',
                                         }}
                                     >
-                                        Побед:{' '}
+                                        <span aria-hidden>⭐</span>{' '}
                                         <span style={{ color: '#1D1D1B', fontWeight: 700 }}>
-                                            {wins != null ? wins : '—'}
-                                        </span>{' '}
-                                        из{' '}
-                                        <span style={{ color: '#6B6B69', fontWeight: 400 }}>
-                                            {gamesPlayed != null ? gamesPlayed : '—'}
+                                            {points != null ? Math.round(Number(points)) : '—'}
                                         </span>
-                                        {points != null && (
-                                            <>
-                                                {'. '}Очки:{' '}
-                                                <span style={{ color: '#1D1D1B', fontWeight: 700 }}>
-                                                    {Math.round(Number(points))}
-                                                </span>
-                                            </>
-                                        )}
                                     </div>
                                 </div>
                             </div>

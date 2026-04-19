@@ -677,6 +677,7 @@ export default function UserProfile() {
                             <span>TG: {user.telegram_id}</span>
                             {pointsValue != null ? (
                                 <span style={{ color: '#1D1D1B', fontWeight: 500 }}>
+                                    <span aria-hidden>⭐</span>{' '}
                                     {formatPointsRu(Math.round(Number(pointsValue)))}
                                 </span>
                             ) : (

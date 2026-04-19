@@ -391,6 +391,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                         {player.points != null && (
                             <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
                                 <span style={{ color: '#1D1D1B', fontWeight: 500 }}>
+                                    <span aria-hidden>⭐</span>{' '}
                                     {formatPointsRu(Math.round(Number(player.points)))}
                                 </span>
                             </div>
