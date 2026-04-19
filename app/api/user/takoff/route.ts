@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
 
         const checked = validateWebAppInitData(initData, botToken)
         if (!checked.ok) {
+            console.error('API /user/takoff: initData не прошёл проверку:', checked.error)
             return NextResponse.json({ error: checked.error }, { status: 401 })
         }
 
