@@ -870,7 +870,7 @@ export default function GamesList() {
                                 )}
                             </div>
                             {event.title && (
-                                <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px', color: '#1D1D1B' }}>
+                                <div style={{ fontSize: '20px', fontWeight: '600', lineHeight: '1.25', marginBottom: '8px', color: '#1D1D1B' }}>
                                     {event.title}
                                 </div>
                             )}
@@ -1441,7 +1441,7 @@ export default function GamesList() {
                                         </div>
                                     )}
                                     {event && event.title && (
-                                        <div style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px', color: '#1D1D1B' }}>
+                                        <div style={{ fontSize: '20px', fontWeight: '600', lineHeight: '1.25', marginBottom: '8px', color: '#1D1D1B' }}>
                                             {event.title}
                                         </div>
                                     )}
