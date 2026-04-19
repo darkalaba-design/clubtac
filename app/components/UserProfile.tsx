@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import { useUser } from '../contexts/UserContext'
 import type { User } from '@/types/user'
@@ -74,16 +73,34 @@ export default function UserProfile() {
 
     const handleTakoffChange = useCallback(
         async (next: boolean) => {
-            if (!user?.id) return
+            if (!user?.id || user.telegram_id == null) return
+            const initData =
+                typeof window !== 'undefined' ? (window as any).Telegram?.WebApp?.initData?.trim?.() || '' : ''
+            if (!initData) {
+                console.error('takoff: нет Telegram.WebApp.initData — откройте приложение из Telegram Mini App')
+                return
+            }
             setTakoffSaving(true)
             try {
-                const supabase = createClient()
-                const { error } = await supabase.from('clubtac_users').update({ takoff: next }).eq('id', user.id)
-                if (error) {
-                    console.error('takoff update:', error)
+                const res = await fetch('/api/user/takoff', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        initData,
+                        id: user.id,
+                        takoff: next,
+                    }),
+                })
+                const payload = await res.json().catch(() => ({}))
+                if (!res.ok) {
+                    console.error('takoff update:', payload?.error || res.statusText)
                     return
                 }
-                setUser({ ...user, takoff: next } as User)
+                if (payload.user) {
+                    setUser(payload.user as User)
+                } else {
+                    setUser({ ...user, takoff: next } as User)
+                }
             } catch (e) {
                 console.error(e)
             } finally {
@@ -361,7 +378,20 @@ export default function UserProfile() {
                         color: '#1D1D1B',
                     }}
                 >
-                    Пользователь не определён — откройте приложение через Telegram Mini App.
+                    Пользователь не определён — откройте приложение через{' '}
+                    <a
+                        href="https://core.telegram.org/bots/webapps"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            color: '#1565C0',
+                            fontWeight: 600,
+                            textDecoration: 'underline',
+                        }}
+                    >
+                        Telegram Mini App
+                    </a>
+                    .
                 </div>
                 {/* Блок профиля — пустые данные */}
                 <div

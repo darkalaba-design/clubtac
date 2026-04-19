@@ -10,6 +10,8 @@ export interface TelegramUser {
 }
 
 export interface TelegramWebApp {
+    /** Подписанная строка query-string для проверки на сервере (initData), не путать с initDataUnsafe */
+    initData?: string
     initDataUnsafe: {
         user?: TelegramUser
         /** Параметр из ссылки t.me/bot?startapp=VALUE */
