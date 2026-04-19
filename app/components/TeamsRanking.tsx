@@ -73,9 +73,6 @@ export default function TeamsRanking() {
 
     return (
         <div>
-            <h3 style={{ margin: '0 12px 12px', fontSize: '18px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                👥 Рейтинг команд
-            </h3>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {teams.map((team, index) => {
                     const winRate = team.games_played > 0 ? Math.round((team.wins / team.games_played) * 100) : 0

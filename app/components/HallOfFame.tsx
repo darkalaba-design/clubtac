@@ -82,9 +82,6 @@ export default function HallOfFame() {
 
     return (
         <div>
-            <h3 style={{ margin: '0 12px 8px', fontSize: '16px', fontWeight: 'bold', color: '#1D1D1B' }}>
-                🏆 Рейтинг игроков
-            </h3>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {players.map((player, index) => {
                     const gamesPlayed =
