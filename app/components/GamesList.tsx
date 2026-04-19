@@ -1028,20 +1028,33 @@ export default function GamesList() {
                                         <div
                                             style={{
                                                 marginTop: '8px',
-                                                padding: '12px',
-                                                backgroundColor: '#FFFEF7',
-                                                borderRadius: '8px',
-                                                fontSize: '14px',
-                                                color: '#6B6B69',
+                                                padding: '12px 0',
+                                                fontSize: '16px',
                                             }}
                                         >
                                             {event.description?.trim() ? (
-                                                <div style={{ whiteSpace: 'pre-wrap', marginBottom: event.club_id ? '12px' : 0 }}>
+                                                <div
+                                                    style={{
+                                                        whiteSpace: 'pre-wrap',
+                                                        marginBottom: event.club_id ? '12px' : 0,
+                                                        color: '#1D1D1B',
+                                                    }}
+                                                >
                                                     {event.description}
                                                 </div>
                                             ) : null}
                                             {event.club_id && (
-                                                <div>🏢 {clubNames[event.club_id] || `Клуб ID: ${event.club_id}`}</div>
+                                                <div
+                                                    style={{
+                                                        fontSize: '14px',
+                                                        color: '#6B6B69',
+                                                        marginTop: '4px',
+                                                    }}
+                                                >
+                                                    {clubNames[event.club_id]
+                                                        ? `🏢 Клуб: ${clubNames[event.club_id]}`
+                                                        : `🏢 Клуб ID: ${event.club_id}`}
+                                                </div>
                                             )}
                                         </div>
                                     )}
