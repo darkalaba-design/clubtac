@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { displayPublicNickname } from '@/lib/takoff'
 import { useUser } from '../contexts/UserContext'
 
 export default function HallOfFame() {
@@ -35,7 +36,35 @@ export default function HallOfFame() {
                     return gamesPlayed && Number(gamesPlayed) > 0
                 })
 
-                setPlayers(filtered)
+                const ids = [
+                    ...new Set(
+                        filtered
+                            .map((p: any) => Number(p.user_id))
+                            .filter((id: number) => !Number.isNaN(id) && id > 0)
+                    ),
+                ]
+                let takoffByUserId: Record<number, boolean> = {}
+                if (ids.length > 0) {
+                    const { data: privRows } = await supabase
+                        .from('clubtac_users')
+                        .select('id, takoff')
+                        .in('id', ids)
+                    if (privRows) {
+                        takoffByUserId = Object.fromEntries(
+                            privRows.map((r: { id: number; takoff?: boolean | null }) => [r.id, !!r.takoff])
+                        )
+                    }
+                }
+
+                setPlayers(
+                    filtered.map((p: any) => {
+                        const uid = Number(p.user_id)
+                        return {
+                            ...p,
+                            takoff: !!takoffByUserId[uid],
+                        }
+                    })
+                )
             } catch (err) {
                 console.error('Error loading players:', err)
                 setError(err instanceof Error ? err.message : 'Unknown error')
@@ -161,7 +190,7 @@ export default function HallOfFame() {
                                                         whiteSpace: 'nowrap',
                                                     }}
                                                 >
-                                                    {player.nickname?.trim() || '—'}
+                                                    {displayPublicNickname(player.nickname, player.takoff)}
                                                 </div>
                                                 <div
                                                     style={{

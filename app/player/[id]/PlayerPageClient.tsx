@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import Tabs from '../../components/Tabs'
 
 interface PlayerStats {
@@ -51,7 +52,21 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                     return
                 }
 
-                setPlayer(data)
+                let userpic: string | null = null
+                let takoff = false
+                const uid = (data as { user_id?: number }).user_id ?? Number(playerId)
+                if (uid && !Number.isNaN(uid)) {
+                    const { data: userRow } = await supabase
+                        .from('clubtac_users')
+                        .select('userpic, takoff')
+                        .eq('id', uid)
+                        .maybeSingle()
+                    const row = userRow as { userpic?: string | null; takoff?: boolean | null } | null
+                    userpic = row?.userpic?.trim() || null
+                    takoff = row?.takoff === true
+                }
+
+                setPlayer({ ...data, userpic, takoff })
             } catch (err) {
                 console.error('Error loading player:', err)
                 setError(err instanceof Error ? err.message : 'Unknown error')
@@ -288,13 +303,26 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                         fontSize: '24px',
                     }}
                 >
-                    #{player.place}
+                    {player.userpic?.trim() && !player.takoff ? (
+                        <img
+                            src={player.userpic.trim()}
+                            alt={player.nickname?.trim() ? `Фото: ${player.nickname.trim()}` : 'Фото игрока'}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                            }}
+                        />
+                    ) : (
+                        <>#{player.place}</>
+                    )}
                 </div>
 
                 {/* Информация */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
-                        {player.nickname?.trim() || '—'}
+                        {displayPublicNickname(player.nickname, player.takoff)}
                     </h2>
                     {player.points != null && (
                         <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
@@ -426,7 +454,12 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                             </div>
                                                 <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                     <div>
-                                                        {renderPlayerName(player.nickname)} + {renderPlayerName(partner)}{' '}
+                                                        {player.takoff ? (
+                                                            <span>{TAKOFF_PUBLIC_NAME}</span>
+                                                        ) : (
+                                                            renderPlayerName(player.nickname)
+                                                        )}{' '}
+                                                        + {renderPlayerName(partner)}{' '}
                                                         <strong>vs</strong> {renderPlayerName(opponent1)} +{' '}
                                                         {renderPlayerName(opponent2)}
                                                     </div>

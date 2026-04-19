@@ -1,7 +1,9 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import { useUser } from '../contexts/UserContext'
 import type { User } from '@/types/user'
 
@@ -52,6 +54,53 @@ export default function UserProfile() {
     const [statsLoading, setStatsLoading] = useState(false)
     const [photoUrl, setPhotoUrl] = useState<string | null>(null)
     const [copyDone, setCopyDone] = useState(false)
+    const [takoffSaving, setTakoffSaving] = useState(false)
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [settingsEntered, setSettingsEntered] = useState(false)
+
+    useEffect(() => {
+        if (!settingsOpen) {
+            setSettingsEntered(false)
+            return
+        }
+        const id = requestAnimationFrame(() => setSettingsEntered(true))
+        return () => cancelAnimationFrame(id)
+    }, [settingsOpen])
+
+    const closeSettings = useCallback(() => {
+        setSettingsEntered(false)
+        window.setTimeout(() => setSettingsOpen(false), 300)
+    }, [])
+
+    const handleTakoffChange = useCallback(
+        async (next: boolean) => {
+            if (!user?.id) return
+            setTakoffSaving(true)
+            try {
+                const supabase = createClient()
+                const { error } = await supabase.from('clubtac_users').update({ takoff: next }).eq('id', user.id)
+                if (error) {
+                    console.error('takoff update:', error)
+                    return
+                }
+                setUser({ ...user, takoff: next } as User)
+            } catch (e) {
+                console.error(e)
+            } finally {
+                setTakoffSaving(false)
+            }
+        },
+        [user, setUser]
+    )
+
+    useEffect(() => {
+        if (!settingsOpen) return
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prev
+        }
+    }, [settingsOpen])
 
     // Получаем фото из базы данных или Telegram
     useEffect(() => {
@@ -105,6 +154,190 @@ export default function UserProfile() {
         // и «Загрузка статистики» не исчезает.
     }, [user?.id, user?.telegram_id, user?.nickname, setUser])
 
+    const settingsFooter = (
+        <div style={{ marginTop: '28px', marginBottom: '24px', padding: '0 12px' }}>
+            <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                style={{
+                    width: '100%',
+                    maxWidth: '400px',
+                    margin: '0 auto',
+                    display: 'block',
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#1D1D1B',
+                    backgroundColor: '#FFFFFF',
+                    border: '2px solid #1D1D1B',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                }}
+            >
+                ⚙ Настройки
+            </button>
+        </div>
+    )
+
+    const settingsModal = settingsOpen ? (
+        <>
+            <div
+                role="presentation"
+                onClick={closeSettings}
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(29, 29, 27, 0.35)',
+                    zIndex: 1100,
+                    opacity: settingsEntered ? 1 : 0,
+                    transition: 'opacity 0.3s ease-out',
+                }}
+            />
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="settings-title"
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    width: '100%',
+                    maxWidth: '100%',
+                    backgroundColor: '#FFFFFF',
+                    zIndex: 1101,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '4px 0 24px rgba(29,29,27,0.12)',
+                    transform: settingsEntered ? 'translateX(0)' : 'translateX(-100%)',
+                    transition: 'transform 0.3s ease-out',
+                }}
+            >
+                <header
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '12px 12px',
+                        borderBottom: '1px solid #EBE8E0',
+                        flexShrink: 0,
+                        position: 'relative',
+                        minHeight: '48px',
+                    }}
+                >
+                    <button
+                        type="button"
+                        onClick={closeSettings}
+                        aria-label="Назад"
+                        style={{
+                            position: 'absolute',
+                            left: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            border: 'none',
+                            background: 'transparent',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            fontSize: '20px',
+                            lineHeight: 1,
+                            color: '#1D1D1B',
+                        }}
+                    >
+                        ←
+                    </button>
+                    <h2
+                        id="settings-title"
+                        style={{
+                            margin: 0,
+                            fontSize: '17px',
+                            fontWeight: 'bold',
+                            color: '#1D1D1B',
+                        }}
+                    >
+                        Настройки
+                    </h2>
+                </header>
+                <div style={{ flex: 1, overflow: 'auto', padding: '16px 12px' }}>
+                    {!user ? (
+                        <p style={{ margin: 0, fontSize: '15px', color: '#6B6B69' }}>
+                            Войдите через Telegram Mini App, чтобы менять настройки.
+                        </p>
+                    ) : (
+                        <>
+                            <p style={{ margin: '0 0 16px', fontSize: '15px', color: '#6B6B69' }}>
+                                Здесь появятся другие опции. Пока доступна одна.
+                            </p>
+                            <div
+                                style={{
+                                    border: '1px solid #EBE8E0',
+                                    borderRadius: '10px',
+                                    padding: '14px 14px',
+                                    backgroundColor: '#FFFEF7',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'flex-start',
+                                        gap: '14px',
+                                    }}
+                                >
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#1D1D1B', marginBottom: '6px' }}>
+                                            Приватность в рейтинге
+                                        </div>
+                                        <p style={{ margin: 0, fontSize: '12px', lineHeight: 1.45, color: '#6B6B69' }}>
+                                            В рейтинге игроков и в статистике команд вместо ника будет «{TAKOFF_PUBLIC_NAME}». На
+                                            вашей странице не показываются фото и ник. Очки, место и игры — как обычно.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={!!user.takoff}
+                                        disabled={takoffSaving}
+                                        onClick={() => handleTakoffChange(!user.takoff)}
+                                        style={{
+                                            flexShrink: 0,
+                                            width: '52px',
+                                            height: '30px',
+                                            borderRadius: '15px',
+                                            border: '2px solid #1D1D1B',
+                                            backgroundColor: user.takoff ? '#FFDF00' : '#EBE8E0',
+                                            cursor: takoffSaving ? 'wait' : 'pointer',
+                                            position: 'relative',
+                                            transition: 'background-color 0.2s',
+                                            padding: 0,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                position: 'absolute',
+                                                top: '3px',
+                                                left: user.takoff ? '26px' : '4px',
+                                                width: '20px',
+                                                height: '20px',
+                                                borderRadius: '50%',
+                                                backgroundColor: '#FFFFFF',
+                                                border: '1px solid #1D1D1B',
+                                                transition: 'left 0.2s',
+                                                display: 'block',
+                                            }}
+                                        />
+                                    </button>
+                                </div>
+                                {takoffSaving && (
+                                    <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#6B6B69' }}>Сохранение…</p>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </>
+    ) : null
+
     if (loading) {
         return (
             <div style={{ padding: '12px', textAlign: 'center' }}>
@@ -116,6 +349,7 @@ export default function UserProfile() {
     // Пустая структура при неопределённом пользователе
     if (!user) {
         return (
+            <>
             <div>
                 <div
                     style={{
@@ -211,6 +445,9 @@ export default function UserProfile() {
                     <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
                 </div>
             </div>
+            {settingsFooter}
+            {settingsModal}
+            </>
         )
     }
 
@@ -287,6 +524,7 @@ export default function UserProfile() {
     }
 
     return (
+        <>
         <div>
             {/* Компактный блок с информацией о пользователе */}
             <div
@@ -312,7 +550,7 @@ export default function UserProfile() {
                         flexShrink: 0,
                     }}
                 >
-                    {photoUrl ? (
+                    {photoUrl && !user.takoff ? (
                         <img
                             src={photoUrl}
                             alt={fullName}
@@ -326,9 +564,9 @@ export default function UserProfile() {
                 {/* Информация */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
-                        {userNickname || '—'}
+                        {displayPublicNickname(userNickname, user.takoff)}
                     </h2>
-                    {user.username && (
+                    {user.username && !user.takoff && (
                         <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>
                             @{user.username}
                         </p>
@@ -463,7 +701,7 @@ export default function UserProfile() {
                                                 </div>
                                                 <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                     <div>
-                                                        {userNickname} + {partner}{' '}
+                                                        {user.takoff ? TAKOFF_PUBLIC_NAME : userNickname} + {partner}{' '}
                                                         <strong>vs</strong> {opponent1} + {opponent2}
                                                     </div>
                                                 </div>
@@ -616,5 +854,8 @@ export default function UserProfile() {
                 )}
             </div>
         </div>
+        {settingsFooter}
+        {settingsModal}
+        </>
     )
 }

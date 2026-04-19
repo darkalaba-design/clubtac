@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { displayPublicNickname } from '@/lib/takoff'
 
 export default function TeamsRanking() {
     const [teams, setTeams] = useState<any[]>([])
@@ -25,8 +26,34 @@ export default function TeamsRanking() {
                     return
                 }
 
-                console.log('Loaded teams:', data)
-                setTeams(data || [])
+                const rows = data || []
+                const idSet = new Set<number>()
+                rows.forEach((t: any) => {
+                    const a = Number(t.player_1_id)
+                    const b = Number(t.player_2_id)
+                    if (!Number.isNaN(a) && a > 0) idSet.add(a)
+                    if (!Number.isNaN(b) && b > 0) idSet.add(b)
+                })
+                const ids = [...idSet]
+                let takoffByUserId: Record<number, boolean> = {}
+                if (ids.length > 0) {
+                    const { data: privRows } = await supabase
+                        .from('clubtac_users')
+                        .select('id, takoff')
+                        .in('id', ids)
+                    if (privRows) {
+                        takoffByUserId = Object.fromEntries(
+                            privRows.map((r: { id: number; takoff?: boolean | null }) => [r.id, !!r.takoff])
+                        )
+                    }
+                }
+                setTeams(
+                    rows.map((t: any) => ({
+                        ...t,
+                        player_1_takoff: !!takoffByUserId[Number(t.player_1_id)],
+                        player_2_takoff: !!takoffByUserId[Number(t.player_2_id)],
+                    }))
+                )
             } catch (err) {
                 console.error('Error loading teams:', err)
                 setError(err instanceof Error ? err.message : 'Unknown error')
@@ -116,7 +143,7 @@ export default function TeamsRanking() {
                                                     textDecoration: 'none',
                                                 }}
                                             >
-                                                {team.player_1_nickname}
+                                                {displayPublicNickname(team.player_1_nickname, team.player_1_takoff)}
                                             </Link>
                                             <span style={{ margin: '0 4px', color: '#6B6B69' }}>+</span>
                                             <Link
@@ -127,7 +154,7 @@ export default function TeamsRanking() {
                                                     textDecoration: 'none',
                                                 }}
                                             >
-                                                {team.player_2_nickname}
+                                                {displayPublicNickname(team.player_2_nickname, team.player_2_takoff)}
                                             </Link>
                                         </div>
                                         <div style={{ fontSize: '12px', color: '#6B6B69' }}>

@@ -7,6 +7,8 @@ export interface User {
     first_name: string
     last_name?: string | null
     userpic?: string | null
+    /** Приватность в списках: в рейтинге/командах показываем «Такофф», на странице игрока без фото и ника */
+    takoff?: boolean | null
     /** Публичный код для ссылки t.me/bot?startapp=<code> */
     referral_code?: string | null
     /** id пользователя-пригласителя (clubtac_users.id) */
