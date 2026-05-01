@@ -102,15 +102,30 @@ export default function TeamsRanking() {
     }
 
     const topTen = teams.slice(0, 10)
+    const topPodium = topTen.slice(0, 3)
+    const topTail = topTen.slice(3)
     const rest = teams.slice(10)
 
-    const renderTeamRow = (team: any, indexInSection: number, rowDividerColor = '#EBE8E0') => {
+    const renderTeamRow = (
+        team: any,
+        indexInSection: number,
+        rowDividerColor = '#EBE8E0',
+        rowZone: 'podium' | 'tail' = 'tail'
+    ) => {
+        const rankNum = Number(team.rank)
+        const isMidTopTenRow =
+            rowZone === 'tail' &&
+            Number.isFinite(rankNum) &&
+            rankNum >= 4 &&
+            rankNum <= 10
+        const defaultRowBg = isMidTopTenRow ? '#FFFCEE' : 'transparent'
+
         return (
             <div key={`${team.player_1_id}-${team.player_2_id}`}>
                 {indexInSection > 0 && <div style={{ height: '1px', backgroundColor: rowDividerColor }} />}
                 <div
                     style={{
-                        backgroundColor: 'transparent',
+                        backgroundColor: defaultRowBg,
                         padding: '8px 12px',
                         transition: 'background-color 0.2s',
                     }}
@@ -118,7 +133,7 @@ export default function TeamsRanking() {
                         e.currentTarget.style.backgroundColor = '#FFFEF7'
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.backgroundColor = defaultRowBg
                     }}
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -195,16 +210,34 @@ export default function TeamsRanking() {
             <div
                 style={{
                     margin: '0 12px',
-                    backgroundColor: '#FFF9E6',
                     border: '1px solid #FFE950',
                     borderRadius: '12px',
-                    padding: '8px 0',
+                    overflow: 'hidden',
                     boxShadow: '0 2px 12px rgba(29, 29, 27, 0.06)',
                 }}
             >
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {topTen.map((team, index) => renderTeamRow(team, index, '#FFE950'))}
+                <div
+                    style={{
+                        backgroundColor: '#FFF9E6',
+                        paddingTop: '8px',
+                        paddingBottom: topTail.length > 0 ? 0 : '8px',
+                    }}
+                >
+                    {topPodium.map((team, index) => renderTeamRow(team, index, '#FFE950', 'podium'))}
                 </div>
+                {topTail.length > 0 && (
+                    <>
+                        <div style={{ height: '1px', backgroundColor: 'rgba(255, 233, 80, 0.5)' }} />
+                        <div
+                            style={{
+                                backgroundColor: '#FFFCEF',
+                                paddingBottom: '8px',
+                            }}
+                        >
+                            {topTail.map((team, index) => renderTeamRow(team, index, '#EBE8E0', 'tail'))}
+                        </div>
+                    </>
+                )}
             </div>
             {rest.length > 0 && (
                 <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column' }}>

@@ -7,10 +7,17 @@ import { displayPublicNickname } from '@/lib/takoff'
 import { useUser } from '../contexts/UserContext'
 import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 
+type RankingSubTab = 'legacy' | 'elo'
+
 export default function HallOfFame() {
     const [players, setPlayers] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const [eloPlayers, setEloPlayers] = useState<any[]>([])
+    const [loadingLegacy, setLoadingLegacy] = useState(true)
+    const [loadingElo, setLoadingElo] = useState(true)
+    const [errorLegacy, setErrorLegacy] = useState<string | null>(null)
+    const [errorElo, setErrorElo] = useState<string | null>(null)
+    const [activeSubTab, setActiveSubTab] = useState<RankingSubTab>('legacy')
+
     const { user } = useUser()
     const getMedalPrefix = useSoloLeaderMedalPrefix()
 
@@ -25,8 +32,8 @@ export default function HallOfFame() {
 
                 if (queryError) {
                     console.error('Supabase error:', queryError)
-                    setError(queryError.message)
-                    setLoading(false)
+                    setErrorLegacy(queryError.message)
+                    setLoadingLegacy(false)
                     return
                 }
 
@@ -69,59 +76,90 @@ export default function HallOfFame() {
                 )
             } catch (err) {
                 console.error('Error loading players:', err)
-                setError(err instanceof Error ? err.message : 'Unknown error')
+                setErrorLegacy(err instanceof Error ? err.message : 'Unknown error')
             } finally {
-                setLoading(false)
+                setLoadingLegacy(false)
             }
         }
 
         load()
     }, [])
 
-    if (loading) {
-        return (
-            <div style={{ padding: '12px', textAlign: 'center' }}>
-                <p>Загрузка...</p>
-            </div>
-        )
-    }
+    useEffect(() => {
+        const loadElo = async () => {
+            try {
+                const supabase = createClient()
+                const { data, error: queryError } = await supabase
+                    .from('clubtac_elo_leaderboard')
+                    .select('*')
+                    .order('place')
 
-    if (error) {
-        return (
-            <div style={{ padding: '12px' }}>
-                <div
-                    style={{
-                        backgroundColor: '#FFF9E6',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        border: '1px solid #FFE950',
-                    }}
-                >
-                    <p style={{ margin: 0, color: '#1D1D1B' }}>Ошибка: {error}</p>
-                </div>
-            </div>
-        )
-    }
+                if (queryError) {
+                    console.error('Supabase elo leaderboard error:', queryError)
+                    setErrorElo(queryError.message)
+                    setLoadingElo(false)
+                    return
+                }
 
-    if (players.length === 0) {
-        return (
-            <div style={{ padding: '12px', textAlign: 'center' }}>
-                <p>Нет данных</p>
-            </div>
-        )
-    }
+                const rows = data || []
 
-    const topTen = players.slice(0, 10)
-    const rest = players.slice(10)
+                const ids = [
+                    ...new Set(
+                        rows
+                            .map((p: any) => Number(p.user_id))
+                            .filter((id: number) => !Number.isNaN(id) && id > 0)
+                    ),
+                ]
+                let takoffByUserId: Record<number, boolean> = {}
+                if (ids.length > 0) {
+                    const { data: privRows } = await supabase
+                        .from('clubtac_users')
+                        .select('id, takoff')
+                        .in('id', ids)
+                    if (privRows) {
+                        takoffByUserId = Object.fromEntries(
+                            privRows.map((r: { id: number; takoff?: boolean | null }) => [r.id, !!r.takoff])
+                        )
+                    }
+                }
 
-    const renderPlayerRow = (player: any, indexInSection: number, rowDividerColor = '#EBE8E0') => {
-        const points =
-            player.points ?? (player as any).total_points ?? (player as any).rating
+                setEloPlayers(
+                    rows.map((p: any) => {
+                        const uid = Number(p.user_id)
+                        return {
+                            ...p,
+                            takoff: !!takoffByUserId[uid],
+                        }
+                    })
+                )
+            } catch (err) {
+                console.error('Error loading Elo leaderboard:', err)
+                setErrorElo(err instanceof Error ? err.message : 'Unknown error')
+            } finally {
+                setLoadingElo(false)
+            }
+        }
+
+        loadElo()
+    }, [])
+
+    const renderPlayerRow = (
+        player: any,
+        resolvePoints: (p: any) => number | null,
+        indexInSection: number,
+        rowDividerColor = '#EBE8E0',
+        rowZone: 'podium' | 'tail' = 'tail'
+    ) => {
+        const points = resolvePoints(player)
 
         const isCurrentUser = user && typeof user.id !== 'undefined' && player.user_id === user.id
+        const placeNum = Number(player.place)
+        const isMidTopTenRow =
+            rowZone === 'tail' && Number.isFinite(placeNum) && placeNum >= 4 && placeNum <= 10
+        const defaultRowBg = isCurrentUser ? '#FFF4C2' : isMidTopTenRow ? '#FFFCEE' : 'transparent'
 
         return (
-            <div key={player.user_id}>
+            <div key={`${player.user_id}-${player.place}`}>
                 {indexInSection > 0 && <div style={{ height: '1px', backgroundColor: rowDividerColor }} />}
                 <Link
                     href={`/player/${player.user_id}`}
@@ -134,7 +172,7 @@ export default function HallOfFame() {
                 >
                     <div
                         style={{
-                            backgroundColor: isCurrentUser ? '#FFF4C2' : 'transparent',
+                            backgroundColor: defaultRowBg,
                             padding: '4px 12px',
                             transition: 'background-color 0.2s',
                         }}
@@ -142,7 +180,7 @@ export default function HallOfFame() {
                             e.currentTarget.style.backgroundColor = isCurrentUser ? '#FFECA0' : '#FFFEF7'
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = isCurrentUser ? '#FFF4C2' : 'transparent'
+                            e.currentTarget.style.backgroundColor = defaultRowBg
                         }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -208,27 +246,169 @@ export default function HallOfFame() {
         )
     }
 
-    return (
-        <div>
-            <div
+    const renderRankingBoard = (list: any[], resolvePoints: (p: any) => number | null) => {
+        const topTen = list.slice(0, 10)
+        const topPodium = topTen.slice(0, 3)
+        const topTail = topTen.slice(3)
+        const rest = list.slice(10)
+
+        return (
+            <div>
+                <div
+                    style={{
+                        margin: '0 12px',
+                        border: '1px solid #FFE950',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        boxShadow: '0 2px 12px rgba(29, 29, 27, 0.06)',
+                    }}
+                >
+                    <div
+                        style={{
+                            backgroundColor: '#FFF9E6',
+                            paddingTop: '8px',
+                            paddingBottom: topTail.length > 0 ? 0 : '8px',
+                        }}
+                    >
+                        {topPodium.map((player, index) =>
+                            renderPlayerRow(player, resolvePoints, index, '#FFE950', 'podium')
+                        )}
+                    </div>
+                    {topTail.length > 0 && (
+                        <>
+                            <div style={{ height: '1px', backgroundColor: 'rgba(255, 233, 80, 0.5)' }} />
+                            <div
+                                style={{
+                                    backgroundColor: '#FFFCEF',
+                                    paddingBottom: '8px',
+                                }}
+                            >
+                                {topTail.map((player, index) =>
+                                    renderPlayerRow(player, resolvePoints, index, '#EBE8E0', 'tail')
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+                {rest.length > 0 && (
+                    <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column' }}>
+                        {rest.map((player, index) => renderPlayerRow(player, resolvePoints, index))}
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    const resolveLegacyPoints = (player: any) => {
+        const v = player.points ?? player.total_points ?? player.rating
+        return v != null && v !== '' ? Number(v) : null
+    }
+
+    const resolveEloPoints = (player: any) => {
+        const v = player.rating
+        return v != null && v !== '' ? Number(v) : null
+    }
+
+    const subTabBar = (
+        <div
+            style={{
+                display: 'flex',
+                borderBottom: '2px solid #EBE8E0',
+                margin: '0 12px',
+                marginBottom: '16px',
+            }}
+        >
+            <button
+                type="button"
+                onClick={() => setActiveSubTab('legacy')}
                 style={{
-                    margin: '0 12px',
-                    backgroundColor: '#FFF9E6',
-                    border: '1px solid #FFE950',
-                    borderRadius: '12px',
-                    padding: '8px 0',
-                    boxShadow: '0 2px 12px rgba(29, 29, 27, 0.06)',
+                    flex: 1,
+                    padding: '12px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: activeSubTab === 'legacy' ? 'bold' : 'normal',
+                    color: activeSubTab === 'legacy' ? '#1D1D1B' : '#6B6B69',
+                    borderBottom:
+                        activeSubTab === 'legacy' ? '2px solid #FFDF00' : '2px solid transparent',
+                    marginBottom: '-2px',
                 }}
             >
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {topTen.map((player, index) => renderPlayerRow(player, index, '#FFE950'))}
+                Старый Рейтинг
+            </button>
+            <button
+                type="button"
+                onClick={() => setActiveSubTab('elo')}
+                style={{
+                    flex: 1,
+                    padding: '12px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: activeSubTab === 'elo' ? 'bold' : 'normal',
+                    color: activeSubTab === 'elo' ? '#1D1D1B' : '#6B6B69',
+                    borderBottom: activeSubTab === 'elo' ? '2px solid #FFDF00' : '2px solid transparent',
+                    marginBottom: '-2px',
+                }}
+            >
+                Новый рейтинг
+            </button>
+        </div>
+    )
+
+    const loading = activeSubTab === 'legacy' ? loadingLegacy : loadingElo
+    const error = activeSubTab === 'legacy' ? errorLegacy : errorElo
+    const list = activeSubTab === 'legacy' ? players : eloPlayers
+
+    if (loading) {
+        return (
+            <div>
+                {subTabBar}
+                <div style={{ padding: '12px', textAlign: 'center' }}>
+                    <p>Загрузка...</p>
                 </div>
             </div>
-            {rest.length > 0 && (
-                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column' }}>
-                    {rest.map((player, index) => renderPlayerRow(player, index))}
+        )
+    }
+
+    if (error) {
+        return (
+            <div>
+                {subTabBar}
+                <div style={{ padding: '12px' }}>
+                    <div
+                        style={{
+                            backgroundColor: '#FFF9E6',
+                            borderRadius: '8px',
+                            padding: '16px',
+                            border: '1px solid #FFE950',
+                        }}
+                    >
+                        <p style={{ margin: 0, color: '#1D1D1B' }}>Ошибка: {error}</p>
+                    </div>
                 </div>
-            )}
+            </div>
+        )
+    }
+
+    if (list.length === 0) {
+        return (
+            <div>
+                {subTabBar}
+                <div style={{ padding: '12px', textAlign: 'center' }}>
+                    <p>Нет данных</p>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div>
+            {subTabBar}
+            {activeSubTab === 'legacy' && renderRankingBoard(players, resolveLegacyPoints)}
+            {activeSubTab === 'elo' && renderRankingBoard(eloPlayers, resolveEloPoints)}
         </div>
     )
 }
