@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { formatPointsRu, formatWinsGamesLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
+import { TELEGRAM_INIT_DATA_HEADER } from '@/lib/admin/constants'
 import { useUser } from '../contexts/UserContext'
 import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 import type { User } from '@/types/user'
@@ -62,6 +63,7 @@ export default function UserProfile() {
     const [takoffSaving, setTakoffSaving] = useState(false)
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [settingsEntered, setSettingsEntered] = useState(false)
+    const [showAppAdminLink, setShowAppAdminLink] = useState(false)
 
     const sectionCard: React.CSSProperties = {
         backgroundColor: '#FFFFFF',
@@ -91,6 +93,34 @@ export default function UserProfile() {
         fontWeight: 600,
         opacity: 0.85,
     }
+
+    useEffect(() => {
+        if (!user) {
+            setShowAppAdminLink(false)
+            return
+        }
+        const initData =
+            typeof window !== 'undefined' ? (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp?.initData?.trim?.() || '' : ''
+        if (!initData) {
+            setShowAppAdminLink(false)
+            return
+        }
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await fetch('/api/admin/session', {
+                    headers: { [TELEGRAM_INIT_DATA_HEADER]: initData },
+                })
+                const j = (await res.json().catch(() => ({}))) as { app_admin_ui?: boolean }
+                if (!cancelled) setShowAppAdminLink(res.ok && !!j.app_admin_ui)
+            } catch {
+                if (!cancelled) setShowAppAdminLink(false)
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [user])
 
     useEffect(() => {
         if (!settingsOpen) {
@@ -422,6 +452,31 @@ export default function UserProfile() {
                                     <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#6B6B69' }}>Сохранение…</p>
                                 )}
                             </div>
+                            {showAppAdminLink && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <Link
+                                        href="/admin"
+                                        style={{
+                                            display: 'block',
+                                            textAlign: 'center',
+                                            padding: '12px',
+                                            borderRadius: '10px',
+                                            backgroundColor: '#1B5E20',
+                                            color: '#fff',
+                                            fontWeight: 700,
+                                            textDecoration: 'none',
+                                            fontSize: '15px',
+                                        }}
+                                    >
+                                        Админка (в приложении)
+                                    </Link>
+                                    {user.app_role === 'root' && (
+                                        <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#6B6B69', textAlign: 'center' }}>
+                                            root: в т.ч. выдача admin для новой админки
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>

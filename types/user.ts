@@ -1,7 +1,11 @@
+import type { AppRole } from '@/lib/admin/appRole'
+
 // Типы для пользователя в Supabase
 export interface User {
     id?: number
     telegram_id: number
+    /** Права в админке; если колонки ещё нет в ответе — считать user. */
+    app_role?: AppRole | null
     username?: string | null
     nickname?: string | null
     first_name: string
