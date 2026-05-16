@@ -7,7 +7,7 @@ const EVENT_SELECT =
     'id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover, players_limit'
 
 const EVENT_TYPES = ['game', 'workshop', 'party'] as const
-const EVENT_STATUSES = ['scheduled', 'finished', 'cancelled', 'canceled'] as const
+const EVENT_STATUSES = ['scheduled', 'finished', 'cancelled', 'hidden'] as const
 
 function parseEventType(v: unknown): (typeof EVENT_TYPES)[number] | undefined {
     if (typeof v !== 'string') return undefined

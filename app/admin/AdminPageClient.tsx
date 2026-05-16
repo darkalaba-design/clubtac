@@ -11,6 +11,7 @@ import {
     formatEventModalDateTime,
     getEventTypeNameRu,
     paymentStatusLabelRu,
+    eventStatusLabelRu,
 } from '@/lib/admin/eventDisplay'
 import { formatParticipantDisplay } from '@/lib/admin/formatParticipantDisplay'
 
@@ -103,8 +104,6 @@ type EventModalDraft = {
     status: string
     type: string
     durationMinutesDigits: string
-    cover: string
-    templateId: string
     clubId: string
 }
 
@@ -141,11 +140,9 @@ function eventToModalDraft(ev: EventRow): EventModalDraft {
         priceDigits: ev.price != null ? String(ev.price) : '',
         maxParticipantsDigits: ev.players_limit != null ? String(ev.players_limit) : '',
         description: ev.description ?? '',
-        status: ev.status,
+        status: ev.status === 'canceled' ? 'cancelled' : ev.status,
         type: ev.type,
         durationMinutesDigits: ev.duration_minutes != null ? String(ev.duration_minutes) : '',
-        cover: ev.cover?.trim() ?? '',
-        templateId: ev.template_id?.trim() ?? '',
         clubId: ev.club_id,
     }
 }
@@ -191,6 +188,8 @@ export default function AdminPageClient() {
     const [eventModalParticipants, setEventModalParticipants] = useState<EventParticipantRow[]>([])
     const [eventModalEditing, setEventModalEditing] = useState(false)
     const [eventModalDraft, setEventModalDraft] = useState<EventModalDraft | null>(null)
+    const [eventModalCoverBusy, setEventModalCoverBusy] = useState(false)
+    const [eventModalCoverMessage, setEventModalCoverMessage] = useState<string | null>(null)
 
     const creatingEventRef = useRef(false)
     const [creatingEvent, setCreatingEvent] = useState(false)
@@ -383,10 +382,38 @@ export default function AdminPageClient() {
         }
     }, [])
 
+    const requestEventCoverWebhook = async () => {
+        if (!eventModalId) return
+        setEventModalCoverBusy(true)
+        setEventModalCoverMessage(null)
+        try {
+            const res = await adminFetch(`/api/admin/events/${encodeURIComponent(eventModalId)}/notify-cover`, {
+                method: 'POST',
+            })
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                setEventModalCoverMessage(
+                    typeof j.error === 'string' ? j.error : 'Не удалось отправить запрос на генерацию обложки'
+                )
+                return
+            }
+            setEventModalCoverMessage(
+                'Запрос на генерацию обложки отправлен. Обычно изображение появляется в течение минуты — можно открыть событие снова позже.'
+            )
+            window.setTimeout(() => {
+                void refetchEventModal(eventModalId)
+            }, 4000)
+        } finally {
+            setEventModalCoverBusy(false)
+        }
+    }
+
     const openEventModal = (id: string) => {
         setEventModalId(id)
         setEventModalEditing(false)
         setEventModalDraft(null)
+        setEventModalCoverMessage(null)
+        setEventModalCoverBusy(false)
         void refetchEventModal(id)
     }
 
@@ -398,6 +425,8 @@ export default function AdminPageClient() {
         setEventModalParticipants([])
         setEventModalEditing(false)
         setEventModalDraft(null)
+        setEventModalCoverBusy(false)
+        setEventModalCoverMessage(null)
     }
 
     const saveEventModal = async (e: React.FormEvent) => {
@@ -420,8 +449,6 @@ export default function AdminPageClient() {
             status: eventModalDraft.status,
             type: eventModalDraft.type,
             description: eventModalDraft.description.trim() || null,
-            cover: eventModalDraft.cover.trim() || null,
-            template_id: eventModalDraft.templateId.trim() || null,
             club_id: eventModalDraft.clubId.trim(),
         }
         if (priceDigits !== '') {
@@ -978,7 +1005,9 @@ export default function AdminPageClient() {
                                     border:
                                         ev.status === 'cancelled' || ev.status === 'canceled'
                                             ? '2px solid #B71C1C'
-                                            : '1px solid transparent',
+                                            : ev.status === 'hidden'
+                                              ? '2px dashed #9E9E9E'
+                                              : '1px solid transparent',
                                 }}
                             >
                                 {ev.cover?.trim() ? (
@@ -1023,6 +1052,11 @@ export default function AdminPageClient() {
                                     {(ev.status === 'cancelled' || ev.status === 'canceled') && (
                                         <div style={{ marginTop: '8px', fontSize: '12px', color: '#B71C1C', fontWeight: 600 }}>
                                             Отменено
+                                        </div>
+                                    )}
+                                    {ev.status === 'hidden' && (
+                                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#616161', fontWeight: 600 }}>
+                                            Скрыто (не в общем списке приложения)
                                         </div>
                                     )}
                                 </div>
@@ -1217,7 +1251,23 @@ export default function AdminPageClient() {
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                                     />
                                                 </div>
-                                            ) : null}
+                                            ) : (
+                                                <div
+                                                    style={{
+                                                        marginBottom: '14px',
+                                                        padding: '14px 16px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: '#F5F5F5',
+                                                        border: '1px dashed #C4C4C2',
+                                                        fontSize: '14px',
+                                                        color: '#6B6B69',
+                                                        lineHeight: 1.45,
+                                                    }}
+                                                >
+                                                    Обложки пока нет (например, Make ещё не успел сгенерировать). В режиме
+                                                    «Редактировать» можно отправить запрос на генерацию ещё раз.
+                                                </div>
+                                            )}
 
                                             <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: '#1D1D1B' }}>
                                                 {eventModalEvent.title}
@@ -1252,7 +1302,10 @@ export default function AdminPageClient() {
                                                 </div>
                                                 <div>
                                                     <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Статус</div>
-                                                    <div style={{ fontSize: '13px' }}>{eventModalEvent.status}</div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {eventStatusLabelRu(eventModalEvent.status)}{' '}
+                                                        <span style={{ color: '#6B6B69' }}>({eventModalEvent.status})</span>
+                                                    </div>
                                                 </div>
                                                 <div>
                                                     <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Стоимость</div>
@@ -1281,34 +1334,11 @@ export default function AdminPageClient() {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>template_id</div>
-                                                    <div style={{ fontSize: '13px', wordBreak: 'break-all' }}>
-                                                        {eventModalEvent.template_id ?? '—'}
-                                                    </div>
-                                                </div>
-                                                <div>
                                                     <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Создано</div>
                                                     <div style={{ fontSize: '13px' }}>
                                                         {eventModalEvent.created_at
                                                             ? new Date(eventModalEvent.created_at).toLocaleString('ru-RU')
                                                             : '—'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Обложка (URL)</div>
-                                                    <div style={{ fontSize: '13px', wordBreak: 'break-all' }}>
-                                                        {eventModalEvent.cover?.trim() ? (
-                                                            <a
-                                                                href={eventModalEvent.cover.trim()}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                style={{ color: '#1B5E20' }}
-                                                            >
-                                                                {eventModalEvent.cover.trim()}
-                                                            </a>
-                                                        ) : (
-                                                            '—'
-                                                        )}
                                                     </div>
                                                 </div>
                                                 <div>
@@ -1390,6 +1420,7 @@ export default function AdminPageClient() {
                                                     setEventModalEditing(true)
                                                     setEventModalDraft(eventToModalDraft(eventModalEvent))
                                                     setEventModalErr(null)
+                                                    setEventModalCoverMessage(null)
                                                 }}
                                                 style={{
                                                     width: '100%',
@@ -1519,10 +1550,10 @@ export default function AdminPageClient() {
                                                     }
                                                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EBE8E0' }}
                                                 >
-                                                    <option value="scheduled">scheduled</option>
-                                                    <option value="finished">finished</option>
-                                                    <option value="cancelled">cancelled</option>
-                                                    <option value="canceled">canceled</option>
+                                                    <option value="scheduled">Запланировано (scheduled)</option>
+                                                    <option value="finished">Завершено (finished)</option>
+                                                    <option value="cancelled">Отменено (cancelled)</option>
+                                                    <option value="hidden">Скрыто — только в админке (hidden)</option>
                                                 </select>
                                             </div>
                                             <div>
@@ -1574,36 +1605,75 @@ export default function AdminPageClient() {
                                                 </select>
                                             </div>
                                             <div>
-                                                <div style={fieldLabel}>template_id (пусто = null)</div>
-                                                <input
-                                                    value={eventModalDraft.templateId}
-                                                    onChange={(e) =>
-                                                        setEventModalDraft((d) => (d ? { ...d, templateId: e.target.value } : d))
-                                                    }
+                                                <div style={fieldLabel}>Обложка</div>
+                                                {eventModalEvent.cover?.trim() ? (
+                                                    <div
+                                                        style={{
+                                                            width: '100%',
+                                                            maxWidth: '100%',
+                                                            aspectRatio: '2 / 1',
+                                                            maxHeight: 200,
+                                                            borderRadius: '8px',
+                                                            overflow: 'hidden',
+                                                            backgroundColor: '#EBE8E0',
+                                                            marginBottom: '10px',
+                                                        }}
+                                                    >
+                                                        <img
+                                                            src={eventModalEvent.cover.trim()}
+                                                            alt=""
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover',
+                                                                display: 'block',
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <p
+                                                        style={{
+                                                            margin: '0 0 10px',
+                                                            fontSize: '13px',
+                                                            color: '#6B6B69',
+                                                            lineHeight: 1.45,
+                                                        }}
+                                                    >
+                                                        Обложки пока нет. Нажмите «Изменить обложку», чтобы снова отправить данные
+                                                        события в генератор (Make).
+                                                    </p>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    disabled={eventModalCoverBusy}
+                                                    onClick={() => void requestEventCoverWebhook()}
                                                     style={{
-                                                        width: '100%',
-                                                        padding: '10px',
+                                                        padding: '10px 14px',
                                                         borderRadius: '8px',
-                                                        border: '1px solid #EBE8E0',
-                                                        boxSizing: 'border-box',
+                                                        border: '1px solid #1B5E20',
+                                                        backgroundColor: '#fff',
+                                                        color: '#1B5E20',
+                                                        fontWeight: 600,
+                                                        cursor: eventModalCoverBusy ? 'not-allowed' : 'pointer',
+                                                        fontSize: '14px',
                                                     }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <div style={fieldLabel}>Обложка (URL, пусто = без обложки)</div>
-                                                <input
-                                                    value={eventModalDraft.cover}
-                                                    onChange={(e) =>
-                                                        setEventModalDraft((d) => (d ? { ...d, cover: e.target.value } : d))
-                                                    }
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '10px',
-                                                        borderRadius: '8px',
-                                                        border: '1px solid #EBE8E0',
-                                                        boxSizing: 'border-box',
-                                                    }}
-                                                />
+                                                >
+                                                    {eventModalCoverBusy ? 'Отправка…' : 'Изменить обложку'}
+                                                </button>
+                                                {eventModalCoverMessage ? (
+                                                    <p
+                                                        style={{
+                                                            margin: '10px 0 0',
+                                                            fontSize: '13px',
+                                                            color: eventModalCoverMessage.includes('отправлен')
+                                                            ? '#2E7D32'
+                                                            : '#B71C1C',
+                                                            lineHeight: 1.45,
+                                                        }}
+                                                    >
+                                                        {eventModalCoverMessage}
+                                                    </p>
+                                                ) : null}
                                             </div>
                                             <div>
                                                 <div style={fieldLabel}>Описание</div>
@@ -1646,6 +1716,7 @@ export default function AdminPageClient() {
                                                         setEventModalEditing(false)
                                                         setEventModalDraft(null)
                                                         setEventModalErr(null)
+                                                        setEventModalCoverMessage(null)
                                                     }}
                                                     style={{
                                                         flex: 1,

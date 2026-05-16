@@ -31,7 +31,7 @@ interface Event {
     price: number | null
     /** Максимум участников (поле players_limit в БД) */
     players_limit?: number | null
-    status: 'scheduled' | 'finished' | 'cancelled' | 'canceled'
+    status: 'scheduled' | 'finished' | 'cancelled' | 'canceled' | 'hidden'
     created_at: string
     description?: string | null
     /** URL горизонтальной обложки; пусто — не показываем */
@@ -148,6 +148,7 @@ export default function GamesList() {
                     .from('clubtac_events')
                     .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover, players_limit')
                     .gt('starts_at', now)
+                    .neq('status', 'hidden')
                     .order('starts_at', { ascending: true })
 
                 console.log('Events (not started yet):', allEvents)
@@ -160,7 +161,7 @@ export default function GamesList() {
                     return
                 }
 
-                const filteredEvents = allEvents || []
+                const filteredEvents = (allEvents || []).filter((e) => e.status !== 'hidden')
                 setEvents(filteredEvents)
 
                 // Загружаем статусы регистрации пользователя на события и количество участников
@@ -605,6 +606,9 @@ export default function GamesList() {
             return
         }
 
+        const ev = events.find((e) => e.id === eventId)
+        if (ev && (ev.status === 'cancelled' || ev.status === 'canceled')) return
+
         // Устанавливаем состояние загрузки
         setEventRegistrationStatus(prev => ({
             ...prev,
@@ -830,7 +834,12 @@ export default function GamesList() {
                             borderRadius: '8px',
                             overflow: 'hidden',
                             boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
-                            border: (event.status === 'cancelled' || event.status === 'canceled') ? '2px solid #B71C1C' : isEventTodayAndNotStarted(event.starts_at) ? '1px solid #C8E6C9' : undefined,
+                            border:
+                                event.status === 'cancelled' || event.status === 'canceled'
+                                    ? '2px solid #B71C1C'
+                                    : isEventTodayAndNotStarted(event.starts_at)
+                                      ? '1px solid #C8E6C9'
+                                      : undefined,
                         }}
                     >
                         {event.cover?.trim() ? (
@@ -1082,6 +1091,46 @@ export default function GamesList() {
                             const isLoading = status?.loading
                             const isSuccess = status?.success
                             const hasError = status?.error
+
+                            if (event.status === 'cancelled' || event.status === 'canceled') {
+                                const participantCancelled = eventParticipants[event.id]
+                                if (participantCancelled?.payment_status === 'paid') {
+                                    return (
+                                        <div
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                backgroundColor: '#E8F5E9',
+                                                color: '#1B5E20',
+                                                border: '1px solid #C8E6C9',
+                                                borderRadius: '6px',
+                                                fontSize: '14px',
+                                                textAlign: 'center',
+                                                fontWeight: '500',
+                                            }}
+                                        >
+                                            Вы зарегистрированы
+                                        </div>
+                                    )
+                                }
+                                return (
+                                    <div
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px',
+                                            backgroundColor: '#F5F5F5',
+                                            color: '#6B6B69',
+                                            border: '1px solid #EBE8E0',
+                                            borderRadius: '6px',
+                                            fontSize: '14px',
+                                            textAlign: 'center',
+                                            fontWeight: '500',
+                                        }}
+                                    >
+                                        Событие отменено — запись и оплата недоступны.
+                                    </div>
+                                )
+                            }
 
                             if (isLoading) {
                                 return (

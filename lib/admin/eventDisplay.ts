@@ -50,3 +50,19 @@ export function paymentStatusLabelRu(status: string): string {
             return status
     }
 }
+
+/** Статус события в clubtac_events (для админки). */
+export function eventStatusLabelRu(status: string): string {
+    switch (status) {
+        case 'scheduled':
+            return 'Запланировано'
+        case 'finished':
+            return 'Завершено'
+        case 'cancelled':
+            return 'Отменено'
+        case 'hidden':
+            return 'Скрыто (только в админке)'
+        default:
+            return status
+    }
+}
