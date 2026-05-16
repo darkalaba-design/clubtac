@@ -1041,6 +1041,26 @@ export default function UserProfile() {
                     )}
                 </div>
             </div>
+            {showAppAdminLink && (
+                <div style={{ padding: '0 12px', marginTop: '4px', marginBottom: '12px' }}>
+                    <Link
+                        href="/admin"
+                        style={{
+                            display: 'block',
+                            textAlign: 'center',
+                            padding: '12px 14px',
+                            borderRadius: '10px',
+                            backgroundColor: '#1B5E20',
+                            color: '#fff',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            fontSize: '15px',
+                        }}
+                    >
+                        Админка (в приложении)
+                    </Link>
+                </div>
+            )}
             {settingsFooter}
             {settingsModal}
         </>

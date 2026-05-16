@@ -5,7 +5,7 @@ import "./globals.css";
 import { UserProvider } from "./contexts/UserContext";
 import { SoloLeaderRanksProvider } from "./contexts/SoloLeaderRanksContext";
 import TelegramAuth from "./components/TelegramAuth";
-import Footer from "./components/Footer";
+import ConditionalFooter from "./components/ConditionalFooter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,7 +43,7 @@ export default function RootLayout({
             <div className="layout-shell">
               <TelegramAuth />
               <div className="layout-content">{children}</div>
-              <Footer />
+              <ConditionalFooter />
             </div>
           </SoloLeaderRanksProvider>
         </UserProvider>

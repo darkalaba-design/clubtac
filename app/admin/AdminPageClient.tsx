@@ -59,10 +59,16 @@ function adminFetch(input: RequestInfo | URL, init: RequestInit = {}) {
     return fetch(input, { ...init, headers: h })
 }
 
+type AdminNavTab = 'events' | 'games' | 'admins'
+
+const ADMIN_SCROLL_PT = 'calc(52px + env(safe-area-inset-top, 0px))'
+const ADMIN_SCROLL_PB = 'calc(72px + env(safe-area-inset-bottom, 0px))'
+
 export default function AdminPageClient() {
     const [phase, setPhase] = useState<'loading' | 'no_telegram' | 'forbidden' | 'ready'>('loading')
     const [session, setSession] = useState<SessionRes | null>(null)
     const [err, setErr] = useState<string | null>(null)
+    const [navTab, setNavTab] = useState<AdminNavTab>('events')
 
     const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([])
     const [events, setEvents] = useState<EventRow[]>([])
@@ -144,6 +150,11 @@ export default function AdminPageClient() {
         }
         void run()
     }, [loadLists])
+
+    useEffect(() => {
+        if (phase !== 'ready' || !session) return
+        if (session.app_role !== 'root' && navTab === 'admins') setNavTab('events')
+    }, [phase, session, navTab])
 
     const setRole = async (targetId: number, app_role: 'admin' | 'user') => {
         setErr(null)
@@ -268,17 +279,117 @@ export default function AdminPageClient() {
     const role = session?.app_role
     const isRoot = role === 'root'
 
-    return (
-        <div style={{ padding: '16px 12px 96px', maxWidth: '720px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <Link href="/" style={{ color: '#1B5E20', fontWeight: 600 }}>
-                    ← На главную
-                </Link>
-                <span style={{ fontSize: '12px', color: '#6B6B69' }}>
-                    {role === 'root' ? 'root' : 'admin'}
-                </span>
+    const navBtn = (tab: AdminNavTab, icon: string, label: string) => (
+        <button
+            key={tab}
+            type="button"
+            onClick={() => {
+                setNavTab(tab)
+                if (typeof window !== 'undefined') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                }
+            }}
+            style={{
+                flex: 1,
+                fontWeight: navTab === tab ? 'bold' : 'normal',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '8px',
+                border: 'none',
+                borderBottom: navTab === tab ? '3px solid #FFDF00' : '3px solid transparent',
+                background: 'transparent',
+                cursor: 'pointer',
+                color: navTab === tab ? '#1D1D1B' : '#6B6B69',
+            }}
+        >
+            <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '26px' }}>{icon}</span>
             </div>
+            <span style={{ fontSize: '10px' }}>{label}</span>
+        </button>
+    )
 
+    return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#FAF9F6' }}>
+            <header
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: 1001,
+                    backgroundColor: '#FFFFFF',
+                    borderBottom: '1px solid #EBE8E0',
+                    boxShadow: '0 2px 12px rgba(29,29,27,0.06)',
+                }}
+            >
+                <div
+                    style={{
+                        maxWidth: 'var(--app-max-width, 850px)',
+                        width: '100%',
+                        marginLeft: 'auto',
+                        marginRight: 'auto',
+                        padding: 'calc(10px + env(safe-area-inset-top, 0px)) 12px 10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        minHeight: '44px',
+                    }}
+                >
+                    <Link
+                        href="/"
+                        style={{
+                            color: '#1B5E20',
+                            fontWeight: 600,
+                            fontSize: '15px',
+                            textDecoration: 'none',
+                            flexShrink: 0,
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        ← На главную
+                    </Link>
+                    <div
+                        style={{
+                            flex: 1,
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            fontSize: '17px',
+                            color: '#1D1D1B',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        Админка
+                    </div>
+                    <span
+                        style={{
+                            fontSize: '11px',
+                            color: '#6B6B69',
+                            fontWeight: 600,
+                            flexShrink: 0,
+                            textTransform: 'uppercase',
+                        }}
+                    >
+                        {role === 'root' ? 'root' : 'admin'}
+                    </span>
+                </div>
+            </header>
+
+            <main
+                id="admin-main-scroll"
+                style={{
+                    paddingTop: ADMIN_SCROLL_PT,
+                    paddingBottom: ADMIN_SCROLL_PB,
+                    paddingLeft: '12px',
+                    paddingRight: '12px',
+                    maxWidth: '720px',
+                    margin: '0 auto',
+                }}
+            >
             {err && (
                 <div
                     style={{
@@ -292,7 +403,7 @@ export default function AdminPageClient() {
                 </div>
             )}
 
-            {isRoot && (
+            {navTab === 'admins' && isRoot && (
                 <section style={card}>
                     <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>Администраторы</h2>
                     <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6B6B69' }}>
@@ -362,6 +473,7 @@ export default function AdminPageClient() {
                 </section>
             )}
 
+            {navTab === 'events' && (
             <section style={card}>
                 <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>События</h2>
                 <form onSubmit={submitNewEvent} style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -532,7 +644,9 @@ export default function AdminPageClient() {
                     ))}
                 </div>
             </section>
+            )}
 
+            {navTab === 'games' && (
             <section style={card}>
                 <h2 style={{ margin: '0 0 8px', fontSize: '17px' }}>Сыгранные партии</h2>
                 <div
@@ -567,6 +681,38 @@ export default function AdminPageClient() {
                     ))}
                 </div>
             </section>
+            )}
+            </main>
+            <nav
+                style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: '#FFFFFF',
+                    borderTop: '1px solid #EBE8E0',
+                    boxShadow: '0 -2px 12px rgba(29,29,27,0.06)',
+                    zIndex: 1000,
+                    paddingTop: '8px',
+                }}
+            >
+                <div
+                    style={{
+                        maxWidth: 'var(--app-max-width, 850px)',
+                        width: '100%',
+                        marginLeft: 'auto',
+                        marginRight: 'auto',
+                        display: 'flex',
+                        gap: 0,
+                        minWidth: 0,
+                        paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
+                    }}
+                >
+                    {navBtn('events', '📅', 'События')}
+                    {navBtn('games', '🎮', 'Партии')}
+                    {isRoot ? navBtn('admins', '👥', 'Доступ') : null}
+                </div>
+            </nav>
         </div>
     )
 }
