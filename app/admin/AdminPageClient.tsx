@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { AppRole } from '@/lib/admin/appRole'
 import { TELEGRAM_INIT_DATA_HEADER } from '@/lib/admin/constants'
@@ -192,6 +192,10 @@ export default function AdminPageClient() {
     const [eventModalEditing, setEventModalEditing] = useState(false)
     const [eventModalDraft, setEventModalDraft] = useState<EventModalDraft | null>(null)
 
+    const creatingEventRef = useRef(false)
+    const [creatingEvent, setCreatingEvent] = useState(false)
+    const [newEventSuccess, setNewEventSuccess] = useState<string | null>(null)
+
     const loadLists = useCallback(async (role: AppRole) => {
         setErr(null)
         try {
@@ -287,6 +291,7 @@ export default function AdminPageClient() {
     const submitNewEvent = async (e: React.FormEvent) => {
         e.preventDefault()
         setErr(null)
+        setNewEventSuccess(null)
         const starts_at = startsAtLocalToIso(newEvent.startsAtLocal)
         if (!starts_at) {
             setErr('Укажите дату и время')
@@ -328,26 +333,36 @@ export default function AdminPageClient() {
             body.players_limit = null
         }
 
-        const res = await adminFetch('/api/admin/events', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        })
-        const j = await res.json().catch(() => ({}))
-        if (!res.ok) {
-            setErr(j.error || res.statusText)
-            return
+        if (creatingEventRef.current) return
+        creatingEventRef.current = true
+        setCreatingEvent(true)
+        try {
+            const res = await adminFetch('/api/admin/events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            })
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                setErr(typeof j.error === 'string' ? j.error : res.statusText)
+                return
+            }
+            setNewEvent({
+                clubId: '',
+                title: '',
+                startsAtLocal: '',
+                address: '',
+                priceDigits: '',
+                maxParticipantsDigits: '',
+                description: '',
+            })
+            if (session?.app_role) await loadLists(session.app_role)
+            const createdTitle = (j as { event?: { title?: string } }).event?.title?.trim() ?? ''
+            setNewEventSuccess(createdTitle ? `Событие «${createdTitle}» создано.` : 'Событие создано.')
+        } finally {
+            creatingEventRef.current = false
+            setCreatingEvent(false)
         }
-        setNewEvent({
-            clubId: '',
-            title: '',
-            startsAtLocal: '',
-            address: '',
-            priceDigits: '',
-            maxParticipantsDigits: '',
-            description: '',
-        })
-        if (session?.app_role) await loadLists(session.app_role)
     }
 
     const refetchEventModal = useCallback(async (id: string) => {
@@ -905,19 +920,37 @@ export default function AdminPageClient() {
 
                     <button
                         type="submit"
+                        disabled={creatingEvent}
                         style={{
                             padding: '12px',
                             borderRadius: '8px',
                             border: 'none',
-                            backgroundColor: '#1B5E20',
+                            backgroundColor: creatingEvent ? '#A5D6A7' : '#1B5E20',
                             color: '#fff',
                             fontWeight: 600,
-                            cursor: 'pointer',
+                            cursor: creatingEvent ? 'not-allowed' : 'pointer',
                             fontSize: '15px',
                         }}
                     >
-                        Создать событие
+                        {creatingEvent ? 'Создание…' : 'Создать событие'}
                     </button>
+                    {newEventSuccess ? (
+                        <div
+                            role="status"
+                            style={{
+                                margin: 0,
+                                padding: '12px 14px',
+                                borderRadius: '8px',
+                                backgroundColor: '#E8F5E9',
+                                border: '1px solid #A5D6A7',
+                                color: '#1B5E20',
+                                fontWeight: 600,
+                                fontSize: '14px',
+                            }}
+                        >
+                            {newEventSuccess}
+                        </div>
+                    ) : null}
                 </form>
 
                 <div style={{ fontWeight: 600, marginBottom: '10px' }}>Список</div>
