@@ -438,6 +438,11 @@ export default function AdminPageClient() {
         if (session?.app_role) await loadLists(session.app_role)
     }
 
+    const filteredAdminUsers = useMemo(
+        () => adminUsers.filter((u) => adminUserMatchesSearch(u, adminUsersSearch)),
+        [adminUsers, adminUsersSearch]
+    )
+
     const card: React.CSSProperties = {
         backgroundColor: '#FFFFFF',
         borderRadius: '12px',
@@ -482,11 +487,6 @@ export default function AdminPageClient() {
 
     const role = session?.app_role
     const isRoot = role === 'root'
-
-    const filteredAdminUsers = useMemo(
-        () => adminUsers.filter((u) => adminUserMatchesSearch(u, adminUsersSearch)),
-        [adminUsers, adminUsersSearch]
-    )
 
     const fieldLabel: CSSProperties = { fontSize: '13px', fontWeight: 600, color: '#1D1D1B', marginBottom: '4px' }
     const chipStyle = (active: boolean): CSSProperties => ({
