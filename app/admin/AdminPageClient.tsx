@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { AppRole } from '@/lib/admin/appRole'
 import { TELEGRAM_INIT_DATA_HEADER } from '@/lib/admin/constants'
@@ -26,8 +26,30 @@ type AdminUserRow = {
     first_name: string | null
     last_name?: string | null
     username: string | null
+    nickname?: string | null
     app_role: AppRole
     created_at?: string | null
+}
+
+function adminUserMatchesSearch(u: AdminUserRow, rawQuery: string): boolean {
+    const q = rawQuery.trim().toLowerCase()
+    if (!q) return true
+    const uname = (u.username ?? '').trim().toLowerCase()
+    const nick = (u.nickname ?? '').trim().toLowerCase()
+    const first = (u.first_name ?? '').trim().toLowerCase()
+    const last = (u.last_name ?? '').trim().toLowerCase()
+    const full = `${first} ${last}`.trim()
+    const chunks = [
+        first,
+        last,
+        full,
+        uname,
+        uname ? `@${uname}` : '',
+        nick,
+        String(u.telegram_id),
+        String(u.id),
+    ]
+    return chunks.some((c) => c && c.includes(q))
 }
 
 type EventRow = {
@@ -145,6 +167,7 @@ export default function AdminPageClient() {
     const [navTab, setNavTab] = useState<AdminNavTab>('events')
 
     const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([])
+    const [adminUsersSearch, setAdminUsersSearch] = useState('')
     const [events, setEvents] = useState<EventRow[]>([])
     const [games, setGames] = useState<GameRow[]>([])
 
@@ -169,7 +192,7 @@ export default function AdminPageClient() {
         setErr(null)
         try {
             if (role === 'root') {
-                const ur = await adminFetch('/api/admin/users?limit=120')
+                const ur = await adminFetch('/api/admin/users?limit=200')
                 const uj = await ur.json().catch(() => ({}))
                 if (!ur.ok) throw new Error(uj.error || ur.statusText)
                 setAdminUsers(uj.users || [])
@@ -460,6 +483,11 @@ export default function AdminPageClient() {
     const role = session?.app_role
     const isRoot = role === 'root'
 
+    const filteredAdminUsers = useMemo(
+        () => adminUsers.filter((u) => adminUserMatchesSearch(u, adminUsersSearch)),
+        [adminUsers, adminUsersSearch]
+    )
+
     const fieldLabel: CSSProperties = { fontSize: '13px', fontWeight: 600, color: '#1D1D1B', marginBottom: '4px' }
     const chipStyle = (active: boolean): CSSProperties => ({
         padding: '6px 11px',
@@ -602,8 +630,33 @@ export default function AdminPageClient() {
                     <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6B6B69' }}>
                         Только root может выдавать и снимать роль admin (не root через API).
                     </p>
+                    <div style={{ marginBottom: '14px' }}>
+                        <div style={fieldLabel}>Поиск</div>
+                        <input
+                            type="search"
+                            value={adminUsersSearch}
+                            onChange={(e) => setAdminUsersSearch(e.target.value)}
+                            placeholder="Имя, фамилия, @username, ник в клубе, id или Telegram id…"
+                            autoComplete="off"
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                                fontSize: '15px',
+                            }}
+                        />
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {adminUsers.map((u) => (
+                        {filteredAdminUsers.length === 0 ? (
+                            <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>
+                                {adminUsers.length === 0
+                                    ? 'Список пользователей пуст.'
+                                    : 'Никого не найдено — попробуйте другой запрос.'}
+                            </p>
+                        ) : (
+                            filteredAdminUsers.map((u) => (
                             <div
                                 key={u.id}
                                 style={{
@@ -621,8 +674,8 @@ export default function AdminPageClient() {
                                         {u.first_name || '—'} {u.last_name || ''}
                                     </div>
                                     <div style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                        id {u.id} · tg {u.telegram_id} · @{u.username || '—'} ·{' '}
-                                        <strong>{u.app_role}</strong>
+                                        id {u.id} · tg {u.telegram_id} · @{u.username || '—'}
+                                        {u.nickname?.trim() ? ` · ник: ${u.nickname}` : ''} · <strong>{u.app_role}</strong>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '6px' }}>
@@ -661,7 +714,8 @@ export default function AdminPageClient() {
                                     )}
                                 </div>
                             </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </section>
             )}
