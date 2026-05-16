@@ -197,6 +197,7 @@ export default function AdminPageClient() {
     const creatingEventRef = useRef(false)
     const [creatingEvent, setCreatingEvent] = useState(false)
     const [newEventSuccess, setNewEventSuccess] = useState<string | null>(null)
+    const [showNewEventForm, setShowNewEventForm] = useState(false)
 
     const loadLists = useCallback(async (role: AppRole) => {
         setErr(null)
@@ -361,6 +362,7 @@ export default function AdminPageClient() {
             if (session?.app_role) await loadLists(session.app_role)
             const createdTitle = (j as { event?: { title?: string } }).event?.title?.trim() ?? ''
             setNewEventSuccess(createdTitle ? `Событие «${createdTitle}» создано.` : 'Событие создано.')
+            setShowNewEventForm(false)
         } finally {
             creatingEventRef.current = false
             setCreatingEvent(false)
@@ -787,6 +789,48 @@ export default function AdminPageClient() {
             {navTab === 'events' && (
             <section style={card}>
                 <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>События</h2>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setShowNewEventForm((prev) => {
+                            const next = !prev
+                            if (next) setNewEventSuccess(null)
+                            return next
+                        })
+                    }}
+                    style={{
+                        width: '100%',
+                        marginBottom: newEventSuccess && !showNewEventForm ? '10px' : showNewEventForm ? '14px' : '16px',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: '#FFDF00',
+                        color: '#1D1D1B',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontSize: '15px',
+                    }}
+                >
+                    {showNewEventForm ? 'Скрыть форму' : 'Добавить событие'}
+                </button>
+                {newEventSuccess && !showNewEventForm ? (
+                    <div
+                        role="status"
+                        style={{
+                            margin: '0 0 16px',
+                            padding: '12px 14px',
+                            borderRadius: '8px',
+                            backgroundColor: '#E8F5E9',
+                            border: '1px solid #A5D6A7',
+                            color: '#1B5E20',
+                            fontWeight: 600,
+                            fontSize: '14px',
+                        }}
+                    >
+                        {newEventSuccess}
+                    </div>
+                ) : null}
+                {showNewEventForm ? (
                 <form onSubmit={submitNewEvent} style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ fontWeight: 700, fontSize: '16px' }}>Новое событие</div>
 
@@ -964,24 +1008,8 @@ export default function AdminPageClient() {
                     >
                         {creatingEvent ? 'Создание…' : 'Создать событие'}
                     </button>
-                    {newEventSuccess ? (
-                        <div
-                            role="status"
-                            style={{
-                                margin: 0,
-                                padding: '12px 14px',
-                                borderRadius: '8px',
-                                backgroundColor: '#E8F5E9',
-                                border: '1px solid #A5D6A7',
-                                color: '#1B5E20',
-                                fontWeight: 600,
-                                fontSize: '14px',
-                            }}
-                        >
-                            {newEventSuccess}
-                        </div>
-                    ) : null}
                 </form>
+                ) : null}
 
                 <div style={{ fontWeight: 600, marginBottom: '10px' }}>Список</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1281,25 +1309,35 @@ export default function AdminPageClient() {
                                             <p style={{ margin: '0 0 14px', fontSize: '15px', color: '#1D1D1B', fontWeight: 600 }}>
                                                 {formatEventModalDateTime(eventModalEvent.starts_at)}
                                             </p>
-                                            <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
+                                            <p style={{ margin: '0 0 8px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
                                                 📍 {eventModalEvent.address}
                                             </p>
+                                            {eventModalEvent.duration_minutes != null ? (
+                                                <p style={{ margin: '0 0 8px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
+                                                    ⏱ {eventModalEvent.duration_minutes} мин
+                                                </p>
+                                            ) : null}
+                                            <p style={{ margin: '0 0 14px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
+                                                {eventModalEvent.price != null && eventModalEvent.price > 0
+                                                    ? `💰 ${eventModalEvent.price} ₽`
+                                                    : '💰 Бесплатно'}
+                                            </p>
+
+                                            <div style={{ margin: '0 0 20px' }}>
+                                                <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '4px' }}>Описание</div>
+                                                <div
+                                                    style={{
+                                                        fontSize: '14px',
+                                                        lineHeight: 1.5,
+                                                        whiteSpace: 'pre-wrap',
+                                                        color: '#1D1D1B',
+                                                    }}
+                                                >
+                                                    {eventModalEvent.description?.trim() ? eventModalEvent.description : '—'}
+                                                </div>
+                                            </div>
 
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>ID</div>
-                                                    <div style={{ fontSize: '13px', wordBreak: 'break-all' }}>{eventModalEvent.id}</div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Клуб</div>
-                                                    <div style={{ fontSize: '13px' }}>
-                                                        {adminClubs.find((c) => c.id === eventModalEvent.club_id)?.name ?? '—'}
-                                                        <span style={{ color: '#6B6B69', wordBreak: 'break-all' }}>
-                                                            {' '}
-                                                            ({eventModalEvent.club_id})
-                                                        </span>
-                                                    </div>
-                                                </div>
                                                 <div>
                                                     <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Тип</div>
                                                     <div style={{ fontSize: '13px' }}>
@@ -1314,51 +1352,12 @@ export default function AdminPageClient() {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Стоимость</div>
-                                                    <div style={{ fontSize: '13px' }}>
-                                                        {eventModalEvent.price != null ? `${eventModalEvent.price} ₽` : 'Бесплатно'}
-                                                    </div>
-                                                </div>
-                                                <div>
                                                     <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>
                                                         Макс. участников
                                                     </div>
                                                     <div style={{ fontSize: '13px' }}>
                                                         {eventModalEvent.players_limit != null
                                                             ? String(eventModalEvent.players_limit)
-                                                            : '—'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>
-                                                        Длительность (мин.)
-                                                    </div>
-                                                    <div style={{ fontSize: '13px' }}>
-                                                        {eventModalEvent.duration_minutes != null
-                                                            ? String(eventModalEvent.duration_minutes)
-                                                            : '—'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Создано</div>
-                                                    <div style={{ fontSize: '13px' }}>
-                                                        {eventModalEvent.created_at
-                                                            ? new Date(eventModalEvent.created_at).toLocaleString('ru-RU')
-                                                            : '—'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '4px' }}>Описание</div>
-                                                    <div
-                                                        style={{
-                                                            fontSize: '14px',
-                                                            lineHeight: 1.5,
-                                                            whiteSpace: 'pre-wrap',
-                                                            color: '#1D1D1B',
-                                                        }}
-                                                    >
-                                                        {eventModalEvent.description?.trim()
-                                                            ? eventModalEvent.description
                                                             : '—'}
                                                     </div>
                                                 </div>
@@ -1419,6 +1418,17 @@ export default function AdminPageClient() {
                                                     ))}
                                                 </ul>
                                             )}
+
+                                            <p
+                                                style={{
+                                                    margin: '0 0 14px',
+                                                    fontSize: '14px',
+                                                    color: '#6B6B69',
+                                                    lineHeight: 1.45,
+                                                }}
+                                            >
+                                                🏢 {adminClubs.find((c) => c.id === eventModalEvent.club_id)?.name ?? '—'}
+                                            </p>
 
                                             <button
                                                 type="button"
