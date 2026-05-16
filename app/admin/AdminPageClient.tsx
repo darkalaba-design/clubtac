@@ -7,7 +7,7 @@ import type { AppRole } from '@/lib/admin/appRole'
 import { TELEGRAM_INIT_DATA_HEADER } from '@/lib/admin/constants'
 import { ADMIN_EVENT_ADDRESS_PRESETS, ADMIN_EVENT_PRICE_PRESETS } from '@/lib/admin/eventFormPresets'
 import {
-    formatEventCardDayMonth,
+    formatEventCardDayMonthAndTime,
     formatEventModalDateTime,
     getEventTypeNameRu,
     paymentStatusLabelRu,
@@ -68,6 +68,9 @@ type EventRow = {
     description?: string | null
     cover?: string | null
     players_limit?: number | null
+    /** Заполнены в GET /api/admin/events при агрегации участников */
+    participants_registered?: number
+    participants_paid?: number
 }
 
 type GameRow = {
@@ -1046,8 +1049,11 @@ export default function AdminPageClient() {
                                     <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '6px', lineHeight: 1.4 }}>
                                         📍 {ev.address}
                                     </div>
-                                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1B' }}>
-                                        {formatEventCardDayMonth(ev.starts_at)}
+                                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1B', marginBottom: '4px' }}>
+                                        {formatEventCardDayMonthAndTime(ev.starts_at)}
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: '#6B6B69', lineHeight: 1.4 }}>
+                                        Записались: {ev.participants_registered ?? 0} · Оплатили: {ev.participants_paid ?? 0}
                                     </div>
                                     {(ev.status === 'cancelled' || ev.status === 'canceled') && (
                                         <div style={{ marginTop: '8px', fontSize: '12px', color: '#B71C1C', fontWeight: 600 }}>

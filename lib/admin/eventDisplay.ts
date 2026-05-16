@@ -1,3 +1,16 @@
+/** День и месяц + время для карточки в админке (например «25 января, 16:30»). */
+export function formatEventCardDayMonthAndTime(iso: string): string {
+    try {
+        const date = new Date(iso)
+        if (Number.isNaN(date.getTime())) return iso
+        const dayMonth = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+        const time = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', hour12: false })
+        return `${dayMonth}, ${time}`
+    } catch {
+        return iso
+    }
+}
+
 /** «25 января» — число и месяц в родительном падеже (локаль ru). */
 export function formatEventCardDayMonth(iso: string): string {
     try {

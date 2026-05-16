@@ -41,7 +41,44 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ events: data ?? [] })
+    const rows = data ?? []
+    const eventIds = rows.map((e) => e.id).filter((id): id is string => typeof id === 'string' && id.length > 0)
+
+    const statsMap: Record<string, { participants_registered: number; participants_paid: number }> = {}
+    if (eventIds.length > 0) {
+        const { data: partRows, error: pErr } = await supabase
+            .from('clubtac_event_participants')
+            .select('event_id, payment_status')
+            .in('event_id', eventIds)
+
+        if (pErr) {
+            console.error('GET /api/admin/events participants:', pErr)
+            return NextResponse.json({ error: pErr.message }, { status: 500 })
+        }
+
+        for (const r of partRows ?? []) {
+            const eid = r.event_id as string
+            if (!eid) continue
+            if (!statsMap[eid]) {
+                statsMap[eid] = { participants_registered: 0, participants_paid: 0 }
+            }
+            statsMap[eid].participants_registered += 1
+            if (r.payment_status === 'paid') {
+                statsMap[eid].participants_paid += 1
+            }
+        }
+    }
+
+    const events = rows.map((ev) => {
+        const s = statsMap[ev.id as string]
+        return {
+            ...ev,
+            participants_registered: s?.participants_registered ?? 0,
+            participants_paid: s?.participants_paid ?? 0,
+        }
+    })
+
+    return NextResponse.json({ events })
 }
 
 /** Создание события (admin / root). */
