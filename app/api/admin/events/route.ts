@@ -5,7 +5,7 @@ import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 
 const EVENT_SELECT =
-    'id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover'
+    'id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover, players_limit'
 
 const EVENT_TYPES = ['game', 'workshop', 'party'] as const
 const EVENT_STATUSES = ['scheduled', 'finished', 'cancelled', 'canceled'] as const
@@ -64,11 +64,20 @@ export async function POST(request: NextRequest) {
 
     const title = typeof body.title === 'string' ? body.title.trim() : ''
     const starts_at = typeof body.starts_at === 'string' ? body.starts_at.trim() : ''
-    const club_id = typeof body.club_id === 'string' ? body.club_id.trim() : ''
     const address = typeof body.address === 'string' ? body.address.trim() : ''
-    if (!title || !starts_at || !club_id || !address) {
+    const clubIdRaw = typeof body.club_id === 'string' ? body.club_id.trim() : ''
+    const club_id = clubIdRaw || process.env.CLUBTAC_DEFAULT_EVENT_CLUB_ID?.trim() || ''
+    if (!title || !starts_at || !address) {
         return NextResponse.json(
-            { error: 'Обязательны поля: title, starts_at (ISO), club_id, address' },
+            { error: 'Обязательны поля: title, starts_at (ISO), address; club_id или переменная CLUBTAC_DEFAULT_EVENT_CLUB_ID' },
+            { status: 400 }
+        )
+    }
+    if (!club_id) {
+        return NextResponse.json(
+            {
+                error: 'Не задан club_id: передайте в теле запроса или задайте CLUBTAC_DEFAULT_EVENT_CLUB_ID на сервере',
+            },
             { status: 400 }
         )
     }
@@ -124,6 +133,14 @@ export async function POST(request: NextRequest) {
         row.cover = body.cover.trim() || null
     } else {
         return NextResponse.json({ error: 'cover должен быть строкой (URL) или null' }, { status: 400 })
+    }
+
+    if (body.players_limit === null || body.players_limit === undefined) {
+        row.players_limit = null
+    } else if (typeof body.players_limit === 'number' && Number.isFinite(body.players_limit) && body.players_limit >= 0) {
+        row.players_limit = Math.floor(body.players_limit)
+    } else {
+        return NextResponse.json({ error: 'players_limit: неотрицательное целое или null' }, { status: 400 })
     }
 
     const { supabase } = gate

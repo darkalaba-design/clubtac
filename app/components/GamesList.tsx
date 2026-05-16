@@ -29,6 +29,8 @@ interface Event {
     address: string
     starts_at: string
     price: number | null
+    /** Максимум участников (поле players_limit в БД) */
+    players_limit?: number | null
     status: 'scheduled' | 'finished' | 'cancelled' | 'canceled'
     created_at: string
     description?: string | null
@@ -144,7 +146,7 @@ export default function GamesList() {
                 // События, которые ещё не начались: starts_at > сейчас (включая сегодняшние с будущим временем)
                 const { data: allEvents, error: allEventsError } = await supabase
                     .from('clubtac_events')
-                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover')
+                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover, players_limit')
                     .gt('starts_at', now)
                     .order('starts_at', { ascending: true })
 
@@ -475,7 +477,7 @@ export default function GamesList() {
                 // Загружаем завершенные события
                 const { data: finishedEvents, error: eventsError } = await supabase
                     .from('clubtac_events')
-                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, cover')
+                    .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, cover, players_limit')
                     .eq('status', 'finished')
                     .lt('starts_at', now)
                     .order('starts_at', { ascending: false })

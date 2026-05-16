@@ -2,8 +2,17 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import type { AppRole } from '@/lib/admin/appRole'
 import { TELEGRAM_INIT_DATA_HEADER } from '@/lib/admin/constants'
+import { ADMIN_EVENT_ADDRESS_PRESETS, ADMIN_EVENT_PRICE_PRESETS } from '@/lib/admin/eventFormPresets'
+import {
+    formatEventCardDayMonth,
+    formatEventModalDateTime,
+    getEventTypeNameRu,
+    paymentStatusLabelRu,
+} from '@/lib/admin/eventDisplay'
+import { formatParticipantDisplay } from '@/lib/admin/formatParticipantDisplay'
 
 type SessionRes = {
     app_role: AppRole
@@ -32,8 +41,10 @@ type EventRow = {
     type: string
     duration_minutes: number | null
     template_id: string | null
+    created_at?: string | null
     description?: string | null
     cover?: string | null
+    players_limit?: number | null
 }
 
 type GameRow = {
@@ -47,9 +58,72 @@ type GameRow = {
     score_2: number
 }
 
+type EventParticipantRow = {
+    user_id: number
+    payment_status: string
+    paylink: string | null
+    created_at: string | null
+    first_name: string | null
+    last_name: string | null
+    username: string | null
+    nickname: string | null
+}
+
+type EventModalDraft = {
+    title: string
+    startsAtLocal: string
+    address: string
+    priceDigits: string
+    maxParticipantsDigits: string
+    description: string
+    status: string
+    type: string
+    durationMinutesDigits: string
+    cover: string
+    templateId: string
+    clubId: string
+}
+
 function getInitDataHeader(): string {
     if (typeof window === 'undefined') return ''
     return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp?.initData?.trim() || ''
+}
+
+function onlyDigits(s: string): string {
+    return s.replace(/\D/g, '')
+}
+
+/** Значение `datetime-local` → ISO для Supabase */
+function startsAtLocalToIso(localValue: string): string | null {
+    const t = localValue.trim()
+    if (!t) return null
+    const d = new Date(t)
+    if (Number.isNaN(d.getTime())) return null
+    return d.toISOString()
+}
+
+function isoToDatetimeLocalValue(iso: string): string {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function eventToModalDraft(ev: EventRow): EventModalDraft {
+    return {
+        title: ev.title,
+        startsAtLocal: isoToDatetimeLocalValue(ev.starts_at),
+        address: ev.address,
+        priceDigits: ev.price != null ? String(ev.price) : '',
+        maxParticipantsDigits: ev.players_limit != null ? String(ev.players_limit) : '',
+        description: ev.description ?? '',
+        status: ev.status,
+        type: ev.type,
+        durationMinutesDigits: ev.duration_minutes != null ? String(ev.duration_minutes) : '',
+        cover: ev.cover?.trim() ?? '',
+        templateId: ev.template_id?.trim() ?? '',
+        clubId: ev.club_id,
+    }
 }
 
 function adminFetch(input: RequestInfo | URL, init: RequestInit = {}) {
@@ -76,17 +150,20 @@ export default function AdminPageClient() {
 
     const [newEvent, setNewEvent] = useState({
         title: '',
-        starts_at: '',
-        club_id: '',
+        startsAtLocal: '',
         address: '',
-        type: 'game',
-        status: 'scheduled',
-        price: '' as string,
+        priceDigits: '',
+        maxParticipantsDigits: '',
         description: '',
     })
 
-    const [editEventId, setEditEventId] = useState<string | null>(null)
-    const [editEvent, setEditEvent] = useState<Partial<EventRow>>({})
+    const [eventModalId, setEventModalId] = useState<string | null>(null)
+    const [eventModalLoading, setEventModalLoading] = useState(false)
+    const [eventModalErr, setEventModalErr] = useState<string | null>(null)
+    const [eventModalEvent, setEventModalEvent] = useState<EventRow | null>(null)
+    const [eventModalParticipants, setEventModalParticipants] = useState<EventParticipantRow[]>([])
+    const [eventModalEditing, setEventModalEditing] = useState(false)
+    const [eventModalDraft, setEventModalDraft] = useState<EventModalDraft | null>(null)
 
     const loadLists = useCallback(async (role: AppRole) => {
         setErr(null)
@@ -174,23 +251,41 @@ export default function AdminPageClient() {
     const submitNewEvent = async (e: React.FormEvent) => {
         e.preventDefault()
         setErr(null)
+        const starts_at = startsAtLocalToIso(newEvent.startsAtLocal)
+        if (!starts_at) {
+            setErr('Укажите дату и время')
+            return
+        }
+        const priceDigits = onlyDigits(newEvent.priceDigits)
+        const maxDigits = onlyDigits(newEvent.maxParticipantsDigits)
         const body: Record<string, unknown> = {
             title: newEvent.title.trim(),
-            starts_at: newEvent.starts_at.trim(),
-            club_id: newEvent.club_id.trim(),
+            starts_at,
             address: newEvent.address.trim(),
-            type: newEvent.type,
-            status: newEvent.status,
+            type: 'game',
+            status: 'scheduled',
             description: newEvent.description.trim() || null,
         }
-        if (newEvent.price.trim() !== '') {
-            const p = Number.parseFloat(newEvent.price.replace(',', '.'))
-            if (!Number.isFinite(p)) {
-                setErr('Некорректная цена')
+        if (priceDigits !== '') {
+            const p = Number.parseInt(priceDigits, 10)
+            if (!Number.isFinite(p) || p < 0) {
+                setErr('Некорректная стоимость')
                 return
             }
             body.price = p
-        } else body.price = null
+        } else {
+            body.price = null
+        }
+        if (maxDigits !== '') {
+            const m = Number.parseInt(maxDigits, 10)
+            if (!Number.isFinite(m) || m < 1) {
+                setErr('Максимум участников — целое число от 1 или оставьте поле пустым')
+                return
+            }
+            body.players_limit = m
+        } else {
+            body.players_limit = null
+        }
 
         const res = await adminFetch('/api/admin/events', {
             method: 'POST',
@@ -204,33 +299,119 @@ export default function AdminPageClient() {
         }
         setNewEvent({
             title: '',
-            starts_at: '',
-            club_id: '',
+            startsAtLocal: '',
             address: '',
-            type: 'game',
-            status: 'scheduled',
-            price: '',
+            priceDigits: '',
+            maxParticipantsDigits: '',
             description: '',
         })
         if (session?.app_role) await loadLists(session.app_role)
     }
 
-    const saveEditEvent = async (e: React.FormEvent) => {
+    const refetchEventModal = useCallback(async (id: string) => {
+        setEventModalLoading(true)
+        setEventModalErr(null)
+        try {
+            const r = await adminFetch(`/api/admin/events/${encodeURIComponent(id)}`)
+            const j = await r.json().catch(() => ({}))
+            if (!r.ok) throw new Error(typeof j.error === 'string' ? j.error : r.statusText)
+            setEventModalEvent(j.event as EventRow)
+            setEventModalParticipants((j.participants as EventParticipantRow[]) || [])
+        } catch (e) {
+            setEventModalErr(e instanceof Error ? e.message : 'Ошибка загрузки')
+            setEventModalEvent(null)
+            setEventModalParticipants([])
+        } finally {
+            setEventModalLoading(false)
+        }
+    }, [])
+
+    const openEventModal = (id: string) => {
+        setEventModalId(id)
+        setEventModalEditing(false)
+        setEventModalDraft(null)
+        void refetchEventModal(id)
+    }
+
+    const closeEventModal = () => {
+        setEventModalId(null)
+        setEventModalLoading(false)
+        setEventModalErr(null)
+        setEventModalEvent(null)
+        setEventModalParticipants([])
+        setEventModalEditing(false)
+        setEventModalDraft(null)
+    }
+
+    const saveEventModal = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!editEventId) return
+        if (!eventModalId || !eventModalDraft) return
+        setEventModalErr(null)
         setErr(null)
-        const res = await adminFetch(`/api/admin/events/${encodeURIComponent(editEventId)}`, {
+        const starts_at = startsAtLocalToIso(eventModalDraft.startsAtLocal)
+        if (!starts_at) {
+            setEventModalErr('Укажите дату и время')
+            return
+        }
+        const priceDigits = onlyDigits(eventModalDraft.priceDigits)
+        const maxDigits = onlyDigits(eventModalDraft.maxParticipantsDigits)
+        const durDigits = onlyDigits(eventModalDraft.durationMinutesDigits)
+        const body: Record<string, unknown> = {
+            title: eventModalDraft.title.trim(),
+            starts_at,
+            address: eventModalDraft.address.trim(),
+            status: eventModalDraft.status,
+            type: eventModalDraft.type,
+            description: eventModalDraft.description.trim() || null,
+            cover: eventModalDraft.cover.trim() || null,
+            template_id: eventModalDraft.templateId.trim() || null,
+            club_id: eventModalDraft.clubId.trim(),
+        }
+        if (priceDigits !== '') {
+            const p = Number.parseInt(priceDigits, 10)
+            if (!Number.isFinite(p) || p < 0) {
+                setEventModalErr('Некорректная стоимость')
+                return
+            }
+            body.price = p
+        } else {
+            body.price = null
+        }
+        if (maxDigits !== '') {
+            const m = Number.parseInt(maxDigits, 10)
+            if (!Number.isFinite(m) || m < 1) {
+                setEventModalErr('Максимум участников — целое от 1 или пусто')
+                return
+            }
+            body.players_limit = m
+        } else {
+            body.players_limit = null
+        }
+        if (durDigits !== '') {
+            const dm = Number.parseInt(durDigits, 10)
+            if (!Number.isFinite(dm) || dm < 0) {
+                setEventModalErr('Длительность — неотрицательное целое или пусто')
+                return
+            }
+            body.duration_minutes = dm
+        } else {
+            body.duration_minutes = null
+        }
+
+        const res = await adminFetch(`/api/admin/events/${encodeURIComponent(eventModalId)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(editEvent),
+            body: JSON.stringify(body),
         })
         const j = await res.json().catch(() => ({}))
         if (!res.ok) {
-            setErr(j.error || res.statusText)
+            setEventModalErr(typeof j.error === 'string' ? j.error : res.statusText)
             return
         }
-        setEditEventId(null)
-        setEditEvent({})
+        setEventModalEditing(false)
+        setEventModalDraft(null)
+        if (j.event) setEventModalEvent(j.event as EventRow)
+        await refetchEventModal(eventModalId)
         if (session?.app_role) await loadLists(session.app_role)
     }
 
@@ -278,6 +459,18 @@ export default function AdminPageClient() {
 
     const role = session?.app_role
     const isRoot = role === 'root'
+
+    const fieldLabel: CSSProperties = { fontSize: '13px', fontWeight: 600, color: '#1D1D1B', marginBottom: '4px' }
+    const chipStyle = (active: boolean): CSSProperties => ({
+        padding: '6px 11px',
+        fontSize: '12px',
+        borderRadius: '999px',
+        border: active ? '2px solid #1B5E20' : '1px solid #EBE8E0',
+        backgroundColor: active ? '#E8F5E9' : '#FFFFFF',
+        color: '#1D1D1B',
+        cursor: 'pointer',
+        fontWeight: active ? 600 : 500,
+    })
 
     const navBtn = (tab: AdminNavTab, icon: string, label: string) => (
         <button
@@ -476,171 +669,234 @@ export default function AdminPageClient() {
             {navTab === 'events' && (
             <section style={card}>
                 <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>События</h2>
-                <form onSubmit={submitNewEvent} style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ fontWeight: 600, fontSize: '14px' }}>Новое событие</div>
-                    <input
-                        placeholder="Название"
-                        value={newEvent.title}
-                        onChange={(e) => setNewEvent((p) => ({ ...p, title: e.target.value }))}
-                        required
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #EBE8E0' }}
-                    />
-                    <input
-                        placeholder="starts_at ISO, напр. 2026-06-01T18:00:00+03:00"
-                        value={newEvent.starts_at}
-                        onChange={(e) => setNewEvent((p) => ({ ...p, starts_at: e.target.value }))}
-                        required
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #EBE8E0' }}
-                    />
-                    <input
-                        placeholder="club_id (uuid)"
-                        value={newEvent.club_id}
-                        onChange={(e) => setNewEvent((p) => ({ ...p, club_id: e.target.value }))}
-                        required
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #EBE8E0' }}
-                    />
-                    <input
-                        placeholder="Адрес"
-                        value={newEvent.address}
-                        onChange={(e) => setNewEvent((p) => ({ ...p, address: e.target.value }))}
-                        required
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #EBE8E0' }}
-                    />
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <select
-                            value={newEvent.type}
-                            onChange={(e) => setNewEvent((p) => ({ ...p, type: e.target.value }))}
-                            style={{ padding: '8px', borderRadius: '8px' }}
-                        >
-                            <option value="game">game</option>
-                            <option value="workshop">workshop</option>
-                            <option value="party">party</option>
-                        </select>
-                        <select
-                            value={newEvent.status}
-                            onChange={(e) => setNewEvent((p) => ({ ...p, status: e.target.value }))}
-                            style={{ padding: '8px', borderRadius: '8px' }}
-                        >
-                            <option value="scheduled">scheduled</option>
-                            <option value="finished">finished</option>
-                            <option value="cancelled">cancelled</option>
-                            <option value="canceled">canceled</option>
-                        </select>
+                <form onSubmit={submitNewEvent} style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '16px' }}>Новое событие</div>
+
+                    <div>
+                        <div style={fieldLabel}>Название</div>
                         <input
-                            placeholder="Цена (пусто = null)"
-                            value={newEvent.price}
-                            onChange={(e) => setNewEvent((p) => ({ ...p, price: e.target.value }))}
-                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #EBE8E0', flex: 1, minWidth: '120px' }}
+                            value={newEvent.title}
+                            onChange={(e) => setNewEvent((p) => ({ ...p, title: e.target.value }))}
+                            required
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                            }}
                         />
                     </div>
-                    <textarea
-                        placeholder="Описание (необязательно)"
-                        value={newEvent.description}
-                        onChange={(e) => setNewEvent((p) => ({ ...p, description: e.target.value }))}
-                        rows={2}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #EBE8E0' }}
-                    />
+
+                    <div>
+                        <div style={fieldLabel}>Дата и время</div>
+                        <input
+                            type="datetime-local"
+                            value={newEvent.startsAtLocal}
+                            onChange={(e) => setNewEvent((p) => ({ ...p, startsAtLocal: e.target.value }))}
+                            required
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                            }}
+                        />
+                    </div>
+
+                    <div>
+                        <div style={fieldLabel}>Адрес</div>
+                        <input
+                            value={newEvent.address}
+                            onChange={(e) => setNewEvent((p) => ({ ...p, address: e.target.value }))}
+                            required
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                            }}
+                        />
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                            {ADMIN_EVENT_ADDRESS_PRESETS.map((preset) => (
+                                <button
+                                    key={preset.value}
+                                    type="button"
+                                    onClick={() => setNewEvent((p) => ({ ...p, address: preset.value }))}
+                                    style={chipStyle(newEvent.address === preset.value)}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style={fieldLabel}>Стоимость участия, ₽</div>
+                        <input
+                            inputMode="numeric"
+                            autoComplete="off"
+                            placeholder="Например 1500"
+                            value={newEvent.priceDigits}
+                            onChange={(e) => setNewEvent((p) => ({ ...p, priceDigits: onlyDigits(e.target.value) }))}
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                            }}
+                        />
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                            {ADMIN_EVENT_PRICE_PRESETS.map((n) => (
+                                <button
+                                    key={n}
+                                    type="button"
+                                    onClick={() => setNewEvent((p) => ({ ...p, priceDigits: String(n) }))}
+                                    style={chipStyle(newEvent.priceDigits === String(n))}
+                                >
+                                    {n}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style={fieldLabel}>Максимальное количество участников</div>
+                        <input
+                            inputMode="numeric"
+                            autoComplete="off"
+                            placeholder="Необязательно"
+                            value={newEvent.maxParticipantsDigits}
+                            onChange={(e) =>
+                                setNewEvent((p) => ({ ...p, maxParticipantsDigits: onlyDigits(e.target.value) }))
+                            }
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                            }}
+                        />
+                    </div>
+
+                    <div>
+                        <div style={fieldLabel}>Описание</div>
+                        <textarea
+                            value={newEvent.description}
+                            onChange={(e) => setNewEvent((p) => ({ ...p, description: e.target.value }))}
+                            rows={4}
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                                minHeight: '88px',
+                                resize: 'vertical',
+                            }}
+                        />
+                    </div>
+
+                    <p style={{ margin: 0, fontSize: '12px', color: '#6B6B69', lineHeight: 1.45 }}>
+                        Привязка события к клубу задаётся на сервере (переменная окружения), чтобы не вводить UUID каждый раз.
+                    </p>
+
                     <button
                         type="submit"
                         style={{
-                            padding: '10px',
+                            padding: '12px',
                             borderRadius: '8px',
                             border: 'none',
                             backgroundColor: '#1B5E20',
                             color: '#fff',
                             fontWeight: 600,
                             cursor: 'pointer',
+                            fontSize: '15px',
                         }}
                     >
                         Создать событие
                     </button>
                 </form>
 
-                <div style={{ fontWeight: 600, marginBottom: '8px' }}>Список</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontWeight: 600, marginBottom: '10px' }}>Список</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {events.map((ev) => (
-                        <div
+                        <button
                             key={ev.id}
+                            type="button"
+                            onClick={() => openEventModal(ev.id)}
                             style={{
-                                border: '1px solid #EBE8E0',
-                                borderRadius: '10px',
-                                padding: '10px',
-                                fontSize: '13px',
+                                textAlign: 'left',
+                                padding: 0,
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                width: '100%',
                             }}
                         >
-                            <div style={{ fontWeight: 700 }}>{ev.title}</div>
-                            <div style={{ color: '#6B6B69' }}>
-                                {ev.starts_at} · {ev.status} · {ev.type}
-                            </div>
-                            {editEventId === ev.id ? (
-                                <form onSubmit={saveEditEvent} style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <input
-                                        value={editEvent.title ?? ''}
-                                        onChange={(e) => setEditEvent((p) => ({ ...p, title: e.target.value }))}
-                                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }}
-                                    />
-                                    <input
-                                        value={editEvent.starts_at ?? ''}
-                                        onChange={(e) => setEditEvent((p) => ({ ...p, starts_at: e.target.value }))}
-                                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }}
-                                    />
-                                    <input
-                                        value={editEvent.address ?? ''}
-                                        onChange={(e) => setEditEvent((p) => ({ ...p, address: e.target.value }))}
-                                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }}
-                                    />
-                                    <select
-                                        value={editEvent.status ?? ev.status}
-                                        onChange={(e) => setEditEvent((p) => ({ ...p, status: e.target.value }))}
-                                        style={{ padding: '8px' }}
+                            <div
+                                style={{
+                                    backgroundColor: '#FFFFFF',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
+                                    border:
+                                        ev.status === 'cancelled' || ev.status === 'canceled'
+                                            ? '2px solid #B71C1C'
+                                            : '1px solid transparent',
+                                }}
+                            >
+                                {ev.cover?.trim() ? (
+                                    <div
+                                        style={{
+                                            width: '100%',
+                                            aspectRatio: '2 / 1',
+                                            maxHeight: 200,
+                                            backgroundColor: '#EBE8E0',
+                                        }}
                                     >
-                                        <option value="scheduled">scheduled</option>
-                                        <option value="finished">finished</option>
-                                        <option value="cancelled">cancelled</option>
-                                        <option value="canceled">canceled</option>
-                                    </select>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button type="submit" style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', backgroundColor: '#FFDF00', fontWeight: 600, cursor: 'pointer' }}>
-                                            Сохранить
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setEditEventId(null)
-                                                setEditEvent({})
+                                        <img
+                                            src={ev.cover.trim()}
+                                            alt={ev.title ? `Обложка: ${ev.title}` : 'Обложка'}
+                                            style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                                display: 'block',
                                             }}
-                                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer' }}
-                                        >
-                                            Отмена
-                                        </button>
+                                        />
                                     </div>
-                                </form>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setEditEventId(ev.id)
-                                        setEditEvent({
-                                            title: ev.title,
-                                            starts_at: ev.starts_at,
-                                            address: ev.address,
-                                            status: ev.status,
-                                        })
-                                    }}
-                                    style={{
-                                        marginTop: '8px',
-                                        padding: '6px 10px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #1D1D1B',
-                                        background: '#fff',
-                                        cursor: 'pointer',
-                                        fontSize: '12px',
-                                    }}
-                                >
-                                    Изменить
-                                </button>
-                            )}
-                        </div>
+                                ) : null}
+                                <div style={{ padding: '14px 16px' }}>
+                                    <div
+                                        style={{
+                                            fontSize: '16px',
+                                            fontWeight: 700,
+                                            color: '#1D1D1B',
+                                            marginBottom: '8px',
+                                            lineHeight: 1.3,
+                                        }}
+                                    >
+                                        {ev.title}
+                                    </div>
+                                    <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '6px', lineHeight: 1.4 }}>
+                                        📍 {ev.address}
+                                    </div>
+                                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1B' }}>
+                                        {formatEventCardDayMonth(ev.starts_at)}
+                                    </div>
+                                    {(ev.status === 'cancelled' || ev.status === 'canceled') && (
+                                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#B71C1C', fontWeight: 600 }}>
+                                            Отменено
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </button>
                     ))}
                 </div>
             </section>
@@ -713,6 +969,556 @@ export default function AdminPageClient() {
                     {isRoot ? navBtn('admins', '👥', 'Доступ') : null}
                 </div>
             </nav>
+
+            {eventModalId && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Карточка события"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1200,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(29, 29, 27, 0.48)',
+                        paddingTop: 'calc(8px + env(safe-area-inset-top, 0px))',
+                        paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+                        paddingLeft: '12px',
+                        paddingRight: '12px',
+                    }}
+                    onClick={closeEventModal}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            width: '100%',
+                            maxWidth: '560px',
+                            maxHeight: 'min(92vh, 880px)',
+                            overflowY: 'auto',
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: '12px',
+                            boxShadow: '0 8px 32px rgba(29,29,27,0.18)',
+                            position: 'relative',
+                        }}
+                    >
+                        <div
+                            style={{
+                                position: 'sticky',
+                                top: 0,
+                                zIndex: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '10px',
+                                padding: '12px 14px',
+                                borderBottom: '1px solid #EBE8E0',
+                                backgroundColor: '#FFFFFF',
+                            }}
+                        >
+                            <div style={{ fontWeight: 700, fontSize: '16px', color: '#1D1D1B' }}>Событие</div>
+                            <button
+                                type="button"
+                                onClick={closeEventModal}
+                                style={{
+                                    border: 'none',
+                                    background: '#F5F5F5',
+                                    borderRadius: '8px',
+                                    width: '36px',
+                                    height: '36px',
+                                    cursor: 'pointer',
+                                    fontSize: '20px',
+                                    lineHeight: 1,
+                                    flexShrink: 0,
+                                }}
+                                aria-label="Закрыть"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '14px 16px 20px' }}>
+                            {eventModalLoading && !eventModalEvent ? (
+                                <p style={{ margin: 0 }}>Загрузка…</p>
+                            ) : eventModalErr && !eventModalEvent ? (
+                                <div>
+                                    <p style={{ margin: '0 0 12px', color: '#B71C1C' }}>{eventModalErr}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => void refetchEventModal(eventModalId)}
+                                        style={{
+                                            padding: '10px 14px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #1D1D1B',
+                                            background: '#fff',
+                                            cursor: 'pointer',
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Повторить
+                                    </button>
+                                </div>
+                            ) : eventModalEvent ? (
+                                <>
+                                    {eventModalErr ? (
+                                        <p style={{ margin: '0 0 12px', color: '#B71C1C', fontSize: '13px' }}>{eventModalErr}</p>
+                                    ) : null}
+
+                                    {!eventModalEditing ? (
+                                        <>
+                                            {eventModalEvent.cover?.trim() ? (
+                                                <div
+                                                    style={{
+                                                        width: '100%',
+                                                        aspectRatio: '2 / 1',
+                                                        maxHeight: 220,
+                                                        borderRadius: '8px',
+                                                        overflow: 'hidden',
+                                                        backgroundColor: '#EBE8E0',
+                                                        marginBottom: '14px',
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={eventModalEvent.cover.trim()}
+                                                        alt=""
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                                    />
+                                                </div>
+                                            ) : null}
+
+                                            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: '#1D1D1B' }}>
+                                                {eventModalEvent.title}
+                                            </h3>
+                                            <p style={{ margin: '0 0 14px', fontSize: '15px', color: '#1D1D1B', fontWeight: 600 }}>
+                                                {formatEventModalDateTime(eventModalEvent.starts_at)}
+                                            </p>
+                                            <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
+                                                📍 {eventModalEvent.address}
+                                            </p>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>ID</div>
+                                                    <div style={{ fontSize: '13px', wordBreak: 'break-all' }}>{eventModalEvent.id}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Клуб (club_id)</div>
+                                                    <div style={{ fontSize: '13px', wordBreak: 'break-all' }}>{eventModalEvent.club_id}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Тип</div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {getEventTypeNameRu(eventModalEvent.type)} ({eventModalEvent.type})
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Статус</div>
+                                                    <div style={{ fontSize: '13px' }}>{eventModalEvent.status}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Стоимость</div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {eventModalEvent.price != null ? `${eventModalEvent.price} ₽` : 'Бесплатно'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>
+                                                        Макс. участников
+                                                    </div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {eventModalEvent.players_limit != null
+                                                            ? String(eventModalEvent.players_limit)
+                                                            : '—'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>
+                                                        Длительность (мин.)
+                                                    </div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {eventModalEvent.duration_minutes != null
+                                                            ? String(eventModalEvent.duration_minutes)
+                                                            : '—'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>template_id</div>
+                                                    <div style={{ fontSize: '13px', wordBreak: 'break-all' }}>
+                                                        {eventModalEvent.template_id ?? '—'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Создано</div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {eventModalEvent.created_at
+                                                            ? new Date(eventModalEvent.created_at).toLocaleString('ru-RU')
+                                                            : '—'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Обложка (URL)</div>
+                                                    <div style={{ fontSize: '13px', wordBreak: 'break-all' }}>
+                                                        {eventModalEvent.cover?.trim() ? (
+                                                            <a
+                                                                href={eventModalEvent.cover.trim()}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                style={{ color: '#1B5E20' }}
+                                                            >
+                                                                {eventModalEvent.cover.trim()}
+                                                            </a>
+                                                        ) : (
+                                                            '—'
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '4px' }}>Описание</div>
+                                                    <div
+                                                        style={{
+                                                            fontSize: '14px',
+                                                            lineHeight: 1.5,
+                                                            whiteSpace: 'pre-wrap',
+                                                            color: '#1D1D1B',
+                                                        }}
+                                                    >
+                                                        {eventModalEvent.description?.trim()
+                                                            ? eventModalEvent.description
+                                                            : '—'}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '10px' }}>Участники</div>
+                                            {eventModalParticipants.length === 0 ? (
+                                                <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#6B6B69' }}>Пока никто не записан.</p>
+                                            ) : (
+                                                <ul
+                                                    style={{
+                                                        margin: '0 0 16px',
+                                                        padding: 0,
+                                                        listStyle: 'none',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        gap: '10px',
+                                                    }}
+                                                >
+                                                    {eventModalParticipants.map((p) => (
+                                                        <li
+                                                            key={`${p.user_id}-${p.created_at ?? ''}-${p.payment_status}`}
+                                                            style={{
+                                                                border: '1px solid #EBE8E0',
+                                                                borderRadius: '8px',
+                                                                padding: '10px 12px',
+                                                                fontSize: '14px',
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'baseline' }}>
+                                                                <Link
+                                                                    href={`/player/${p.user_id}`}
+                                                                    style={{ fontWeight: 600, color: '#1B5E20' }}
+                                                                >
+                                                                    {formatParticipantDisplay(p)}
+                                                                </Link>
+                                                                <span style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                                    {paymentStatusLabelRu(p.payment_status)}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
+                                                                user_id: {p.user_id}
+                                                                {p.created_at
+                                                                    ? ` · ${new Date(p.created_at).toLocaleString('ru-RU')}`
+                                                                    : ''}
+                                                            </div>
+                                                            {p.paylink?.trim() ? (
+                                                                <a
+                                                                    href={p.paylink.trim()}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    style={{ fontSize: '13px', color: '#1565C0', marginTop: '6px', display: 'inline-block' }}
+                                                                >
+                                                                    Ссылка на оплату
+                                                                </a>
+                                                            ) : null}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setEventModalEditing(true)
+                                                    setEventModalDraft(eventToModalDraft(eventModalEvent))
+                                                    setEventModalErr(null)
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px',
+                                                    borderRadius: '8px',
+                                                    border: 'none',
+                                                    backgroundColor: '#FFDF00',
+                                                    color: '#1D1D1B',
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer',
+                                                    fontSize: '15px',
+                                                }}
+                                            >
+                                                Редактировать
+                                            </button>
+                                        </>
+                                    ) : eventModalDraft ? (
+                                        <form onSubmit={saveEventModal} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            <div>
+                                                <div style={fieldLabel}>Название</div>
+                                                <input
+                                                    value={eventModalDraft.title}
+                                                    onChange={(e) => setEventModalDraft((d) => (d ? { ...d, title: e.target.value } : d))}
+                                                    required
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>Дата и время</div>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={eventModalDraft.startsAtLocal}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) => (d ? { ...d, startsAtLocal: e.target.value } : d))
+                                                    }
+                                                    required
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>Адрес</div>
+                                                <input
+                                                    value={eventModalDraft.address}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) => (d ? { ...d, address: e.target.value } : d))
+                                                    }
+                                                    required
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>Стоимость, ₽ (пусто = бесплатно)</div>
+                                                <input
+                                                    inputMode="numeric"
+                                                    value={eventModalDraft.priceDigits}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) =>
+                                                            d ? { ...d, priceDigits: onlyDigits(e.target.value) } : d
+                                                        )
+                                                    }
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>Макс. участников (пусто = без лимита)</div>
+                                                <input
+                                                    inputMode="numeric"
+                                                    value={eventModalDraft.maxParticipantsDigits}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) =>
+                                                            d ? { ...d, maxParticipantsDigits: onlyDigits(e.target.value) } : d
+                                                        )
+                                                    }
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>Тип</div>
+                                                <select
+                                                    value={eventModalDraft.type}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) => (d ? { ...d, type: e.target.value } : d))
+                                                    }
+                                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EBE8E0' }}
+                                                >
+                                                    <option value="game">Игра</option>
+                                                    <option value="workshop">Мастер-класс</option>
+                                                    <option value="party">Вечеринка</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>Статус</div>
+                                                <select
+                                                    value={eventModalDraft.status}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) => (d ? { ...d, status: e.target.value } : d))
+                                                    }
+                                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #EBE8E0' }}
+                                                >
+                                                    <option value="scheduled">scheduled</option>
+                                                    <option value="finished">finished</option>
+                                                    <option value="cancelled">cancelled</option>
+                                                    <option value="canceled">canceled</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>Длительность, мин. (пусто = не задано)</div>
+                                                <input
+                                                    inputMode="numeric"
+                                                    value={eventModalDraft.durationMinutesDigits}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) =>
+                                                            d ? { ...d, durationMinutesDigits: onlyDigits(e.target.value) } : d
+                                                        )
+                                                    }
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>club_id</div>
+                                                <input
+                                                    value={eventModalDraft.clubId}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) => (d ? { ...d, clubId: e.target.value } : d))
+                                                    }
+                                                    required
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>template_id (пусто = null)</div>
+                                                <input
+                                                    value={eventModalDraft.templateId}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) => (d ? { ...d, templateId: e.target.value } : d))
+                                                    }
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>Обложка (URL, пусто = без обложки)</div>
+                                                <input
+                                                    value={eventModalDraft.cover}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) => (d ? { ...d, cover: e.target.value } : d))
+                                                    }
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={fieldLabel}>Описание</div>
+                                                <textarea
+                                                    value={eventModalDraft.description}
+                                                    onChange={(e) =>
+                                                        setEventModalDraft((d) => (d ? { ...d, description: e.target.value } : d))
+                                                    }
+                                                    rows={5}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        boxSizing: 'border-box',
+                                                        minHeight: '100px',
+                                                        resize: 'vertical',
+                                                    }}
+                                                />
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                                                <button
+                                                    type="submit"
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '12px',
+                                                        borderRadius: '8px',
+                                                        border: 'none',
+                                                        backgroundColor: '#1B5E20',
+                                                        color: '#fff',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    Сохранить
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setEventModalEditing(false)
+                                                        setEventModalDraft(null)
+                                                        setEventModalErr(null)
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '12px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        backgroundColor: '#fff',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    Отмена
+                                                </button>
+                                            </div>
+                                        </form>
+                                    ) : null}
+                                </>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
