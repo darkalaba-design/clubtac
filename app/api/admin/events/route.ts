@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
+import { notifyMakeEventImageWebhook } from '@/lib/admin/notifyMakeEventImageWebhook'
 
 const EVENT_SELECT =
     'id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover, players_limit'
@@ -140,6 +141,16 @@ export async function POST(request: NextRequest) {
     if (error) {
         console.error('POST /api/admin/events:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    if (data) {
+        notifyMakeEventImageWebhook({
+            id: data.id as string,
+            title: data.title as string,
+            description: (data.description as string | null) ?? null,
+            type: data.type as string,
+            imageVersion: 'board',
+        })
     }
 
     return NextResponse.json({ event: data }, { status: 201 })
