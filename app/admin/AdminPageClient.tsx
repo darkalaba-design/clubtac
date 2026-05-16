@@ -80,6 +80,8 @@ type GameRow = {
     score_2: number
 }
 
+type AdminClubOption = { id: string; name: string }
+
 type EventParticipantRow = {
     user_id: number
     payment_status: string
@@ -168,10 +170,12 @@ export default function AdminPageClient() {
 
     const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([])
     const [adminUsersSearch, setAdminUsersSearch] = useState('')
+    const [adminClubs, setAdminClubs] = useState<AdminClubOption[]>([])
     const [events, setEvents] = useState<EventRow[]>([])
     const [games, setGames] = useState<GameRow[]>([])
 
     const [newEvent, setNewEvent] = useState({
+        clubId: '',
         title: '',
         startsAtLocal: '',
         address: '',
@@ -201,15 +205,24 @@ export default function AdminPageClient() {
             }
 
             if (role === 'admin' || role === 'root') {
-                const er = await adminFetch('/api/admin/events')
+                const [er, cr, gr] = await Promise.all([
+                    adminFetch('/api/admin/events'),
+                    adminFetch('/api/admin/clubs'),
+                    adminFetch('/api/admin/games?limit=100'),
+                ])
                 const ej = await er.json().catch(() => ({}))
-                if (!er.ok) throw new Error(ej.error || er.statusText)
-                setEvents(ej.events || [])
-
-                const gr = await adminFetch('/api/admin/games?limit=100')
+                const cj = await cr.json().catch(() => ({}))
                 const gj = await gr.json().catch(() => ({}))
-                if (!gr.ok) throw new Error(gj.error || gr.statusText)
+                if (!er.ok) throw new Error(typeof ej.error === 'string' ? ej.error : er.statusText)
+                setEvents(ej.events || [])
+                if (cr.ok) setAdminClubs((cj.clubs as AdminClubOption[]) || [])
+                else setAdminClubs([])
+                if (!gr.ok) throw new Error(typeof gj.error === 'string' ? gj.error : gr.statusText)
                 setGames(gj.games || [])
+            } else {
+                setEvents([])
+                setGames([])
+                setAdminClubs([])
             }
         } catch (e) {
             setErr(e instanceof Error ? e.message : 'Ошибка загрузки')
@@ -279,9 +292,14 @@ export default function AdminPageClient() {
             setErr('Укажите дату и время')
             return
         }
+        if (!newEvent.clubId.trim()) {
+            setErr('Выберите клуб')
+            return
+        }
         const priceDigits = onlyDigits(newEvent.priceDigits)
         const maxDigits = onlyDigits(newEvent.maxParticipantsDigits)
         const body: Record<string, unknown> = {
+            club_id: newEvent.clubId.trim(),
             title: newEvent.title.trim(),
             starts_at,
             address: newEvent.address.trim(),
@@ -321,6 +339,7 @@ export default function AdminPageClient() {
             return
         }
         setNewEvent({
+            clubId: '',
             title: '',
             startsAtLocal: '',
             address: '',
@@ -727,6 +746,35 @@ export default function AdminPageClient() {
                     <div style={{ fontWeight: 700, fontSize: '16px' }}>Новое событие</div>
 
                     <div>
+                        <div style={fieldLabel}>Клуб</div>
+                        <select
+                            value={newEvent.clubId}
+                            onChange={(e) => setNewEvent((p) => ({ ...p, clubId: e.target.value }))}
+                            required
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                                fontSize: '15px',
+                            }}
+                        >
+                            <option value="">Выберите клуб…</option>
+                            {adminClubs.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name}
+                                </option>
+                            ))}
+                        </select>
+                        {adminClubs.length === 0 ? (
+                            <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#B71C1C' }}>
+                                Список клубов не загрузился. Обновите страницу или проверьте таблицу <code>clubtac_clubs</code>.
+                            </p>
+                        ) : null}
+                    </div>
+
+                    <div>
                         <div style={fieldLabel}>Название</div>
                         <input
                             value={newEvent.title}
@@ -854,10 +902,6 @@ export default function AdminPageClient() {
                             }}
                         />
                     </div>
-
-                    <p style={{ margin: 0, fontSize: '12px', color: '#6B6B69', lineHeight: 1.45 }}>
-                        Привязка события к клубу задаётся на сервере (переменная окружения), чтобы не вводить UUID каждый раз.
-                    </p>
 
                     <button
                         type="submit"
@@ -1158,8 +1202,14 @@ export default function AdminPageClient() {
                                                     <div style={{ fontSize: '13px', wordBreak: 'break-all' }}>{eventModalEvent.id}</div>
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Клуб (club_id)</div>
-                                                    <div style={{ fontSize: '13px', wordBreak: 'break-all' }}>{eventModalEvent.club_id}</div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Клуб</div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {adminClubs.find((c) => c.id === eventModalEvent.club_id)?.name ?? '—'}
+                                                        <span style={{ color: '#6B6B69', wordBreak: 'break-all' }}>
+                                                            {' '}
+                                                            ({eventModalEvent.club_id})
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <div>
                                                     <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Тип</div>
@@ -1462,8 +1512,8 @@ export default function AdminPageClient() {
                                                 />
                                             </div>
                                             <div>
-                                                <div style={fieldLabel}>club_id</div>
-                                                <input
+                                                <div style={fieldLabel}>Клуб</div>
+                                                <select
                                                     value={eventModalDraft.clubId}
                                                     onChange={(e) =>
                                                         setEventModalDraft((d) => (d ? { ...d, clubId: e.target.value } : d))
@@ -1476,7 +1526,19 @@ export default function AdminPageClient() {
                                                         border: '1px solid #EBE8E0',
                                                         boxSizing: 'border-box',
                                                     }}
-                                                />
+                                                >
+                                                    {!adminClubs.some((c) => c.id === eventModalDraft.clubId) &&
+                                                    eventModalDraft.clubId ? (
+                                                        <option value={eventModalDraft.clubId}>
+                                                            {eventModalDraft.clubId} (не в списке)
+                                                        </option>
+                                                    ) : null}
+                                                    {adminClubs.map((c) => (
+                                                        <option key={c.id} value={c.id}>
+                                                            {c.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
                                             <div>
                                                 <div style={fieldLabel}>template_id (пусто = null)</div>

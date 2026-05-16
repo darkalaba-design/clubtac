@@ -65,19 +65,10 @@ export async function POST(request: NextRequest) {
     const title = typeof body.title === 'string' ? body.title.trim() : ''
     const starts_at = typeof body.starts_at === 'string' ? body.starts_at.trim() : ''
     const address = typeof body.address === 'string' ? body.address.trim() : ''
-    const clubIdRaw = typeof body.club_id === 'string' ? body.club_id.trim() : ''
-    const club_id = clubIdRaw || process.env.CLUBTAC_DEFAULT_EVENT_CLUB_ID?.trim() || ''
-    if (!title || !starts_at || !address) {
+    const club_id = typeof body.club_id === 'string' ? body.club_id.trim() : ''
+    if (!title || !starts_at || !address || !club_id) {
         return NextResponse.json(
-            { error: 'Обязательны поля: title, starts_at (ISO), address; club_id или переменная CLUBTAC_DEFAULT_EVENT_CLUB_ID' },
-            { status: 400 }
-        )
-    }
-    if (!club_id) {
-        return NextResponse.json(
-            {
-                error: 'Не задан club_id: передайте в теле запроса или задайте CLUBTAC_DEFAULT_EVENT_CLUB_ID на сервере',
-            },
+            { error: 'Обязательны поля: title, starts_at (ISO), address, club_id (id клуба из clubtac_clubs)' },
             { status: 400 }
         )
     }
