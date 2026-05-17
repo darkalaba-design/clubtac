@@ -7,6 +7,53 @@ import { createClient } from '@/lib/supabase/client'
 import { formatGamesRu } from '@/lib/ruCountPhrases'
 import { useUser } from '../contexts/UserContext'
 import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
+import GeoIcon from './GeoIcon'
+import ClubIcon from './ClubIcon'
+
+function EventAddressLine({ address }: { address: string }) {
+    return (
+        <div
+            style={{
+                fontSize: '14px',
+                color: '#6B6B69',
+                marginBottom: '4px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '6px',
+            }}
+        >
+            <GeoIcon size={16} style={{ marginTop: '2px' }} />
+            <span>{address}</span>
+        </div>
+    )
+}
+
+function EventClubLine({
+    clubId,
+    clubNames,
+    style,
+}: {
+    clubId: string
+    clubNames: Record<string, string>
+    style?: React.CSSProperties
+}) {
+    const label = clubNames[clubId] ? `Клуб: ${clubNames[clubId]}` : `Клуб ID: ${clubId}`
+    return (
+        <div
+            style={{
+                fontSize: '14px',
+                color: '#6B6B69',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '6px',
+                ...style,
+            }}
+        >
+            <ClubIcon size={16} style={{ marginTop: '2px' }} />
+            <span>{label}</span>
+        </div>
+    )
+}
 
 interface Game {
     game_id: number
@@ -922,11 +969,7 @@ export default function GamesList() {
                                     {event.title}
                                 </div>
                             )}
-                            {event.address && (
-                                <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
-                                    📍 {event.address}
-                                </div>
-                            )}
+                            {event.address && <EventAddressLine address={event.address} />}
                             {event.duration_minutes && (
                                 <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
                                     ⏱️ Длительность: {event.duration_minutes} мин.
@@ -1069,17 +1112,11 @@ export default function GamesList() {
                                                 </div>
                                             ) : null}
                                             {event.club_id && (
-                                                <div
-                                                    style={{
-                                                        fontSize: '14px',
-                                                        color: '#6B6B69',
-                                                        marginTop: '4px',
-                                                    }}
-                                                >
-                                                    {clubNames[event.club_id]
-                                                        ? `🏢 Клуб: ${clubNames[event.club_id]}`
-                                                        : `🏢 Клуб ID: ${event.club_id}`}
-                                                </div>
+                                                <EventClubLine
+                                                    clubId={event.club_id}
+                                                    clubNames={clubNames}
+                                                    style={{ marginTop: '4px' }}
+                                                />
                                             )}
                                         </div>
                                     )}
@@ -1603,15 +1640,13 @@ export default function GamesList() {
                                             {event.title}
                                         </div>
                                     )}
-                                    {event && event.address && (
-                                        <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
-                                            📍 {event.address}
-                                        </div>
-                                    )}
+                                    {event && event.address && <EventAddressLine address={event.address} />}
                                     {event && event.club_id && (
-                                        <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
-                                            🏢 Клуб ID: {event.club_id}
-                                        </div>
+                                        <EventClubLine
+                                            clubId={event.club_id}
+                                            clubNames={clubNames}
+                                            style={{ marginBottom: '4px' }}
+                                        />
                                     )}
                                     <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '8px' }}>
                                         {formatGamesRu(dateGames.length)}

@@ -8,6 +8,9 @@ import { formatPointsRu, formatWinsGamesLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import Tabs from '../../components/Tabs'
 import { useSoloLeaderMedalPrefix } from '../../contexts/SoloLeaderRanksContext'
+import BrandStarIcon from '../../components/BrandStarIcon'
+import GamesTabIcon from '../../components/GamesTabIcon'
+import TeamsTabIcon from '../../components/TeamsTabIcon'
 
 interface PlayerStats {
     recentGames: Array<{
@@ -391,7 +394,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                         {player.points != null && (
                             <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
                                 <span style={{ color: '#1D1D1B', fontWeight: 500 }}>
-                                    <span aria-hidden>⭐</span>{' '}
+                                    <BrandStarIcon size={14} />{' '}
                                     {formatPointsRu(Math.round(Number(player.points)))}
                                 </span>
                             </div>
@@ -496,8 +499,19 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                         boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
                     }}
                 >
-                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                        🎮 Последние игры
+                    <h3
+                        style={{
+                            marginTop: 0,
+                            marginBottom: '16px',
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                        }}
+                    >
+                        <GamesTabIcon size={24} />
+                        Последние игры
                     </h3>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             {playerStats.recentGames.map((game, index) => {
@@ -584,8 +598,19 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                         boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
                     }}
                 >
-                    <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                        🤝 Лучшие напарники
+                    <h3
+                        style={{
+                            marginTop: 0,
+                            marginBottom: '16px',
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                        }}
+                    >
+                        <TeamsTabIcon size={24} />
+                        Лучшие напарники
                     </h3>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             {playerStats.bestPartners.map((partner, index) => (

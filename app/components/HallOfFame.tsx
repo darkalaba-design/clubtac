@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { displayPublicNickname } from '@/lib/takoff'
 import { useUser } from '../contexts/UserContext'
 import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
+import BrandStarIcon from './BrandStarIcon'
 
 type RankingSubTab = 'legacy' | 'elo'
 
@@ -16,7 +17,7 @@ export default function HallOfFame() {
     const [loadingElo, setLoadingElo] = useState(true)
     const [errorLegacy, setErrorLegacy] = useState<string | null>(null)
     const [errorElo, setErrorElo] = useState<string | null>(null)
-    const [activeSubTab, setActiveSubTab] = useState<RankingSubTab>('legacy')
+    const [activeSubTab, setActiveSubTab] = useState<RankingSubTab>('elo')
 
     const { user } = useUser()
     const getMedalPrefix = useSoloLeaderMedalPrefix()
@@ -148,7 +149,8 @@ export default function HallOfFame() {
         resolvePoints: (p: any) => number | null,
         indexInSection: number,
         rowDividerColor = '#EBE8E0',
-        rowZone: 'podium' | 'tail' = 'tail'
+        rowZone: 'podium' | 'tail' = 'tail',
+        showMedals = true
     ) => {
         const points = resolvePoints(player)
 
@@ -221,7 +223,7 @@ export default function HallOfFame() {
                                             whiteSpace: 'nowrap',
                                         }}
                                     >
-                                        {getMedalPrefix(player.user_id)}
+                                        {showMedals ? getMedalPrefix(player.user_id) : null}
                                         {displayPublicNickname(player.nickname, player.takoff)}
                                     </div>
                                     <div
@@ -232,7 +234,7 @@ export default function HallOfFame() {
                                             whiteSpace: 'nowrap',
                                         }}
                                     >
-                                        <span aria-hidden>⭐</span>{' '}
+                                        <BrandStarIcon size={14} />{' '}
                                         <span style={{ color: '#1D1D1B', fontWeight: 700 }}>
                                             {points != null ? Math.round(Number(points)) : '—'}
                                         </span>
@@ -246,7 +248,11 @@ export default function HallOfFame() {
         )
     }
 
-    const renderRankingBoard = (list: any[], resolvePoints: (p: any) => number | null) => {
+    const renderRankingBoard = (
+        list: any[],
+        resolvePoints: (p: any) => number | null,
+        showMedals = true
+    ) => {
         const topTen = list.slice(0, 10)
         const topPodium = topTen.slice(0, 3)
         const topTail = topTen.slice(3)
@@ -271,7 +277,7 @@ export default function HallOfFame() {
                         }}
                     >
                         {topPodium.map((player, index) =>
-                            renderPlayerRow(player, resolvePoints, index, '#FFE950', 'podium')
+                            renderPlayerRow(player, resolvePoints, index, '#FFE950', 'podium', showMedals)
                         )}
                     </div>
                     {topTail.length > 0 && (
@@ -284,7 +290,7 @@ export default function HallOfFame() {
                                 }}
                             >
                                 {topTail.map((player, index) =>
-                                    renderPlayerRow(player, resolvePoints, index, '#EBE8E0', 'tail')
+                                    renderPlayerRow(player, resolvePoints, index, '#EBE8E0', 'tail', showMedals)
                                 )}
                             </div>
                         </>
@@ -292,7 +298,9 @@ export default function HallOfFame() {
                 </div>
                 {rest.length > 0 && (
                     <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column' }}>
-                        {rest.map((player, index) => renderPlayerRow(player, resolvePoints, index))}
+                        {rest.map((player, index) =>
+                            renderPlayerRow(player, resolvePoints, index, '#EBE8E0', 'tail', showMedals)
+                        )}
                     </div>
                 )}
             </div>
@@ -320,25 +328,6 @@ export default function HallOfFame() {
         >
             <button
                 type="button"
-                onClick={() => setActiveSubTab('legacy')}
-                style={{
-                    flex: 1,
-                    padding: '12px',
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: activeSubTab === 'legacy' ? 'bold' : 'normal',
-                    color: activeSubTab === 'legacy' ? '#1D1D1B' : '#6B6B69',
-                    borderBottom:
-                        activeSubTab === 'legacy' ? '2px solid #FFDF00' : '2px solid transparent',
-                    marginBottom: '-2px',
-                }}
-            >
-                Старый Рейтинг
-            </button>
-            <button
-                type="button"
                 onClick={() => setActiveSubTab('elo')}
                 style={{
                     flex: 1,
@@ -354,6 +343,25 @@ export default function HallOfFame() {
                 }}
             >
                 Новый рейтинг
+            </button>
+            <button
+                type="button"
+                onClick={() => setActiveSubTab('legacy')}
+                style={{
+                    flex: 1,
+                    padding: '12px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: activeSubTab === 'legacy' ? 'bold' : 'normal',
+                    color: activeSubTab === 'legacy' ? '#1D1D1B' : '#6B6B69',
+                    borderBottom:
+                        activeSubTab === 'legacy' ? '2px solid #FFDF00' : '2px solid transparent',
+                    marginBottom: '-2px',
+                }}
+            >
+                Старый рейтинг
             </button>
         </div>
     )
@@ -407,8 +415,8 @@ export default function HallOfFame() {
     return (
         <div>
             {subTabBar}
-            {activeSubTab === 'legacy' && renderRankingBoard(players, resolveLegacyPoints)}
-            {activeSubTab === 'elo' && renderRankingBoard(eloPlayers, resolveEloPoints)}
+            {activeSubTab === 'elo' && renderRankingBoard(eloPlayers, resolveEloPoints, true)}
+            {activeSubTab === 'legacy' && renderRankingBoard(players, resolveLegacyPoints, false)}
         </div>
     )
 }

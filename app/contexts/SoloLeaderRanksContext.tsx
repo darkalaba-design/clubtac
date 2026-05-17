@@ -17,10 +17,9 @@ export function SoloLeaderRanksProvider({ children }: { children: ReactNode }) {
         const load = async () => {
             try {
                 const supabase = createClient()
-                // Как в HallOfFame: `*`, иначе часть полей с матчами может не прийти — фильтр обнулит список и медали пропадут везде
                 const { data, error } = await supabase
-                    .from('clubtac_players_hall_of_fame_v3')
-                    .select('*')
+                    .from('clubtac_elo_leaderboard')
+                    .select('user_id, place')
                     .order('place', { ascending: true })
 
                 if (error || !data?.length) {
@@ -28,14 +27,8 @@ export function SoloLeaderRanksProvider({ children }: { children: ReactNode }) {
                     return
                 }
 
-                const filtered = (data as any[]).filter((player: any) => {
-                    const gamesPlayed =
-                        player.games_played ?? player.games ?? player.total_games
-                    return gamesPlayed && Number(gamesPlayed) > 0
-                })
-
                 const map: Record<number, SoloLeaderRank> = {}
-                for (const row of filtered) {
+                for (const row of data as { user_id: number; place: number }[]) {
                     const pl = Number(row.place)
                     if (pl !== 1 && pl !== 2 && pl !== 3) continue
                     const uid = Number(row.user_id)

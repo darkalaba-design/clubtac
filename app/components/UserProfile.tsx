@@ -7,6 +7,11 @@ import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import { TELEGRAM_INIT_DATA_HEADER } from '@/lib/admin/constants'
 import { useUser } from '../contexts/UserContext'
 import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
+import BrandStarIcon from './BrandStarIcon'
+import GamesTabIcon from './GamesTabIcon'
+import TeamsTabIcon from './TeamsTabIcon'
+import ProfileTabIcon from './ProfileTabIcon'
+import SettingsIcon from './SettingsIcon'
 import type { User } from '@/types/user'
 
 interface UserStats {
@@ -286,16 +291,16 @@ export default function UserProfile() {
                 style={{
                     padding: '10px',
                     margin: 0,
-                    fontSize: '22px',
-                    lineHeight: 1,
-                    color: '#1D1D1B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     backgroundColor: 'transparent',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
                 }}
             >
-                ⚙
+                <SettingsIcon size={24} />
             </button>
         </div>
     )
@@ -544,7 +549,7 @@ export default function UserProfile() {
                                 flexShrink: 0,
                             }}
                         >
-                            <span style={{ fontSize: '32px' }}>👤</span>
+                            <ProfileTabIcon size={40} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold', color: '#6B6B69' }}>
@@ -594,15 +599,37 @@ export default function UserProfile() {
                     </div>
                     {/* Последние игры — пусто */}
                     <div style={sectionCard}>
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            🎮 Последние игры
+                        <h3
+                            style={{
+                                marginTop: 0,
+                                marginBottom: '16px',
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                            }}
+                        >
+                            <GamesTabIcon size={24} />
+                            Последние игры
                         </h3>
                         <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
                     </div>
                     {/* Лучшие напарники — пусто */}
                     <div style={sectionCard}>
-                        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                            🤝 Лучшие напарники
+                        <h3
+                            style={{
+                                marginTop: 0,
+                                marginBottom: '16px',
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                            }}
+                        >
+                            <TeamsTabIcon size={24} />
+                            Лучшие напарники
                         </h3>
                         <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Нет данных</p>
                     </div>
@@ -713,7 +740,7 @@ export default function UserProfile() {
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                         ) : (
-                            <span style={{ fontSize: '32px' }}>👤</span>
+                            <ProfileTabIcon size={40} />
                         )}
                     </div>
 
@@ -732,7 +759,7 @@ export default function UserProfile() {
                             <span>TG: {user.telegram_id}</span>
                             {pointsValue != null ? (
                                 <span style={{ color: '#1D1D1B', fontWeight: 500 }}>
-                                    <span aria-hidden>⭐</span>{' '}
+                                    <BrandStarIcon size={14} />{' '}
                                     {formatPointsRu(Math.round(Number(pointsValue)))}
                                 </span>
                             ) : (
@@ -795,8 +822,19 @@ export default function UserProfile() {
                 {!statsLoading && (
                     <>
                         <div style={sectionCard}>
-                            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                                🎮 Последние игры
+                            <h3
+                                style={{
+                                    marginTop: 0,
+                                    marginBottom: '16px',
+                                    fontSize: '18px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                }}
+                            >
+                                <GamesTabIcon size={24} />
+                                Последние игры
                             </h3>
                             {(stats?.recentGames?.length ?? 0) > 0 ? (
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -880,8 +918,19 @@ export default function UserProfile() {
                         </div>
 
                         <div style={sectionCard}>
-                            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-                                🤝 Лучшие напарники
+                            <h3
+                                style={{
+                                    marginTop: 0,
+                                    marginBottom: '16px',
+                                    fontSize: '18px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                }}
+                            >
+                                <TeamsTabIcon size={24} />
+                                Лучшие напарники
                             </h3>
                             {(stats?.bestPartners?.length ?? 0) > 0 ? (
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>

@@ -5,7 +5,6 @@ export default function Footer() {
         padding: '16px 12px',
         marginBottom: '81px',
         backgroundColor: '#FFFFFF',
-        borderTop: '1px solid #EBE8E0',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

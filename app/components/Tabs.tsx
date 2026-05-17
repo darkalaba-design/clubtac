@@ -2,8 +2,29 @@
 
 import { useUser } from '../contexts/UserContext'
 import { useEffect, useState } from 'react'
+import GamesTabIcon from './GamesTabIcon'
+import RatingTabIcon from './RatingTabIcon'
+import TeamsTabIcon from './TeamsTabIcon'
+import ProfileTabIcon from './ProfileTabIcon'
 
 type Tab = 'players' | 'teams' | 'games' | 'profile'
+
+function tabButtonStyle(isActive: boolean): React.CSSProperties {
+    return {
+        flex: 1,
+        fontWeight: isActive ? 'bold' : 'normal',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '8px',
+        border: 'none',
+        borderRadius: isActive ? '8px' : 0,
+        background: isActive ? '#FFDF00' : 'transparent',
+        cursor: 'pointer',
+        color: isActive ? '#1D1D1B' : '#6B6B69',
+    }
+}
 
 export default function Tabs({
     active,
@@ -51,97 +72,35 @@ export default function Tabs({
                     marginLeft: 'auto',
                     marginRight: 'auto',
                     display: 'flex',
-                    gap: 0,
-                    minWidth: 0,
-                }}
-            >
-            <button
-                onClick={() => onChange('games')}
-                style={{
-                    flex: 1,
-                    fontWeight: active === 'games' ? 'bold' : 'normal',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
                     gap: '4px',
-                    padding: '8px',
-                    border: 'none',
-                    borderBottom: active === 'games' ? '3px solid #FFDF00' : '3px solid transparent',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    color: active === 'games' ? '#1D1D1B' : '#6B6B69',
+                    minWidth: 0,
+                    padding: '0 8px',
                 }}
             >
+            <button onClick={() => onChange('games')} style={tabButtonStyle(active === 'games')}>
                 <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: '26px' }}>🎮</span>
+                    <GamesTabIcon active={active === 'games'} size={24} />
                 </div>
                 <span style={{ fontSize: '10px' }}>Игры</span>
             </button>
 
-            <button
-                onClick={() => onChange('players')}
-                style={{
-                    flex: 1,
-                    fontWeight: active === 'players' ? 'bold' : 'normal',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '8px',
-                    border: 'none',
-                    borderBottom: active === 'players' ? '3px solid #FFDF00' : '3px solid transparent',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    color: active === 'players' ? '#1D1D1B' : '#6B6B69',
-                }}
-            >
+            <button onClick={() => onChange('players')} style={tabButtonStyle(active === 'players')}>
                 <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: '26px' }}>🏆</span>
+                    <RatingTabIcon active={active === 'players'} size={24} />
                 </div>
                 <span style={{ fontSize: '10px' }}>Рейтинг</span>
             </button>
 
-            <button
-                onClick={() => onChange('teams')}
-                style={{
-                    flex: 1,
-                    fontWeight: active === 'teams' ? 'bold' : 'normal',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '8px',
-                    border: 'none',
-                    borderBottom: active === 'teams' ? '3px solid #FFDF00' : '3px solid transparent',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    color: active === 'teams' ? '#1D1D1B' : '#6B6B69',
-                }}
-            >
+            <button onClick={() => onChange('teams')} style={tabButtonStyle(active === 'teams')}>
                 <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: '26px' }}>👥</span>
+                    <TeamsTabIcon active={active === 'teams'} size={24} />
                 </div>
                 <span style={{ fontSize: '10px' }}>Команды</span>
             </button>
 
             <button
                 onClick={() => onChange('profile')}
-                style={{
-                    flex: 1,
-                    fontWeight: active === 'profile' ? 'bold' : 'normal',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '8px',
-                    border: 'none',
-                    borderBottom: active === 'profile' ? '3px solid #FFDF00' : '3px solid transparent',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    color: active === 'profile' ? '#1D1D1B' : '#6B6B69',
-                    position: 'relative',
-                    zIndex: 1,
-                }}
+                style={{ ...tabButtonStyle(active === 'profile'), position: 'relative', zIndex: 1 }}
             >
                 <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                     {user && photoUrl ? (
@@ -157,7 +116,7 @@ export default function Tabs({
                             }}
                         />
                     ) : (
-                        <span style={{ fontSize: '26px', pointerEvents: 'none' }}>👤</span>
+                        <ProfileTabIcon active={active === 'profile'} size={24} />
                     )}
                 </div>
                 <span style={{ fontSize: '10px', pointerEvents: 'none' }}>Профиль</span>
