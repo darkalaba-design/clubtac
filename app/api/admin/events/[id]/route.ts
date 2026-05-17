@@ -71,12 +71,20 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
 
     let userMap: Record<
         number,
-        { id: number; first_name?: string | null; last_name?: string | null; username?: string | null; nickname?: string | null }
+        {
+            id: number
+            first_name?: string | null
+            last_name?: string | null
+            username?: string | null
+            nickname?: string | null
+            userpic?: string | null
+            takoff?: boolean | null
+        }
     > = {}
     if (userIds.length > 0) {
         const { data: users, error: uErr } = await supabase
             .from('clubtac_users')
-            .select('id, first_name, last_name, username, nickname')
+            .select('id, first_name, last_name, username, nickname, userpic, takoff')
             .in('id', userIds)
 
         if (uErr) {
@@ -113,6 +121,8 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
             last_name: u?.last_name ?? null,
             username: u?.username ?? null,
             nickname: u?.nickname ?? null,
+            userpic: u?.userpic ?? null,
+            takoff: !!u?.takoff,
         }
     })
 

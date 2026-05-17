@@ -50,6 +50,17 @@ export function getEventTypeNameRu(type: string): string {
     }
 }
 
+export function paymentStatusBadgeStyle(status: string): { backgroundColor: string; color: string } {
+    switch (status) {
+        case 'paid':
+            return { backgroundColor: '#E8F5E9', color: '#1B5E20' }
+        case 'pending':
+            return { backgroundColor: '#FFF9E6', color: '#6D4C00' }
+        default:
+            return { backgroundColor: '#F0EFEB', color: '#6B6B69' }
+    }
+}
+
 export function paymentStatusLabelRu(status: string): string {
     switch (status) {
         case 'paid':

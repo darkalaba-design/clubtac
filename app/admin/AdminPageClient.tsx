@@ -10,10 +10,9 @@ import {
     formatEventCardDayMonthAndTime,
     formatEventModalDateTime,
     getEventTypeNameRu,
-    paymentStatusLabelRu,
     eventStatusLabelRu,
 } from '@/lib/admin/eventDisplay'
-import { formatParticipantDisplay } from '@/lib/admin/formatParticipantDisplay'
+import { EventParticipantAdminCard } from './EventParticipantAdminCard'
 import { participantRefundAmount } from '@/lib/admin/eventParticipantWallet'
 import GeoIcon from '../components/GeoIcon'
 import GamesTabIcon from '../components/GamesTabIcon'
@@ -134,6 +133,8 @@ type EventParticipantRow = {
     last_name: string | null
     username: string | null
     nickname: string | null
+    userpic: string | null
+    takoff: boolean
 }
 
 type EventModalDraft = {
@@ -1863,266 +1864,34 @@ export default function AdminPageClient() {
                                                                 gap: '10px',
                                                             }}
                                                         >
-                                                            {eventModalParticipants.map((p) => {
-                                                                const isPending = p.payment_status === 'pending'
-                                                                const showAdmitPrompt =
-                                                                    admitPromptParticipantId === p.id
-                                                                const showExcludePrompt =
-                                                                    excludePromptParticipantId === p.id
-                                                                const refundAmount = participantRefundAmount(
-                                                                    p.price_paid
-                                                                )
-                                                                return (
-                                                                <li
+                                                            {eventModalParticipants.map((p) => (
+                                                                <EventParticipantAdminCard
                                                                     key={p.id}
-                                                                    style={{
-                                                                        border: '1px solid #EBE8E0',
-                                                                        borderRadius: '8px',
-                                                                        padding: '10px 12px',
-                                                                        fontSize: '14px',
+                                                                    participant={{
+                                                                        ...p,
+                                                                        userpic: p.userpic ?? null,
+                                                                        takoff: p.takoff ?? false,
                                                                     }}
-                                                                >
-                                                                    <div
-                                                                        style={{
-                                                                            display: 'flex',
-                                                                            flexWrap: 'wrap',
-                                                                            gap: '8px',
-                                                                            alignItems: 'baseline',
-                                                                            justifyContent: 'space-between',
-                                                                        }}
-                                                                    >
-                                                                        <div style={{ minWidth: 0, flex: 1 }}>
-                                                                            <Link
-                                                                                href={`/player/${p.user_id}`}
-                                                                                style={{ fontWeight: 600, color: '#1B5E20' }}
-                                                                            >
-                                                                                {formatParticipantDisplay(p)}
-                                                                            </Link>
-                                                                            <span style={{ fontSize: '12px', color: '#6B6B69', marginLeft: '8px' }}>
-                                                                                {paymentStatusLabelRu(p.payment_status)}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                                                                            <button
-                                                                                type="button"
-                                                                                disabled={participantBusy}
-                                                                                onClick={() => {
-                                                                                    setAdmitPromptParticipantId(null)
-                                                                                    setExcludePromptParticipantId(p.id)
-                                                                                }}
-                                                                                style={{
-                                                                                    padding: '6px 10px',
-                                                                                    borderRadius: '8px',
-                                                                                    border: '1px solid #B71C1C',
-                                                                                    backgroundColor: '#fff',
-                                                                                    color: '#B71C1C',
-                                                                                    fontSize: '12px',
-                                                                                    fontWeight: 600,
-                                                                                    cursor: participantBusy
-                                                                                        ? 'not-allowed'
-                                                                                        : 'pointer',
-                                                                                    opacity: participantBusy ? 0.65 : 1,
-                                                                                }}
-                                                                            >
-                                                                                Исключить
-                                                                            </button>
-                                                                            {isPending ? (
-                                                                                <button
-                                                                                    type="button"
-                                                                                    disabled={participantBusy}
-                                                                                    onClick={() => {
-                                                                                        setExcludePromptParticipantId(null)
-                                                                                        setAdmitPromptParticipantId(p.id)
-                                                                                    }}
-                                                                                    style={{
-                                                                                        padding: '6px 10px',
-                                                                                        borderRadius: '8px',
-                                                                                        border: 'none',
-                                                                                        backgroundColor: '#FFDF00',
-                                                                                        color: '#1D1D1B',
-                                                                                        fontSize: '12px',
-                                                                                        fontWeight: 700,
-                                                                                        cursor: participantBusy ? 'not-allowed' : 'pointer',
-                                                                                        opacity: participantBusy ? 0.65 : 1,
-                                                                                    }}
-                                                                                >
-                                                                                    Добавить
-                                                                                </button>
-                                                                            ) : null}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div
-                                                                        style={{
-                                                                            fontSize: '12px',
-                                                                            color: '#6B6B69',
-                                                                            marginTop: '4px',
-                                                                        }}
-                                                                    >
-                                                                        user_id: {p.user_id}
-                                                                        {p.price_paid != null && Number.isFinite(Number(p.price_paid))
-                                                                            ? ` · ${Number(p.price_paid)} ₽`
-                                                                            : ''}
-                                                                        {p.created_at
-                                                                            ? ` · ${new Date(p.created_at).toLocaleString('ru-RU')}`
-                                                                            : ''}
-                                                                    </div>
-                                                                    {p.paylink?.trim() ? (
-                                                                        <a
-                                                                            href={p.paylink.trim()}
-                                                                            target="_blank"
-                                                                            rel="noreferrer"
-                                                                            style={{
-                                                                                fontSize: '13px',
-                                                                                color: '#1565C0',
-                                                                                marginTop: '6px',
-                                                                                display: 'inline-block',
-                                                                            }}
-                                                                        >
-                                                                            Ссылка на оплату
-                                                                        </a>
-                                                                    ) : null}
-                                                                    {showExcludePrompt ? (
-                                                                        <div
-                                                                            style={{
-                                                                                marginTop: '12px',
-                                                                                paddingTop: '12px',
-                                                                                borderTop: '1px solid #EBE8E0',
-                                                                            }}
-                                                                        >
-                                                                            <p
-                                                                                style={{
-                                                                                    margin: '0 0 10px',
-                                                                                    fontWeight: 600,
-                                                                                    color: '#1D1D1B',
-                                                                                    lineHeight: 1.45,
-                                                                                }}
-                                                                            >
-                                                                                Исключить игрока из события?
-                                                                                {refundAmount > 0 ? (
-                                                                                    <>
-                                                                                        <br />
-                                                                                        <span style={{ fontWeight: 500 }}>
-                                                                                            На баланс игрока будет
-                                                                                            возвращено {refundAmount} ₽.
-                                                                                        </span>
-                                                                                    </>
-                                                                                ) : null}
-                                                                            </p>
-                                                                            <div
-                                                                                style={{
-                                                                                    display: 'flex',
-                                                                                    flexDirection: 'column',
-                                                                                    gap: '8px',
-                                                                                }}
-                                                                            >
-                                                                                <button
-                                                                                    type="button"
-                                                                                    disabled={participantBusy}
-                                                                                    onClick={() =>
-                                                                                        void excludeParticipant(p.id)
-                                                                                    }
-                                                                                    style={{
-                                                                                        padding: '10px 12px',
-                                                                                        borderRadius: '8px',
-                                                                                        border: 'none',
-                                                                                        backgroundColor: '#B71C1C',
-                                                                                        color: '#fff',
-                                                                                        fontWeight: 600,
-                                                                                        fontSize: '14px',
-                                                                                        cursor: participantBusy
-                                                                                            ? 'not-allowed'
-                                                                                            : 'pointer',
-                                                                                    }}
-                                                                                >
-                                                                                    Исключить
-                                                                                </button>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    disabled={participantBusy}
-                                                                                    onClick={() =>
-                                                                                        setExcludePromptParticipantId(null)
-                                                                                    }
-                                                                                    style={{
-                                                                                        padding: '8px',
-                                                                                        border: 'none',
-                                                                                        background: 'transparent',
-                                                                                        color: '#6B6B69',
-                                                                                        fontSize: '13px',
-                                                                                        cursor: 'pointer',
-                                                                                    }}
-                                                                                >
-                                                                                    Отмена
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    ) : null}
-                                                                    {showAdmitPrompt ? (
-                                                                        <div
-                                                                            style={{
-                                                                                marginTop: '12px',
-                                                                                paddingTop: '12px',
-                                                                                borderTop: '1px solid #EBE8E0',
-                                                                            }}
-                                                                        >
-                                                                            <p style={{ margin: '0 0 10px', fontWeight: 600, color: '#1D1D1B' }}>
-                                                                                Допустить игрока?
-                                                                            </p>
-                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    disabled={participantBusy}
-                                                                                    onClick={() => void admitParticipant(p.id, 'cash')}
-                                                                                    style={{
-                                                                                        padding: '10px 12px',
-                                                                                        borderRadius: '8px',
-                                                                                        border: 'none',
-                                                                                        backgroundColor: '#1B5E20',
-                                                                                        color: '#fff',
-                                                                                        fontWeight: 600,
-                                                                                        fontSize: '14px',
-                                                                                        cursor: participantBusy ? 'not-allowed' : 'pointer',
-                                                                                    }}
-                                                                                >
-                                                                                    Оплатил налом
-                                                                                </button>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    disabled={participantBusy}
-                                                                                    onClick={() => void admitParticipant(p.id, 'free')}
-                                                                                    style={{
-                                                                                        padding: '10px 12px',
-                                                                                        borderRadius: '8px',
-                                                                                        border: '1px solid #1B5E20',
-                                                                                        backgroundColor: '#fff',
-                                                                                        color: '#1B5E20',
-                                                                                        fontWeight: 600,
-                                                                                        fontSize: '14px',
-                                                                                        cursor: participantBusy ? 'not-allowed' : 'pointer',
-                                                                                    }}
-                                                                                >
-                                                                                    Пускаем бесплатно
-                                                                                </button>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    disabled={participantBusy}
-                                                                                    onClick={() => setAdmitPromptParticipantId(null)}
-                                                                                    style={{
-                                                                                        padding: '8px',
-                                                                                        border: 'none',
-                                                                                        background: 'transparent',
-                                                                                        color: '#6B6B69',
-                                                                                        fontSize: '13px',
-                                                                                        cursor: 'pointer',
-                                                                                    }}
-                                                                                >
-                                                                                    Отмена
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    ) : null}
-                                                                </li>
-                                                                )
-                                                            })}
+                                                                    participantBusy={participantBusy}
+                                                                    isPending={p.payment_status === 'pending'}
+                                                                    showAdmitPrompt={admitPromptParticipantId === p.id}
+                                                                    showExcludePrompt={excludePromptParticipantId === p.id}
+                                                                    refundAmount={participantRefundAmount(p.price_paid)}
+                                                                    onExcludeClick={() => {
+                                                                        setAdmitPromptParticipantId(null)
+                                                                        setExcludePromptParticipantId(p.id)
+                                                                    }}
+                                                                    onAdmitClick={() => {
+                                                                        setExcludePromptParticipantId(null)
+                                                                        setAdmitPromptParticipantId(p.id)
+                                                                    }}
+                                                                    onCancelAdmit={() => setAdmitPromptParticipantId(null)}
+                                                                    onCancelExclude={() => setExcludePromptParticipantId(null)}
+                                                                    onConfirmExclude={() => void excludeParticipant(p.id)}
+                                                                    onAdmitCash={() => void admitParticipant(p.id, 'cash')}
+                                                                    onAdmitFree={() => void admitParticipant(p.id, 'free')}
+                                                                />
+                                                            ))}
                                                         </ul>
                                                     )}
                                                 </>
