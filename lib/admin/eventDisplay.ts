@@ -56,8 +56,9 @@ export function paymentStatusLabelRu(status: string): string {
             return 'Оплачено'
         case 'pending':
             return 'Ожидает оплаты'
-        case 'cancelled':
         case 'canceled':
+            return 'Исключён'
+        case 'cancelled':
             return 'Отменено'
         default:
             return status

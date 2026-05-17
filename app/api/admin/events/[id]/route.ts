@@ -58,6 +58,7 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
         .from('clubtac_event_participants')
         .select('id, order_id, event_id, user_id, payment_status, price_paid, paylink, created_at')
         .eq('event_id', eventId)
+        .neq('payment_status', 'canceled')
         .order('created_at', { ascending: false })
 
     if (pErr) {

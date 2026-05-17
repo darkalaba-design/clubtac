@@ -3,27 +3,11 @@ import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { isUuid } from '@/lib/uuid'
+import { type EventParticipantRow, walletOrderIdFromParticipant } from '@/lib/admin/eventParticipantWallet'
 
 type RouteParams = { params: Promise<{ id: string; participantId: string }> }
 
 type AdmitMethod = 'cash' | 'free'
-
-type ParticipantRow = {
-    id: string | number
-    order_id?: string | null
-    event_id: string
-    user_id: number
-    payment_status: string
-    price_paid: number | null
-}
-
-/** order_id в кошельке — UUID: id участника (если UUID) или order_id записи участника. */
-function walletOrderIdFromParticipant(row: ParticipantRow): string | null {
-    const idStr = row.id != null ? String(row.id).trim() : ''
-    if (isUuid(idStr)) return idStr
-    if (row.order_id != null && isUuid(row.order_id)) return String(row.order_id).trim()
-    return null
-}
 
 /** Допуск участника с pending: оплата наличными или бесплатно + записи в кошелёк. */
 export async function POST(request: NextRequest, ctx: RouteParams) {
@@ -81,7 +65,7 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
         return NextResponse.json({ error: 'Участник не найден' }, { status: 404 })
     }
 
-    const participant = row as ParticipantRow
+    const participant = row as EventParticipantRow
 
     const walletOrderId = walletOrderIdFromParticipant(participant)
     if (!walletOrderId) {

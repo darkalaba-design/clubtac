@@ -14,6 +14,7 @@ import {
     eventStatusLabelRu,
 } from '@/lib/admin/eventDisplay'
 import { formatParticipantDisplay } from '@/lib/admin/formatParticipantDisplay'
+import { participantRefundAmount } from '@/lib/admin/eventParticipantWallet'
 import GeoIcon from '../components/GeoIcon'
 import GamesTabIcon from '../components/GamesTabIcon'
 import EventsTabIcon from '../components/EventsTabIcon'
@@ -246,7 +247,8 @@ export default function AdminPageClient() {
     const [eventModalCoverMessage, setEventModalCoverMessage] = useState<string | null>(null)
     const [eventModalTab, setEventModalTab] = useState<EventModalTab>('participants')
     const [admitPromptParticipantId, setAdmitPromptParticipantId] = useState<string | number | null>(null)
-    const [admitSubmitting, setAdmitSubmitting] = useState(false)
+    const [excludePromptParticipantId, setExcludePromptParticipantId] = useState<string | number | null>(null)
+    const [participantBusy, setParticipantBusy] = useState(false)
 
     const creatingEventRef = useRef(false)
     const [creatingEvent, setCreatingEvent] = useState(false)
@@ -476,7 +478,8 @@ export default function AdminPageClient() {
         setEventModalId(id)
         setEventModalTab('participants')
         setAdmitPromptParticipantId(null)
-        setAdmitSubmitting(false)
+        setExcludePromptParticipantId(null)
+        setParticipantBusy(false)
         setEventModalEditing(false)
         setEventModalDraft(null)
         setEventModalCoverMessage(null)
@@ -496,12 +499,13 @@ export default function AdminPageClient() {
         setEventModalCoverBusy(false)
         setEventModalCoverMessage(null)
         setAdmitPromptParticipantId(null)
-        setAdmitSubmitting(false)
+        setExcludePromptParticipantId(null)
+        setParticipantBusy(false)
     }
 
     const admitParticipant = async (participantId: string | number, method: 'cash' | 'free') => {
-        if (!eventModalId || admitSubmitting) return
-        setAdmitSubmitting(true)
+        if (!eventModalId || participantBusy) return
+        setParticipantBusy(true)
         setEventModalErr(null)
         try {
             const res = await adminFetch(
@@ -521,7 +525,29 @@ export default function AdminPageClient() {
         } catch (e) {
             setEventModalErr(e instanceof Error ? e.message : 'Не удалось допустить участника')
         } finally {
-            setAdmitSubmitting(false)
+            setParticipantBusy(false)
+        }
+    }
+
+    const excludeParticipant = async (participantId: string | number) => {
+        if (!eventModalId || participantBusy) return
+        setParticipantBusy(true)
+        setEventModalErr(null)
+        try {
+            const res = await adminFetch(
+                `/api/admin/events/${encodeURIComponent(eventModalId)}/participants/${encodeURIComponent(String(participantId))}/exclude`,
+                { method: 'POST' }
+            )
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+            }
+            setExcludePromptParticipantId(null)
+            await refetchEventModal(eventModalId)
+        } catch (e) {
+            setEventModalErr(e instanceof Error ? e.message : 'Не удалось исключить участника')
+        } finally {
+            setParticipantBusy(false)
         }
     }
 
@@ -1841,6 +1867,11 @@ export default function AdminPageClient() {
                                                                 const isPending = p.payment_status === 'pending'
                                                                 const showAdmitPrompt =
                                                                     admitPromptParticipantId === p.id
+                                                                const showExcludePrompt =
+                                                                    excludePromptParticipantId === p.id
+                                                                const refundAmount = participantRefundAmount(
+                                                                    p.price_paid
+                                                                )
                                                                 return (
                                                                 <li
                                                                     key={p.id}
@@ -1874,17 +1905,23 @@ export default function AdminPageClient() {
                                                                         <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                                                                             <button
                                                                                 type="button"
-                                                                                disabled
-                                                                                title="Скоро"
+                                                                                disabled={participantBusy}
+                                                                                onClick={() => {
+                                                                                    setAdmitPromptParticipantId(null)
+                                                                                    setExcludePromptParticipantId(p.id)
+                                                                                }}
                                                                                 style={{
                                                                                     padding: '6px 10px',
                                                                                     borderRadius: '8px',
-                                                                                    border: '1px solid #EBE8E0',
-                                                                                    backgroundColor: '#F5F5F5',
-                                                                                    color: '#9E9E9E',
+                                                                                    border: '1px solid #B71C1C',
+                                                                                    backgroundColor: '#fff',
+                                                                                    color: '#B71C1C',
                                                                                     fontSize: '12px',
                                                                                     fontWeight: 600,
-                                                                                    cursor: 'not-allowed',
+                                                                                    cursor: participantBusy
+                                                                                        ? 'not-allowed'
+                                                                                        : 'pointer',
+                                                                                    opacity: participantBusy ? 0.65 : 1,
                                                                                 }}
                                                                             >
                                                                                 Исключить
@@ -1892,8 +1929,11 @@ export default function AdminPageClient() {
                                                                             {isPending ? (
                                                                                 <button
                                                                                     type="button"
-                                                                                    disabled={admitSubmitting}
-                                                                                    onClick={() => setAdmitPromptParticipantId(p.id)}
+                                                                                    disabled={participantBusy}
+                                                                                    onClick={() => {
+                                                                                        setExcludePromptParticipantId(null)
+                                                                                        setAdmitPromptParticipantId(p.id)
+                                                                                    }}
                                                                                     style={{
                                                                                         padding: '6px 10px',
                                                                                         borderRadius: '8px',
@@ -1902,8 +1942,8 @@ export default function AdminPageClient() {
                                                                                         color: '#1D1D1B',
                                                                                         fontSize: '12px',
                                                                                         fontWeight: 700,
-                                                                                        cursor: admitSubmitting ? 'not-allowed' : 'pointer',
-                                                                                        opacity: admitSubmitting ? 0.65 : 1,
+                                                                                        cursor: participantBusy ? 'not-allowed' : 'pointer',
+                                                                                        opacity: participantBusy ? 0.65 : 1,
                                                                                     }}
                                                                                 >
                                                                                     Добавить
@@ -1941,6 +1981,81 @@ export default function AdminPageClient() {
                                                                             Ссылка на оплату
                                                                         </a>
                                                                     ) : null}
+                                                                    {showExcludePrompt ? (
+                                                                        <div
+                                                                            style={{
+                                                                                marginTop: '12px',
+                                                                                paddingTop: '12px',
+                                                                                borderTop: '1px solid #EBE8E0',
+                                                                            }}
+                                                                        >
+                                                                            <p
+                                                                                style={{
+                                                                                    margin: '0 0 10px',
+                                                                                    fontWeight: 600,
+                                                                                    color: '#1D1D1B',
+                                                                                    lineHeight: 1.45,
+                                                                                }}
+                                                                            >
+                                                                                Исключить игрока из события?
+                                                                                {refundAmount > 0 ? (
+                                                                                    <>
+                                                                                        <br />
+                                                                                        <span style={{ fontWeight: 500 }}>
+                                                                                            На баланс игрока будет
+                                                                                            возвращено {refundAmount} ₽.
+                                                                                        </span>
+                                                                                    </>
+                                                                                ) : null}
+                                                                            </p>
+                                                                            <div
+                                                                                style={{
+                                                                                    display: 'flex',
+                                                                                    flexDirection: 'column',
+                                                                                    gap: '8px',
+                                                                                }}
+                                                                            >
+                                                                                <button
+                                                                                    type="button"
+                                                                                    disabled={participantBusy}
+                                                                                    onClick={() =>
+                                                                                        void excludeParticipant(p.id)
+                                                                                    }
+                                                                                    style={{
+                                                                                        padding: '10px 12px',
+                                                                                        borderRadius: '8px',
+                                                                                        border: 'none',
+                                                                                        backgroundColor: '#B71C1C',
+                                                                                        color: '#fff',
+                                                                                        fontWeight: 600,
+                                                                                        fontSize: '14px',
+                                                                                        cursor: participantBusy
+                                                                                            ? 'not-allowed'
+                                                                                            : 'pointer',
+                                                                                    }}
+                                                                                >
+                                                                                    Исключить
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    disabled={participantBusy}
+                                                                                    onClick={() =>
+                                                                                        setExcludePromptParticipantId(null)
+                                                                                    }
+                                                                                    style={{
+                                                                                        padding: '8px',
+                                                                                        border: 'none',
+                                                                                        background: 'transparent',
+                                                                                        color: '#6B6B69',
+                                                                                        fontSize: '13px',
+                                                                                        cursor: 'pointer',
+                                                                                    }}
+                                                                                >
+                                                                                    Отмена
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : null}
                                                                     {showAdmitPrompt ? (
                                                                         <div
                                                                             style={{
@@ -1955,7 +2070,7 @@ export default function AdminPageClient() {
                                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                                                 <button
                                                                                     type="button"
-                                                                                    disabled={admitSubmitting}
+                                                                                    disabled={participantBusy}
                                                                                     onClick={() => void admitParticipant(p.id, 'cash')}
                                                                                     style={{
                                                                                         padding: '10px 12px',
@@ -1965,14 +2080,14 @@ export default function AdminPageClient() {
                                                                                         color: '#fff',
                                                                                         fontWeight: 600,
                                                                                         fontSize: '14px',
-                                                                                        cursor: admitSubmitting ? 'not-allowed' : 'pointer',
+                                                                                        cursor: participantBusy ? 'not-allowed' : 'pointer',
                                                                                     }}
                                                                                 >
                                                                                     Оплатил налом
                                                                                 </button>
                                                                                 <button
                                                                                     type="button"
-                                                                                    disabled={admitSubmitting}
+                                                                                    disabled={participantBusy}
                                                                                     onClick={() => void admitParticipant(p.id, 'free')}
                                                                                     style={{
                                                                                         padding: '10px 12px',
@@ -1982,14 +2097,14 @@ export default function AdminPageClient() {
                                                                                         color: '#1B5E20',
                                                                                         fontWeight: 600,
                                                                                         fontSize: '14px',
-                                                                                        cursor: admitSubmitting ? 'not-allowed' : 'pointer',
+                                                                                        cursor: participantBusy ? 'not-allowed' : 'pointer',
                                                                                     }}
                                                                                 >
                                                                                     Пускаем бесплатно
                                                                                 </button>
                                                                                 <button
                                                                                     type="button"
-                                                                                    disabled={admitSubmitting}
+                                                                                    disabled={participantBusy}
                                                                                     onClick={() => setAdmitPromptParticipantId(null)}
                                                                                     style={{
                                                                                         padding: '8px',
