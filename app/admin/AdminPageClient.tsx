@@ -565,12 +565,17 @@ export default function AdminPageClient() {
         [adminPlayers, adminPlayersSearch]
     )
 
-    const card: React.CSSProperties = {
-        backgroundColor: '#FFFFFF',
-        borderRadius: '12px',
-        padding: '14px',
-        marginBottom: '14px',
-        boxShadow: '0 2px 12px rgba(29,29,27,0.06)',
+    const pageSection: React.CSSProperties = {
+        padding: '0 12px 16px',
+    }
+
+    const errorBanner: React.CSSProperties = {
+        margin: '0 12px 14px',
+        padding: '12px 14px',
+        backgroundColor: '#FFEBEE',
+        color: '#B71C1C',
+        border: '1px solid #FFCDD2',
+        borderRadius: '8px',
     }
 
     if (phase === 'loading') {
@@ -655,7 +660,7 @@ export default function AdminPageClient() {
     )
 
     return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#FAF9F6' }}>
+        <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
             <header
                 style={{
                     position: 'fixed',
@@ -727,27 +732,16 @@ export default function AdminPageClient() {
                 style={{
                     paddingTop: ADMIN_SCROLL_PT,
                     paddingBottom: ADMIN_SCROLL_PB,
-                    paddingLeft: '12px',
-                    paddingRight: '12px',
-                    maxWidth: '720px',
-                    margin: '0 auto',
+                    width: '100%',
+                    maxWidth: 'var(--app-max-width, 850px)',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
                 }}
             >
-            {err && (
-                <div
-                    style={{
-                        ...card,
-                        backgroundColor: '#FFEBEE',
-                        color: '#B71C1C',
-                        border: '1px solid #FFCDD2',
-                    }}
-                >
-                    {err}
-                </div>
-            )}
+            {err && <div style={errorBanner}>{err}</div>}
 
             {navTab === 'admins' && isRoot && (
-                <section style={card}>
+                <section style={pageSection}>
                     <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>Администраторы</h2>
                     <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6B6B69' }}>
                         Только root может выдавать и снимать роль admin (не root через API).
@@ -843,7 +837,7 @@ export default function AdminPageClient() {
             )}
 
             {navTab === 'events' && (
-            <section style={card}>
+            <section style={pageSection}>
                 <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>События</h2>
                 <button
                     type="button"
@@ -1068,7 +1062,7 @@ export default function AdminPageClient() {
                 ) : null}
 
                 <div style={{ fontWeight: 600, marginBottom: '10px' }}>Список</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
                     {events.map((ev) => (
                         <button
                             key={ev.id}
@@ -1085,24 +1079,24 @@ export default function AdminPageClient() {
                         >
                             <div
                                 style={{
-                                    backgroundColor: '#FFFFFF',
-                                    borderRadius: '8px',
                                     overflow: 'hidden',
-                                    boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
-                                    border:
+                                    borderBottom: '1px solid #EBE8E0',
+                                    borderTop:
                                         ev.status === 'cancelled' || ev.status === 'canceled'
                                             ? '2px solid #B71C1C'
                                             : ev.status === 'hidden'
                                               ? '2px dashed #9E9E9E'
-                                              : '1px solid transparent',
+                                              : 'none',
                                 }}
                             >
                                 {ev.cover?.trim() ? (
                                     <div
                                         style={{
-                                            width: '100%',
+                                            width: 'calc(100% + 24px)',
+                                            marginLeft: '-12px',
+                                            marginRight: '-12px',
                                             aspectRatio: '2 / 1',
-                                            maxHeight: 200,
+                                            maxHeight: 220,
                                             backgroundColor: '#EBE8E0',
                                         }}
                                     >
@@ -1118,7 +1112,7 @@ export default function AdminPageClient() {
                                         />
                                     </div>
                                 ) : null}
-                                <div style={{ padding: '14px 16px' }}>
+                                <div style={{ padding: '14px 0' }}>
                                     <div
                                         style={{
                                             fontSize: '16px',
@@ -1156,7 +1150,7 @@ export default function AdminPageClient() {
             )}
 
             {navTab === 'players' && (
-                <section style={card}>
+                <section style={pageSection}>
                     <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>Игроки</h2>
                     <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6B6B69' }}>
                         Новый рейтинг (Elo) — как в публичном приложении.
@@ -1250,7 +1244,7 @@ export default function AdminPageClient() {
             )}
 
             {navTab === 'games' && (
-            <section style={card}>
+            <section style={pageSection}>
                 <h2 style={{ margin: '0 0 8px', fontSize: '17px' }}>Сыгранные партии</h2>
                 <div
                     style={{
