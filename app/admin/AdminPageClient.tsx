@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { CSSProperties } from 'react'
 import type { AppRole } from '@/lib/admin/appRole'
 import { TELEGRAM_INIT_DATA_HEADER } from '@/lib/admin/constants'
@@ -14,6 +14,29 @@ import {
     eventStatusLabelRu,
 } from '@/lib/admin/eventDisplay'
 import { formatParticipantDisplay } from '@/lib/admin/formatParticipantDisplay'
+import GeoIcon from '../components/GeoIcon'
+import GamesTabIcon from '../components/GamesTabIcon'
+import EventsTabIcon from '../components/EventsTabIcon'
+import AccessTabIcon from '../components/AccessTabIcon'
+
+function AdminAddressLine({ address, style }: { address: string; style?: CSSProperties }) {
+    return (
+        <div
+            style={{
+                fontSize: '14px',
+                color: '#6B6B69',
+                lineHeight: 1.4,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '6px',
+                ...style,
+            }}
+        >
+            <GeoIcon size={16} style={{ marginTop: '2px' }} />
+            <span>{address}</span>
+        </div>
+    )
+}
 
 type SessionRes = {
     app_role: AppRole
@@ -566,7 +589,7 @@ export default function AdminPageClient() {
         fontWeight: active ? 600 : 500,
     })
 
-    const navBtn = (tab: AdminNavTab, icon: string, label: string) => (
+    const navBtn = (tab: AdminNavTab, icon: ReactNode, label: string) => (
         <button
             key={tab}
             type="button"
@@ -592,7 +615,7 @@ export default function AdminPageClient() {
             }}
         >
             <div style={{ height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: '26px' }}>{icon}</span>
+                {icon}
             </div>
             <span style={{ fontSize: '10px' }}>{label}</span>
         </button>
@@ -1074,9 +1097,7 @@ export default function AdminPageClient() {
                                     >
                                         {ev.title}
                                     </div>
-                                    <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '6px', lineHeight: 1.4 }}>
-                                        📍 {ev.address}
-                                    </div>
+                                    <AdminAddressLine address={ev.address} style={{ marginBottom: '6px' }} />
                                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1B', marginBottom: '4px' }}>
                                         {formatEventCardDayMonthAndTime(ev.starts_at)}
                                     </div>
@@ -1163,9 +1184,9 @@ export default function AdminPageClient() {
                         paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
                     }}
                 >
-                    {navBtn('events', '📅', 'События')}
-                    {navBtn('games', '🎮', 'Партии')}
-                    {isRoot ? navBtn('admins', '👥', 'Доступ') : null}
+                    {navBtn('events', <EventsTabIcon active={navTab === 'events'} size={24} />, 'События')}
+                    {navBtn('games', <GamesTabIcon active={navTab === 'games'} size={24} />, 'Партии')}
+                    {isRoot ? navBtn('admins', <AccessTabIcon active={navTab === 'admins'} size={24} />, 'Доступ') : null}
                 </div>
             </nav>
 
@@ -1309,9 +1330,7 @@ export default function AdminPageClient() {
                                             <p style={{ margin: '0 0 14px', fontSize: '15px', color: '#1D1D1B', fontWeight: 600 }}>
                                                 {formatEventModalDateTime(eventModalEvent.starts_at)}
                                             </p>
-                                            <p style={{ margin: '0 0 8px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
-                                                📍 {eventModalEvent.address}
-                                            </p>
+                                            <AdminAddressLine address={eventModalEvent.address} style={{ marginBottom: '8px' }} />
                                             {eventModalEvent.duration_minutes != null ? (
                                                 <p style={{ margin: '0 0 8px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
                                                     ⏱ {eventModalEvent.duration_minutes} мин
