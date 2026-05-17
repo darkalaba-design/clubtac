@@ -1189,7 +1189,7 @@ export default function AdminPageClient() {
                         ) : (
                             filteredAdminPlayers.map((p) => {
                                 const rating =
-                                    p.rating != null && p.rating !== ''
+                                    p.rating != null && Number.isFinite(Number(p.rating))
                                         ? Math.round(Number(p.rating))
                                         : null
                                 const games =
