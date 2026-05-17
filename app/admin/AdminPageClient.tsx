@@ -121,8 +121,11 @@ type GameRow = {
 type AdminClubOption = { id: string; name: string }
 
 type EventParticipantRow = {
+    id: number
+    event_id: string
     user_id: number
     payment_status: string
+    price_paid: number | null
     paylink: string | null
     created_at: string | null
     first_name: string | null
@@ -241,6 +244,8 @@ export default function AdminPageClient() {
     const [eventModalCoverBusy, setEventModalCoverBusy] = useState(false)
     const [eventModalCoverMessage, setEventModalCoverMessage] = useState<string | null>(null)
     const [eventModalTab, setEventModalTab] = useState<EventModalTab>('participants')
+    const [admitPromptParticipantId, setAdmitPromptParticipantId] = useState<number | null>(null)
+    const [admitSubmitting, setAdmitSubmitting] = useState(false)
 
     const creatingEventRef = useRef(false)
     const [creatingEvent, setCreatingEvent] = useState(false)
@@ -469,6 +474,8 @@ export default function AdminPageClient() {
     const openEventModal = (id: string) => {
         setEventModalId(id)
         setEventModalTab('participants')
+        setAdmitPromptParticipantId(null)
+        setAdmitSubmitting(false)
         setEventModalEditing(false)
         setEventModalDraft(null)
         setEventModalCoverMessage(null)
@@ -487,6 +494,34 @@ export default function AdminPageClient() {
         setEventModalDraft(null)
         setEventModalCoverBusy(false)
         setEventModalCoverMessage(null)
+        setAdmitPromptParticipantId(null)
+        setAdmitSubmitting(false)
+    }
+
+    const admitParticipant = async (participantId: number, method: 'cash' | 'free') => {
+        if (!eventModalId || admitSubmitting) return
+        setAdmitSubmitting(true)
+        setEventModalErr(null)
+        try {
+            const res = await adminFetch(
+                `/api/admin/events/${encodeURIComponent(eventModalId)}/participants/${encodeURIComponent(String(participantId))}/admit`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ method }),
+                }
+            )
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+            }
+            setAdmitPromptParticipantId(null)
+            await refetchEventModal(eventModalId)
+        } catch (e) {
+            setEventModalErr(e instanceof Error ? e.message : 'Не удалось допустить участника')
+        } finally {
+            setAdmitSubmitting(false)
+        }
     }
 
     const saveEventModal = async (e: React.FormEvent) => {
@@ -1440,7 +1475,10 @@ export default function AdminPageClient() {
                                     backgroundColor: '#FFFFFF',
                                 }}
                             >
-                                {eventModalTabBtn('participants', 'Участники')}
+                                {eventModalTabBtn(
+                                    'participants',
+                                    `Участники (${eventModalParticipants.length})`
+                                )}
                                 {eventModalTabBtn('games', 'Партии')}
                                 {eventModalTabBtn('details', 'Детали')}
                             </div>
@@ -1783,13 +1821,6 @@ export default function AdminPageClient() {
                                         <>
                                             {eventModalTab === 'participants' ? (
                                                 <>
-                                                    <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '10px' }}>
-                                                        Участники
-                                                        <span style={{ fontWeight: 500, color: '#6B6B69', fontSize: '14px' }}>
-                                                            {' '}
-                                                            ({eventModalParticipants.length})
-                                                        </span>
-                                                    </div>
                                                     {eventModalParticipants.length === 0 ? (
                                                         <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>
                                                             Пока никто не записан.
@@ -1805,9 +1836,13 @@ export default function AdminPageClient() {
                                                                 gap: '10px',
                                                             }}
                                                         >
-                                                            {eventModalParticipants.map((p) => (
+                                                            {eventModalParticipants.map((p) => {
+                                                                const isPending = p.payment_status === 'pending'
+                                                                const showAdmitPrompt =
+                                                                    admitPromptParticipantId === p.id
+                                                                return (
                                                                 <li
-                                                                    key={`${p.user_id}-${p.created_at ?? ''}-${p.payment_status}`}
+                                                                    key={p.id}
                                                                     style={{
                                                                         border: '1px solid #EBE8E0',
                                                                         borderRadius: '8px',
@@ -1821,17 +1856,59 @@ export default function AdminPageClient() {
                                                                             flexWrap: 'wrap',
                                                                             gap: '8px',
                                                                             alignItems: 'baseline',
+                                                                            justifyContent: 'space-between',
                                                                         }}
                                                                     >
-                                                                        <Link
-                                                                            href={`/player/${p.user_id}`}
-                                                                            style={{ fontWeight: 600, color: '#1B5E20' }}
-                                                                        >
-                                                                            {formatParticipantDisplay(p)}
-                                                                        </Link>
-                                                                        <span style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                                            {paymentStatusLabelRu(p.payment_status)}
-                                                                        </span>
+                                                                        <div style={{ minWidth: 0, flex: 1 }}>
+                                                                            <Link
+                                                                                href={`/player/${p.user_id}`}
+                                                                                style={{ fontWeight: 600, color: '#1B5E20' }}
+                                                                            >
+                                                                                {formatParticipantDisplay(p)}
+                                                                            </Link>
+                                                                            <span style={{ fontSize: '12px', color: '#6B6B69', marginLeft: '8px' }}>
+                                                                                {paymentStatusLabelRu(p.payment_status)}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                                                                            <button
+                                                                                type="button"
+                                                                                disabled
+                                                                                title="Скоро"
+                                                                                style={{
+                                                                                    padding: '6px 10px',
+                                                                                    borderRadius: '8px',
+                                                                                    border: '1px solid #EBE8E0',
+                                                                                    backgroundColor: '#F5F5F5',
+                                                                                    color: '#9E9E9E',
+                                                                                    fontSize: '12px',
+                                                                                    fontWeight: 600,
+                                                                                    cursor: 'not-allowed',
+                                                                                }}
+                                                                            >
+                                                                                Исключить
+                                                                            </button>
+                                                                            {isPending ? (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    disabled={admitSubmitting}
+                                                                                    onClick={() => setAdmitPromptParticipantId(p.id)}
+                                                                                    style={{
+                                                                                        padding: '6px 10px',
+                                                                                        borderRadius: '8px',
+                                                                                        border: 'none',
+                                                                                        backgroundColor: '#FFDF00',
+                                                                                        color: '#1D1D1B',
+                                                                                        fontSize: '12px',
+                                                                                        fontWeight: 700,
+                                                                                        cursor: admitSubmitting ? 'not-allowed' : 'pointer',
+                                                                                        opacity: admitSubmitting ? 0.65 : 1,
+                                                                                    }}
+                                                                                >
+                                                                                    Добавить
+                                                                                </button>
+                                                                            ) : null}
+                                                                        </div>
                                                                     </div>
                                                                     <div
                                                                         style={{
@@ -1841,6 +1918,9 @@ export default function AdminPageClient() {
                                                                         }}
                                                                     >
                                                                         user_id: {p.user_id}
+                                                                        {p.price_paid != null && Number.isFinite(Number(p.price_paid))
+                                                                            ? ` · ${Number(p.price_paid)} ₽`
+                                                                            : ''}
                                                                         {p.created_at
                                                                             ? ` · ${new Date(p.created_at).toLocaleString('ru-RU')}`
                                                                             : ''}
@@ -1860,8 +1940,73 @@ export default function AdminPageClient() {
                                                                             Ссылка на оплату
                                                                         </a>
                                                                     ) : null}
+                                                                    {showAdmitPrompt ? (
+                                                                        <div
+                                                                            style={{
+                                                                                marginTop: '12px',
+                                                                                paddingTop: '12px',
+                                                                                borderTop: '1px solid #EBE8E0',
+                                                                            }}
+                                                                        >
+                                                                            <p style={{ margin: '0 0 10px', fontWeight: 600, color: '#1D1D1B' }}>
+                                                                                Допустить игрока?
+                                                                            </p>
+                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    disabled={admitSubmitting}
+                                                                                    onClick={() => void admitParticipant(p.id, 'cash')}
+                                                                                    style={{
+                                                                                        padding: '10px 12px',
+                                                                                        borderRadius: '8px',
+                                                                                        border: 'none',
+                                                                                        backgroundColor: '#1B5E20',
+                                                                                        color: '#fff',
+                                                                                        fontWeight: 600,
+                                                                                        fontSize: '14px',
+                                                                                        cursor: admitSubmitting ? 'not-allowed' : 'pointer',
+                                                                                    }}
+                                                                                >
+                                                                                    Оплатил налом
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    disabled={admitSubmitting}
+                                                                                    onClick={() => void admitParticipant(p.id, 'free')}
+                                                                                    style={{
+                                                                                        padding: '10px 12px',
+                                                                                        borderRadius: '8px',
+                                                                                        border: '1px solid #1B5E20',
+                                                                                        backgroundColor: '#fff',
+                                                                                        color: '#1B5E20',
+                                                                                        fontWeight: 600,
+                                                                                        fontSize: '14px',
+                                                                                        cursor: admitSubmitting ? 'not-allowed' : 'pointer',
+                                                                                    }}
+                                                                                >
+                                                                                    Пускаем бесплатно
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    disabled={admitSubmitting}
+                                                                                    onClick={() => setAdmitPromptParticipantId(null)}
+                                                                                    style={{
+                                                                                        padding: '8px',
+                                                                                        border: 'none',
+                                                                                        background: 'transparent',
+                                                                                        color: '#6B6B69',
+                                                                                        fontSize: '13px',
+                                                                                        cursor: 'pointer',
+                                                                                    }}
+                                                                                >
+                                                                                    Отмена
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : null}
                                                                 </li>
-                                                            ))}
+                                                                )
+                                                            })}
                                                         </ul>
                                                     )}
                                                 </>
