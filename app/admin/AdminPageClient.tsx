@@ -1163,7 +1163,7 @@ export default function AdminPageClient() {
                 ) : null}
 
                 <div style={{ fontWeight: 600, marginBottom: '10px' }}>Список</div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {events.map((ev) => (
                         <button
                             key={ev.id}
@@ -1181,7 +1181,9 @@ export default function AdminPageClient() {
                             <div
                                 style={{
                                     overflow: 'hidden',
-                                    borderBottom: '1px solid #EBE8E0',
+                                    borderRadius: '8px',
+                                    backgroundColor: '#FFFFFF',
+                                    boxShadow: '0px 3px 4.5px rgba(0, 0, 0, 0.12)',
                                     borderTop:
                                         ev.status === 'cancelled' || ev.status === 'canceled'
                                             ? '2px solid #B71C1C'
@@ -1193,9 +1195,7 @@ export default function AdminPageClient() {
                                 {ev.cover?.trim() ? (
                                     <div
                                         style={{
-                                            width: 'calc(100% + 24px)',
-                                            marginLeft: '-12px',
-                                            marginRight: '-12px',
+                                            width: '100%',
                                             aspectRatio: '2 / 1',
                                             maxHeight: 220,
                                             backgroundColor: '#EBE8E0',
@@ -1213,7 +1213,7 @@ export default function AdminPageClient() {
                                         />
                                     </div>
                                 ) : null}
-                                <div style={{ padding: '14px 0' }}>
+                                <div style={{ padding: '12px' }}>
                                     <div
                                         style={{
                                             fontSize: '16px',

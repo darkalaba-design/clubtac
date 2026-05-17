@@ -69,6 +69,7 @@ export function EventParticipantAdminCard({
                 borderRadius: '8px',
                 padding: '12px',
                 backgroundColor: '#FFFFFF',
+                border: '1px solid #EBE8E0',
                 boxShadow: '0px 3px 4.5px rgba(0, 0, 0, 0.12)',
                 listStyle: 'none',
             }}
@@ -199,7 +200,7 @@ export function EventParticipantAdminCard({
                         {metaParts.length > 0 ? (
                             <div
                                 style={{
-                                    fontSize: '12px',
+                                    fontSize: '11px',
                                     color: '#6B6B69',
                                     lineHeight: 1.35,
                                 }}
