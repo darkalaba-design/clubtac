@@ -1,5 +1,10 @@
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
+import {
+    buildTelegramProfilePatch,
+    normalizeOptionalString,
+    telegramDisplayName,
+} from '@/lib/auth/syncTelegramProfile'
 import { createClient } from '@/lib/supabase/api'
 import type { TelegramAuthRequest } from '@/types/user'
 
@@ -86,27 +91,28 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            const shouldSendWebhook = photo_url && (
-                !existingUser.userpic ||
-                existingUser.userpic !== photo_url
-            )
+            const profilePatch = buildTelegramProfilePatch(existingUser, {
+                username,
+                first_name,
+                last_name,
+                photo_url,
+            })
 
-            if (shouldSendWebhook) {
-                try {
-                    await fetch('https://hook.eu2.make.com/wp9c6tglisd4sok6299oskxklys18n3i', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            telegram_id: telegram_id,
-                            photo_url: photo_url,
-                        }),
-                    })
-                } catch (webhookError) {
-                    console.error('API /auth/telegram: Ошибка отправки на webhook:', webhookError)
+            if (profilePatch) {
+                const { data: profileUpdated, error: profileErr } = await supabase
+                    .from('clubtac_users')
+                    .update(profilePatch)
+                    .eq('id', existingUser.id)
+                    .select()
+                    .single()
+
+                if (profileErr) {
+                    console.error('API /auth/telegram: не удалось обновить профиль из Telegram:', profileErr)
+                } else if (profileUpdated) {
+                    Object.assign(existingUser, profileUpdated)
                 }
             }
+
             return NextResponse.json({ user: existingUser }, { status: 200 })
         }
 
@@ -128,13 +134,17 @@ export async function POST(request: NextRequest) {
         const ownReferralCode = await generateUniqueReferralCode(supabase)
 
         console.log('API /auth/telegram: Пользователь не найден, создаём нового')
+        const displayNickname = telegramDisplayName(first_name, last_name)
+
         const { data: newUser, error: createError } = await supabase
             .from('clubtac_users')
             .insert({
                 telegram_id,
-                username: username || null,
-                first_name,
-                last_name: last_name || null,
+                username: normalizeOptionalString(username),
+                first_name: first_name.trim(),
+                last_name: normalizeOptionalString(last_name),
+                nickname: displayNickname || null,
+                userpic: normalizeOptionalString(photo_url),
                 referral_code: ownReferralCode,
                 referred_by_user_id: referredByUserId,
             })
@@ -150,23 +160,6 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('API /auth/telegram: Новый пользователь создан:', newUser)
-
-        if (photo_url) {
-            try {
-                await fetch('https://hook.eu2.make.com/wp9c6tglisd4sok6299oskxklys18n3i', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        telegram_id: telegram_id,
-                        photo_url: photo_url,
-                    }),
-                })
-            } catch (webhookError) {
-                console.error('API /auth/telegram: Ошибка отправки на webhook:', webhookError)
-            }
-        }
 
         return NextResponse.json({ user: newUser }, { status: 201 })
     } catch (error) {
