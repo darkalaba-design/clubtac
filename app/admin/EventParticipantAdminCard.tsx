@@ -55,186 +55,206 @@ export function EventParticipantAdminCard({
     const displayName = formatParticipantDisplay(p)
     const avatarUrl = !p.takoff && p.userpic?.trim() ? p.userpic.trim() : null
     const statusBadge = paymentStatusBadgeStyle(p.payment_status)
-    const metaParts: string[] = []
-    if (p.created_at) {
-        metaParts.push(formatEventCardDayMonthAndTime(p.created_at))
-    }
-    if (p.price_paid != null && Number.isFinite(Number(p.price_paid))) {
-        metaParts.push(`${Number(p.price_paid)} ₽`)
-    }
+    const hasPaylink = Boolean(p.paylink?.trim())
+    const dateStr = p.created_at ? formatEventCardDayMonthAndTime(p.created_at) : null
+    const priceStr =
+        p.price_paid != null && Number.isFinite(Number(p.price_paid))
+            ? `${Number(p.price_paid)} ₽`
+            : null
+    const metaParts = [dateStr, priceStr].filter(Boolean) as string[]
 
     return (
         <li
             style={{
-                border: '1px solid #EBE8E0',
-                borderRadius: '12px',
-                padding: '12px 14px',
-                fontSize: '14px',
-                backgroundColor: '#FAFAF8',
+                borderRadius: '8px',
+                padding: '12px',
+                backgroundColor: '#FFFFFF',
+                boxShadow: '0px 3px 4.5px rgba(0, 0, 0, 0.12)',
+                listStyle: 'none',
             }}
         >
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <Link
-                    href={`/player/${p.user_id}`}
-                    style={{ flexShrink: 0, textDecoration: 'none' }}
-                    title={displayName}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {/* Верх: аватар + имя + статус */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
+                    <Link
+                        href={`/player/${p.user_id}`}
+                        style={{ flexShrink: 0, textDecoration: 'none' }}
+                        title={displayName}
+                    >
+                        <div
+                            style={{
+                                width: '54px',
+                                height: '54px',
+                                borderRadius: '50%',
+                                overflow: 'hidden',
+                                backgroundColor: '#FFDF00',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 700,
+                                fontSize: '18px',
+                                color: '#1D1D1B',
+                            }}
+                        >
+                            {avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={avatarUrl}
+                                    alt=""
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        display: 'block',
+                                    }}
+                                />
+                            ) : (
+                                participantAvatarInitial(p)
+                            )}
+                        </div>
+                    </Link>
+                    <div
+                        style={{
+                            flex: 1,
+                            minWidth: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            alignItems: 'flex-start',
+                        }}
+                    >
+                        <Link
+                            href={`/player/${p.user_id}`}
+                            title={displayName}
+                            style={{
+                                width: '100%',
+                                fontWeight: 600,
+                                fontSize: '18px',
+                                lineHeight: 1.4,
+                                color: '#1D1D1B',
+                                textDecoration: 'none',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                display: 'block',
+                            }}
+                        >
+                            {displayName}
+                        </Link>
+                        <span
+                            style={{
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                padding: '6px 8px',
+                                borderRadius: '5px',
+                                lineHeight: 1,
+                                backgroundColor: statusBadge.backgroundColor,
+                                color: statusBadge.color,
+                            }}
+                        >
+                            {paymentStatusLabelRu(p.payment_status)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Низ: ссылка, дата/сумма, кнопки */}
+                <div
+                    style={{
+                        display: 'flex',
+                        gap: '7px',
+                        alignItems: 'center',
+                        minWidth: 0,
+                    }}
                 >
                     <div
                         style={{
-                            width: '44px',
-                            height: '44px',
-                            borderRadius: '50%',
-                            overflow: 'hidden',
-                            backgroundColor: '#FFDF00',
-                            border: '2px solid #fff',
-                            boxShadow: '0 1px 4px rgba(29,29,27,0.12)',
+                            flex: 1,
+                            minWidth: 0,
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 700,
-                            fontSize: '16px',
-                            color: '#1D1D1B',
+                            flexDirection: 'column',
+                            justifyContent: hasPaylink || metaParts.length > 0 ? 'space-between' : 'center',
+                            minHeight: hasPaylink && metaParts.length > 0 ? '32px' : undefined,
+                            gap: hasPaylink && metaParts.length > 0 ? 0 : '2px',
                         }}
                     >
-                        {avatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                                src={avatarUrl}
-                                alt=""
+                        {hasPaylink ? (
+                            <a
+                                href={p.paylink!.trim()}
+                                target="_blank"
+                                rel="noreferrer"
                                 style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
+                                    fontSize: '14px',
+                                    color: '#1565C0',
+                                    textDecoration: 'none',
+                                    lineHeight: 1.35,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
                                     display: 'block',
                                 }}
-                            />
-                        ) : (
-                            participantAvatarInitial(p)
-                        )}
-                    </div>
-                </Link>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '8px',
-                            justifyContent: 'space-between',
-                        }}
-                    >
-                        <div style={{ minWidth: 0, flex: 1 }}>
+                            >
+                                Ссылка на оплату
+                            </a>
+                        ) : null}
+                        {metaParts.length > 0 ? (
                             <div
                                 style={{
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    minWidth: 0,
+                                    fontSize: '12px',
+                                    color: '#6B6B69',
+                                    lineHeight: 1.35,
                                 }}
                             >
-                                <Link
-                                    href={`/player/${p.user_id}`}
-                                    title={displayName}
-                                    style={{
-                                        fontWeight: 600,
-                                        color: '#1D1D1B',
-                                        textDecoration: 'none',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        minWidth: 0,
-                                        maxWidth: '100%',
-                                        display: 'block',
-                                    }}
-                                >
-                                    {displayName}
-                                </Link>
-                                <span
-                                    style={{
-                                        fontSize: '11px',
-                                        fontWeight: 600,
-                                        padding: '2px 8px',
-                                        borderRadius: '999px',
-                                        flexShrink: 0,
-                                        backgroundColor: statusBadge.backgroundColor,
-                                        color: statusBadge.color,
-                                    }}
-                                >
-                                    {paymentStatusLabelRu(p.payment_status)}
-                                </span>
+                                {metaParts.join(' · ')}
                             </div>
-                            {metaParts.length > 0 ? (
-                                <div
-                                    style={{
-                                        fontSize: '12px',
-                                        color: '#6B6B69',
-                                        marginTop: '4px',
-                                        lineHeight: 1.35,
-                                    }}
-                                >
-                                    {metaParts.join(' · ')}
-                                </div>
-                            ) : null}
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                        ) : null}
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center' }}>
+                        <button
+                            type="button"
+                            disabled={participantBusy}
+                            onClick={onExcludeClick}
+                            style={{
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                border: '1px solid #B71C1C',
+                                backgroundColor: '#fff',
+                                color: '#B71C1C',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                lineHeight: 1.4,
+                                cursor: participantBusy ? 'not-allowed' : 'pointer',
+                                opacity: participantBusy ? 0.65 : 1,
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            Исключить
+                        </button>
+                        {isPending ? (
                             <button
                                 type="button"
                                 disabled={participantBusy}
-                                onClick={onExcludeClick}
+                                onClick={onAdmitClick}
                                 style={{
                                     padding: '6px 10px',
                                     borderRadius: '8px',
-                                    border: '1px solid #B71C1C',
-                                    backgroundColor: '#fff',
-                                    color: '#B71C1C',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
+                                    border: 'none',
+                                    backgroundColor: '#FFDF00',
+                                    color: '#1D1D1B',
+                                    fontSize: '13px',
+                                    fontWeight: 700,
+                                    lineHeight: 1.4,
                                     cursor: participantBusy ? 'not-allowed' : 'pointer',
                                     opacity: participantBusy ? 0.65 : 1,
+                                    whiteSpace: 'nowrap',
                                 }}
                             >
-                                Исключить
+                                Добавить
                             </button>
-                            {isPending ? (
-                                <button
-                                    type="button"
-                                    disabled={participantBusy}
-                                    onClick={onAdmitClick}
-                                    style={{
-                                        padding: '6px 10px',
-                                        borderRadius: '8px',
-                                        border: 'none',
-                                        backgroundColor: '#FFDF00',
-                                        color: '#1D1D1B',
-                                        fontSize: '12px',
-                                        fontWeight: 700,
-                                        cursor: participantBusy ? 'not-allowed' : 'pointer',
-                                        opacity: participantBusy ? 0.65 : 1,
-                                    }}
-                                >
-                                    Добавить
-                                </button>
-                            ) : null}
-                        </div>
+                        ) : null}
                     </div>
                 </div>
             </div>
-            {p.paylink?.trim() ? (
-                <a
-                    href={p.paylink.trim()}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                        fontSize: '13px',
-                        color: '#1565C0',
-                        marginTop: '8px',
-                        marginLeft: '56px',
-                        display: 'inline-block',
-                    }}
-                >
-                    Ссылка на оплату
-                </a>
-            ) : null}
+
             {showExcludePrompt ? (
                 <div
                     style={{

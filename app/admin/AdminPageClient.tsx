@@ -1861,7 +1861,7 @@ export default function AdminPageClient() {
                                                                 listStyle: 'none',
                                                                 display: 'flex',
                                                                 flexDirection: 'column',
-                                                                gap: '10px',
+                                                                gap: '8px',
                                                             }}
                                                         >
                                                             {eventModalParticipants.map((p) => (
