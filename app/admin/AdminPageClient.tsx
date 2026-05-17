@@ -1329,34 +1329,27 @@ export default function AdminPageClient() {
                         zIndex: 1200,
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        backgroundColor: 'rgba(29, 29, 27, 0.48)',
-                        paddingTop: 'calc(8px + env(safe-area-inset-top, 0px))',
-                        paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
-                        paddingLeft: '12px',
-                        paddingRight: '12px',
+                        backgroundColor: '#FFFFFF',
+                        paddingTop: 'env(safe-area-inset-top, 0px)',
+                        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
                     }}
-                    onClick={closeEventModal}
                 >
                     <div
-                        onClick={(e) => e.stopPropagation()}
                         style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            minHeight: 0,
                             width: '100%',
-                            maxWidth: '560px',
-                            maxHeight: 'min(92vh, 880px)',
-                            overflowY: 'auto',
+                            maxWidth: 'var(--app-max-width, 850px)',
+                            marginLeft: 'auto',
+                            marginRight: 'auto',
                             backgroundColor: '#FFFFFF',
-                            borderRadius: '12px',
-                            boxShadow: '0 8px 32px rgba(29,29,27,0.18)',
-                            position: 'relative',
                         }}
                     >
                         <div
                             style={{
-                                position: 'sticky',
-                                top: 0,
-                                zIndex: 2,
+                                flexShrink: 0,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
@@ -1387,6 +1380,14 @@ export default function AdminPageClient() {
                             </button>
                         </div>
 
+                        <div
+                            style={{
+                                flex: 1,
+                                minHeight: 0,
+                                overflowY: 'auto',
+                                WebkitOverflowScrolling: 'touch',
+                            }}
+                        >
                         <div style={{ padding: '14px 16px 20px' }}>
                             {eventModalLoading && !eventModalEvent ? (
                                 <p style={{ margin: 0 }}>Загрузка…</p>
@@ -1898,6 +1899,7 @@ export default function AdminPageClient() {
                                     ) : null}
                                 </>
                             ) : null}
+                        </div>
                         </div>
                     </div>
                 </div>
