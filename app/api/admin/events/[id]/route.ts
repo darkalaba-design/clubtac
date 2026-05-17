@@ -56,7 +56,7 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
 
     const { data: partRows, error: pErr } = await supabase
         .from('clubtac_event_participants')
-        .select('id, event_id, user_id, payment_status, price_paid, paylink, created_at')
+        .select('id, order_id, event_id, user_id, payment_status, price_paid, paylink, created_at')
         .eq('event_id', eventId)
         .order('created_at', { ascending: false })
 
@@ -89,7 +89,8 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
 
     const participants = rows.map(
         (row: {
-            id: number
+            id: string | number
+            order_id?: string | null
             event_id: string
             user_id: number
             payment_status: string
@@ -100,6 +101,7 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
         const u = userMap[row.user_id]
         return {
             id: row.id,
+            order_id: row.order_id ?? null,
             event_id: row.event_id,
             user_id: row.user_id,
             payment_status: row.payment_status,

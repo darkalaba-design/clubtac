@@ -2,17 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
+import { isUuid } from '@/lib/uuid'
 
 type RouteParams = { params: Promise<{ id: string; participantId: string }> }
 
 type AdmitMethod = 'cash' | 'free'
 
 type ParticipantRow = {
-    id: number
+    id: string | number
+    order_id?: string | null
     event_id: string
     user_id: number
     payment_status: string
     price_paid: number | null
+}
+
+/** order_id в кошельке — UUID: id участника (если UUID) или order_id записи участника. */
+function walletOrderIdFromParticipant(row: ParticipantRow): string | null {
+    const idStr = row.id != null ? String(row.id).trim() : ''
+    if (isUuid(idStr)) return idStr
+    if (row.order_id != null && isUuid(row.order_id)) return String(row.order_id).trim()
+    return null
 }
 
 /** Допуск участника с pending: оплата наличными или бесплатно + записи в кошелёк. */
@@ -32,8 +42,12 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
         return NextResponse.json({ error: 'Некорректный id события' }, { status: 400 })
     }
 
-    const participantId = Number.parseInt(String(participantIdRaw), 10)
-    if (!Number.isFinite(participantId) || participantId <= 0) {
+    if (!isUuid(eventId)) {
+        return NextResponse.json({ error: 'Некорректный id события (ожидается UUID)' }, { status: 400 })
+    }
+
+    const participantKey = String(participantIdRaw ?? '').trim()
+    if (!participantKey) {
         return NextResponse.json({ error: 'Некорректный id участника' }, { status: 400 })
     }
 
@@ -53,8 +67,8 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
 
     const { data: row, error: fetchErr } = await supabase
         .from('clubtac_event_participants')
-        .select('id, event_id, user_id, payment_status, price_paid')
-        .eq('id', participantId)
+        .select('id, order_id, event_id, user_id, payment_status, price_paid')
+        .eq('id', participantKey)
         .eq('event_id', eventId)
         .maybeSingle()
 
@@ -68,6 +82,17 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
     }
 
     const participant = row as ParticipantRow
+
+    const walletOrderId = walletOrderIdFromParticipant(participant)
+    if (!walletOrderId) {
+        return NextResponse.json(
+            {
+                error:
+                    'Для записи в кошелёк нужен UUID: id участника или order_id в clubtac_event_participants. Сейчас id не UUID.',
+            },
+            { status: 400 }
+        )
+    }
 
     if (participant.payment_status !== 'pending') {
         return NextResponse.json(
@@ -93,7 +118,7 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
     const { error: updateErr } = await supabase
         .from('clubtac_event_participants')
         .update(participantPatch)
-        .eq('id', participantId)
+        .eq('id', participantKey)
         .eq('event_id', eventId)
         .eq('payment_status', 'pending')
 
@@ -107,14 +132,14 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
             user_id: participant.user_id,
             amount,
             type: 'manual_adjustment',
-            order_id: participantId,
+            order_id: walletOrderId,
             event_id: eventId,
         },
         {
             user_id: participant.user_id,
             amount: -amount,
             type: 'game_payment',
-            order_id: participantId,
+            order_id: walletOrderId,
             event_id: eventId,
         },
     ]
@@ -126,10 +151,10 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
         await supabase
             .from('clubtac_event_participants')
             .update({ payment_status: 'pending', ...(method === 'free' ? { price_paid: participant.price_paid } : {}) })
-            .eq('id', participantId)
+            .eq('id', participantKey)
             .eq('event_id', eventId)
         return NextResponse.json({ error: walletErr.message }, { status: 500 })
     }
 
-    return NextResponse.json({ ok: true, method, amount })
+    return NextResponse.json({ ok: true, method, amount, order_id: walletOrderId })
 }

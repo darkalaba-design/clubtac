@@ -121,7 +121,8 @@ type GameRow = {
 type AdminClubOption = { id: string; name: string }
 
 type EventParticipantRow = {
-    id: number
+    id: string | number
+    order_id?: string | null
     event_id: string
     user_id: number
     payment_status: string
@@ -244,7 +245,7 @@ export default function AdminPageClient() {
     const [eventModalCoverBusy, setEventModalCoverBusy] = useState(false)
     const [eventModalCoverMessage, setEventModalCoverMessage] = useState<string | null>(null)
     const [eventModalTab, setEventModalTab] = useState<EventModalTab>('participants')
-    const [admitPromptParticipantId, setAdmitPromptParticipantId] = useState<number | null>(null)
+    const [admitPromptParticipantId, setAdmitPromptParticipantId] = useState<string | number | null>(null)
     const [admitSubmitting, setAdmitSubmitting] = useState(false)
 
     const creatingEventRef = useRef(false)
@@ -498,7 +499,7 @@ export default function AdminPageClient() {
         setAdmitSubmitting(false)
     }
 
-    const admitParticipant = async (participantId: number, method: 'cash' | 'free') => {
+    const admitParticipant = async (participantId: string | number, method: 'cash' | 'free') => {
         if (!eventModalId || admitSubmitting) return
         setAdmitSubmitting(true)
         setEventModalErr(null)
