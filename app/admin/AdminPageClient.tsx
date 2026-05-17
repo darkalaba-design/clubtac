@@ -78,12 +78,32 @@ function adminUserMatchesSearch(u: AdminUserRow, rawQuery: string): boolean {
     return chunks.some((c) => c && c.includes(q))
 }
 
+function adminPlayerDisplayName(p: AdminPlayerRow): string {
+    if (p.takoff) return displayPublicNickname(null, true)
+    if (p.nickname?.trim()) return p.nickname.trim()
+    const name = [p.first_name, p.last_name].filter(Boolean).join(' ').trim()
+    return name || `Игрок #${p.user_id}`
+}
+
 function adminPlayerMatchesSearch(p: AdminPlayerRow, rawQuery: string): boolean {
     const q = rawQuery.trim().toLowerCase()
     if (!q) return true
     const nick = (p.nickname ?? '').trim().toLowerCase()
     const uname = (p.username ?? '').trim().toLowerCase()
-    const chunks = [nick, uname, uname ? `@${uname}` : '', String(p.user_id), String(p.place)]
+    const first = (p.first_name ?? '').trim().toLowerCase()
+    const last = (p.last_name ?? '').trim().toLowerCase()
+    const full = `${first} ${last}`.trim()
+    const chunks = [
+        nick,
+        first,
+        last,
+        full,
+        uname,
+        uname ? `@${uname}` : '',
+        String(p.user_id),
+        p.telegram_id != null ? String(p.telegram_id) : '',
+        p.place != null ? String(p.place) : '',
+    ]
     return chunks.some((c) => c.length > 0 && c.includes(q))
 }
 
@@ -202,12 +222,16 @@ type EventModalTab = 'participants' | 'games' | 'details'
 
 type AdminPlayerRow = {
     user_id: number
-    place: number
+    telegram_id?: number
+    first_name?: string | null
+    last_name?: string | null
     nickname?: string | null
     rating?: number | null
     games_played?: number | null
+    place?: number | null
     username?: string | null
     takoff?: boolean
+    userpic?: string | null
 }
 
 const ADMIN_SCROLL_PT = 'calc(52px + env(safe-area-inset-top, 0px))'
@@ -273,7 +297,7 @@ export default function AdminPageClient() {
                     adminFetch('/api/admin/events'),
                     adminFetch('/api/admin/clubs'),
                     adminFetch('/api/admin/games?limit=100'),
-                    adminFetch('/api/admin/players?limit=300'),
+                    adminFetch('/api/admin/players?limit=500'),
                 ])
                 const ej = await er.json().catch(() => ({}))
                 const cj = await cr.json().catch(() => ({}))
@@ -1254,7 +1278,8 @@ export default function AdminPageClient() {
                 <section style={pageSection}>
                     <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>Игроки</h2>
                     <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6B6B69' }}>
-                        Новый рейтинг (Elo) — как в публичном приложении.
+                        Все зарегистрированные пользователи с активным аккаунтом. Рейтинг и число игр — если есть в
+                        таблице Elo.
                     </p>
                     <div style={{ marginBottom: '14px' }}>
                         <div style={fieldLabel}>Поиск</div>
@@ -1262,7 +1287,7 @@ export default function AdminPageClient() {
                             type="search"
                             value={adminPlayersSearch}
                             onChange={(e) => setAdminPlayersSearch(e.target.value)}
-                            placeholder="Ник, @username, id или место…"
+                            placeholder="Ник, имя, @username, id или tg id…"
                             autoComplete="off"
                             style={{
                                 width: '100%',
@@ -1289,6 +1314,9 @@ export default function AdminPageClient() {
                                         : null
                                 const games =
                                     p.games_played ?? (p as { games?: number }).games ?? null
+                                const displayName = adminPlayerDisplayName(p)
+                                const avatarUrl =
+                                    !p.takoff && p.userpic?.trim() ? p.userpic.trim() : null
                                 return (
                                     <div
                                         key={p.user_id}
@@ -1300,32 +1328,58 @@ export default function AdminPageClient() {
                                             paddingBottom: '8px',
                                         }}
                                     >
-                                        <div
-                                            style={{
-                                                width: '32px',
-                                                height: '32px',
-                                                borderRadius: '50%',
-                                                backgroundColor: '#FFDF00',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontWeight: 700,
-                                                fontSize: '13px',
-                                                flexShrink: 0,
-                                            }}
+                                        <Link
+                                            href={`/player/${p.user_id}`}
+                                            style={{ flexShrink: 0, textDecoration: 'none' }}
+                                            title={displayName}
                                         >
-                                            {p.place}
-                                        </div>
+                                            <div
+                                                style={{
+                                                    width: '36px',
+                                                    height: '36px',
+                                                    borderRadius: '50%',
+                                                    overflow: 'hidden',
+                                                    backgroundColor: '#FFDF00',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontWeight: 700,
+                                                    fontSize: '14px',
+                                                    color: '#1D1D1B',
+                                                }}
+                                            >
+                                                {avatarUrl ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img
+                                                        src={avatarUrl}
+                                                        alt=""
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover',
+                                                            display: 'block',
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    displayName.charAt(0).toUpperCase()
+                                                )}
+                                            </div>
+                                        </Link>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <Link
                                                 href={`/player/${p.user_id}`}
+                                                title={displayName}
                                                 style={{
                                                     fontWeight: 600,
                                                     color: '#1D1D1B',
                                                     textDecoration: 'none',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                    display: 'block',
                                                 }}
                                             >
-                                                {displayPublicNickname(p.nickname, p.takoff)}
+                                                {displayName}
                                             </Link>
                                             <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                 id {p.user_id}

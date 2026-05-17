@@ -3,7 +3,7 @@ import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 
-/** Рейтинг игроков (новый Elo) для админки. */
+/** Все активные пользователи clubtac_users для вкладки «Игроки» в админке. */
 export async function GET(request: NextRequest) {
     const gate = await requireActor(request)
     if (!gate.ok) return gate.response
@@ -16,17 +16,18 @@ export async function GET(request: NextRequest) {
     }
 
     const limitRaw = request.nextUrl.searchParams.get('limit')
-    let limit = 200
+    let limit = 500
     if (limitRaw) {
         const n = Number.parseInt(limitRaw, 10)
-        if (Number.isFinite(n)) limit = Math.min(500, Math.max(1, n))
+        if (Number.isFinite(n)) limit = Math.min(1000, Math.max(1, n))
     }
 
     const { supabase } = gate
-    const { data, error } = await supabase
-        .from('clubtac_elo_leaderboard')
-        .select('*')
-        .order('place', { ascending: true })
+    const { data: users, error } = await supabase
+        .from('clubtac_users')
+        .select('id, telegram_id, first_name, last_name, username, nickname, takoff, userpic, created_at')
+        .eq('is_active', true)
+        .order('id', { ascending: false })
         .limit(limit)
 
     if (error) {
@@ -34,40 +35,65 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const rows = data ?? []
-    const ids = [
-        ...new Set(
-            rows
-                .map((r: { user_id?: number }) => Number(r.user_id))
-                .filter((id: number) => Number.isFinite(id) && id > 0)
-        ),
-    ]
+    const rows = users ?? []
+    const ids = rows.map((u: { id: number }) => u.id)
 
-    let usersById: Record<number, { username: string | null; takoff: boolean }> = {}
+    let eloByUserId: Record<
+        number,
+        { rating?: number | null; games_played?: number | null; place?: number | null }
+    > = {}
+
     if (ids.length > 0) {
-        const { data: userRows } = await supabase
-            .from('clubtac_users')
-            .select('id, username, takoff')
-            .in('id', ids)
-        if (userRows) {
-            usersById = Object.fromEntries(
-                userRows.map((u: { id: number; username?: string | null; takoff?: boolean | null }) => [
-                    u.id,
-                    { username: u.username ?? null, takoff: !!u.takoff },
-                ])
+        const { data: eloRows, error: eloErr } = await supabase
+            .from('clubtac_elo_leaderboard')
+            .select('user_id, rating, games_played, place')
+            .in('user_id', ids)
+
+        if (eloErr) {
+            console.error('GET /api/admin/players elo:', eloErr)
+        } else if (eloRows) {
+            eloByUserId = Object.fromEntries(
+                eloRows.map(
+                    (r: {
+                        user_id: number
+                        rating?: number | null
+                        games_played?: number | null
+                        place?: number | null
+                    }) => [r.user_id, r]
+                )
             )
         }
     }
 
-    const players = rows.map((row: Record<string, unknown>) => {
-        const uid = Number(row.user_id)
-        const meta = usersById[uid]
-        return {
-            ...row,
-            username: meta?.username ?? null,
-            takoff: meta?.takoff ?? false,
+    const players = rows.map(
+        (u: {
+            id: number
+            telegram_id: number
+            first_name?: string | null
+            last_name?: string | null
+            username?: string | null
+            nickname?: string | null
+            takoff?: boolean | null
+            userpic?: string | null
+            created_at?: string | null
+        }) => {
+            const elo = eloByUserId[u.id]
+            return {
+                user_id: u.id,
+                telegram_id: u.telegram_id,
+                first_name: u.first_name ?? null,
+                last_name: u.last_name ?? null,
+                username: u.username ?? null,
+                nickname: u.nickname ?? null,
+                takoff: !!u.takoff,
+                userpic: u.userpic ?? null,
+                created_at: u.created_at ?? null,
+                rating: elo?.rating ?? null,
+                games_played: elo?.games_played ?? null,
+                place: elo?.place ?? null,
+            }
         }
-    })
+    )
 
     return NextResponse.json({ players })
 }
