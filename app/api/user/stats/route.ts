@@ -1,6 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/api'
 
+/** Место и очки — из нового Elo; игры/победы — из hall_of_fame, если есть. */
+function mergePlayerRankingStats(
+    hall: Record<string, unknown> | null,
+    elo: Record<string, unknown> | null
+): Record<string, unknown> | null {
+    if (!hall && !elo) return null
+    const eloRating =
+        elo?.rating != null && elo.rating !== '' ? Number(elo.rating) : null
+    const hallPoints =
+        hall?.points != null && hall.points !== ''
+            ? Number(hall.points)
+            : hall?.total_points != null && hall.total_points !== ''
+              ? Number(hall.total_points)
+              : null
+    return {
+        ...(hall || {}),
+        ...(elo || {}),
+        place: elo?.place ?? hall?.place,
+        points: eloRating ?? hallPoints,
+        rating: eloRating ?? (hall?.rating != null ? Number(hall.rating) : null),
+        nickname: (elo?.nickname as string | undefined) ?? (hall?.nickname as string | undefined),
+        games_played: hall?.games_played ?? elo?.games_played,
+        games: hall?.games ?? elo?.games,
+        total_games: hall?.total_games ?? elo?.total_games,
+        wins: hall?.wins ?? elo?.wins,
+        total_wins: hall?.total_wins ?? elo?.total_wins,
+        win_rate: hall?.win_rate ?? elo?.win_rate,
+        winrate: hall?.winrate ?? elo?.winrate,
+        win_percent: hall?.win_percent ?? elo?.win_percent,
+    }
+}
+
 /**
  * API endpoint для получения статистики пользователя
  * Принимает telegram_id, user_id (id в clubtac_users) или nickname
@@ -56,18 +88,29 @@ export async function GET(request: NextRequest) {
             }
             user = userData
         } else if (nickname) {
-            const { data: rankRow, error: rankError } = await supabase
-                .from('clubtac_players_hall_of_fame_v3')
+            const nick = nickname.trim()
+            let rankRow: { user_id: number; nickname?: string | null } | null = null
+            const { data: eloRow } = await supabase
+                .from('clubtac_elo_leaderboard')
                 .select('user_id, nickname')
-                .eq('nickname', nickname.trim())
-                .single()
-            if (rankError || !rankRow) {
+                .eq('nickname', nick)
+                .maybeSingle()
+            if (eloRow) rankRow = eloRow as { user_id: number; nickname?: string | null }
+            if (!rankRow) {
+                const { data: hallRow } = await supabase
+                    .from('clubtac_players_hall_of_fame_v3')
+                    .select('user_id, nickname')
+                    .eq('nickname', nick)
+                    .maybeSingle()
+                if (hallRow) rankRow = hallRow as { user_id: number; nickname?: string | null }
+            }
+            if (!rankRow) {
                 return NextResponse.json(
                     { error: 'Пользователь не найден' },
                     { status: 404 }
                 )
             }
-            userNickname = rankRow.nickname?.trim() || nickname.trim()
+            userNickname = rankRow.nickname?.trim() || nick
             const { data: userData, error: userError } = await supabase
                 .from('clubtac_users')
                 .select('*')
@@ -82,17 +125,29 @@ export async function GET(request: NextRequest) {
             user = userData
         }
 
-        // Получаем статистику из clubtac_players_hall_of_fame_v3 по user_id
-        const { data: stats, error: statsError } = await supabase
-            .from('clubtac_players_hall_of_fame_v3')
-            .select('*')
-            .eq('user_id', user.id)
-            .single()
+        const [{ data: hallStats }, { data: eloStats }] = await Promise.all([
+            supabase
+                .from('clubtac_players_hall_of_fame_v3')
+                .select('*')
+                .eq('user_id', user.id)
+                .maybeSingle(),
+            supabase
+                .from('clubtac_elo_leaderboard')
+                .select('*')
+                .eq('user_id', user.id)
+                .maybeSingle(),
+        ])
+
+        const stats = mergePlayerRankingStats(
+            (hallStats as Record<string, unknown> | null) ?? null,
+            (eloStats as Record<string, unknown> | null) ?? null
+        )
 
         if (!userNickname) {
-            const fromHall = (stats as { nickname?: string | null } | null)?.nickname?.trim()
+            const fromElo = (eloStats as { nickname?: string | null } | null)?.nickname?.trim()
+            const fromHall = (hallStats as { nickname?: string | null } | null)?.nickname?.trim()
             const fromUser = user?.nickname?.trim()
-            userNickname = fromHall || fromUser || null
+            userNickname = fromElo || fromHall || fromUser || null
         }
 
         const cellNick = (v: string | null | undefined) => (v ?? '').trim()
@@ -130,7 +185,7 @@ export async function GET(request: NextRequest) {
         }
 
         let bestPartners: any[] = []
-        if (!gamesError && allGames && userNickname && stats) {
+        if (!gamesError && allGames && userNickname && stats != null) {
             const partnerStats: Record<string, { games: number; wins: number }> = {}
 
             allGames.forEach((game) => {

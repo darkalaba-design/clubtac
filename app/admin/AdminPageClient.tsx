@@ -18,6 +18,8 @@ import GeoIcon from '../components/GeoIcon'
 import GamesTabIcon from '../components/GamesTabIcon'
 import EventsTabIcon from '../components/EventsTabIcon'
 import AccessTabIcon from '../components/AccessTabIcon'
+import PlayersTabIcon from '../components/PlayersTabIcon'
+import { displayPublicNickname } from '@/lib/takoff'
 
 function AdminAddressLine({ address, style }: { address: string; style?: CSSProperties }) {
     return (
@@ -74,6 +76,15 @@ function adminUserMatchesSearch(u: AdminUserRow, rawQuery: string): boolean {
         String(u.id),
     ]
     return chunks.some((c) => c && c.includes(q))
+}
+
+function adminPlayerMatchesSearch(p: AdminPlayerRow, rawQuery: string): boolean {
+    const q = rawQuery.trim().toLowerCase()
+    if (!q) return true
+    const nick = (p.nickname ?? '').trim().toLowerCase()
+    const uname = (p.username ?? '').trim().toLowerCase()
+    const chunks = [nick, uname, uname ? `@${uname}` : '', String(p.user_id), String(p.place)]
+    return chunks.some((c) => c.length > 0 && c.includes(q))
 }
 
 type EventRow = {
@@ -180,7 +191,17 @@ function adminFetch(input: RequestInfo | URL, init: RequestInit = {}) {
     return fetch(input, { ...init, headers: h })
 }
 
-type AdminNavTab = 'events' | 'games' | 'admins'
+type AdminNavTab = 'events' | 'games' | 'players' | 'admins'
+
+type AdminPlayerRow = {
+    user_id: number
+    place: number
+    nickname?: string | null
+    rating?: number | null
+    games_played?: number | null
+    username?: string | null
+    takoff?: boolean
+}
 
 const ADMIN_SCROLL_PT = 'calc(52px + env(safe-area-inset-top, 0px))'
 const ADMIN_SCROLL_PB = 'calc(72px + env(safe-area-inset-bottom, 0px))'
@@ -196,6 +217,8 @@ export default function AdminPageClient() {
     const [adminClubs, setAdminClubs] = useState<AdminClubOption[]>([])
     const [events, setEvents] = useState<EventRow[]>([])
     const [games, setGames] = useState<GameRow[]>([])
+    const [adminPlayers, setAdminPlayers] = useState<AdminPlayerRow[]>([])
+    const [adminPlayersSearch, setAdminPlayersSearch] = useState('')
 
     const [newEvent, setNewEvent] = useState({
         clubId: '',
@@ -235,24 +258,29 @@ export default function AdminPageClient() {
             }
 
             if (role === 'admin' || role === 'root') {
-                const [er, cr, gr] = await Promise.all([
+                const [er, cr, gr, pr] = await Promise.all([
                     adminFetch('/api/admin/events'),
                     adminFetch('/api/admin/clubs'),
                     adminFetch('/api/admin/games?limit=100'),
+                    adminFetch('/api/admin/players?limit=300'),
                 ])
                 const ej = await er.json().catch(() => ({}))
                 const cj = await cr.json().catch(() => ({}))
                 const gj = await gr.json().catch(() => ({}))
+                const pj = await pr.json().catch(() => ({}))
                 if (!er.ok) throw new Error(typeof ej.error === 'string' ? ej.error : er.statusText)
                 setEvents(ej.events || [])
                 if (cr.ok) setAdminClubs((cj.clubs as AdminClubOption[]) || [])
                 else setAdminClubs([])
                 if (!gr.ok) throw new Error(typeof gj.error === 'string' ? gj.error : gr.statusText)
                 setGames(gj.games || [])
+                if (!pr.ok) throw new Error(typeof pj.error === 'string' ? pj.error : pr.statusText)
+                setAdminPlayers((pj.players as AdminPlayerRow[]) || [])
             } else {
                 setEvents([])
                 setGames([])
                 setAdminClubs([])
+                setAdminPlayers([])
             }
         } catch (e) {
             setErr(e instanceof Error ? e.message : 'Ошибка загрузки')
@@ -530,6 +558,11 @@ export default function AdminPageClient() {
     const filteredAdminUsers = useMemo(
         () => adminUsers.filter((u) => adminUserMatchesSearch(u, adminUsersSearch)),
         [adminUsers, adminUsersSearch]
+    )
+
+    const filteredAdminPlayers = useMemo(
+        () => adminPlayers.filter((p) => adminPlayerMatchesSearch(p, adminPlayersSearch)),
+        [adminPlayers, adminPlayersSearch]
     )
 
     const card: React.CSSProperties = {
@@ -1122,6 +1155,100 @@ export default function AdminPageClient() {
             </section>
             )}
 
+            {navTab === 'players' && (
+                <section style={card}>
+                    <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>Игроки</h2>
+                    <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6B6B69' }}>
+                        Новый рейтинг (Elo) — как в публичном приложении.
+                    </p>
+                    <div style={{ marginBottom: '14px' }}>
+                        <div style={fieldLabel}>Поиск</div>
+                        <input
+                            type="search"
+                            value={adminPlayersSearch}
+                            onChange={(e) => setAdminPlayersSearch(e.target.value)}
+                            placeholder="Ник, @username, id или место…"
+                            autoComplete="off"
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                                fontSize: '15px',
+                            }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {filteredAdminPlayers.length === 0 ? (
+                            <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>
+                                {adminPlayers.length === 0
+                                    ? 'Список игроков пуст.'
+                                    : 'Никого не найдено — попробуйте другой запрос.'}
+                            </p>
+                        ) : (
+                            filteredAdminPlayers.map((p) => {
+                                const rating =
+                                    p.rating != null && p.rating !== ''
+                                        ? Math.round(Number(p.rating))
+                                        : null
+                                const games =
+                                    p.games_played ?? (p as { games?: number }).games ?? null
+                                return (
+                                    <div
+                                        key={p.user_id}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            borderBottom: '1px solid #EBE8E0',
+                                            paddingBottom: '8px',
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '50%',
+                                                backgroundColor: '#FFDF00',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontWeight: 700,
+                                                fontSize: '13px',
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            {p.place}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <Link
+                                                href={`/player/${p.user_id}`}
+                                                style={{
+                                                    fontWeight: 600,
+                                                    color: '#1D1D1B',
+                                                    textDecoration: 'none',
+                                                }}
+                                            >
+                                                {displayPublicNickname(p.nickname, p.takoff)}
+                                            </Link>
+                                            <div style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                id {p.user_id}
+                                                {p.username && !p.takoff ? ` · @${p.username}` : ''}
+                                                {rating != null ? ` · ⭐ ${rating}` : ''}
+                                                {games != null && Number(games) > 0
+                                                    ? ` · ${games} игр`
+                                                    : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })
+                        )}
+                    </div>
+                </section>
+            )}
+
             {navTab === 'games' && (
             <section style={card}>
                 <h2 style={{ margin: '0 0 8px', fontSize: '17px' }}>Сыгранные партии</h2>
@@ -1186,6 +1313,7 @@ export default function AdminPageClient() {
                 >
                     {navBtn('events', <EventsTabIcon active={navTab === 'events'} size={24} />, 'События')}
                     {navBtn('games', <GamesTabIcon active={navTab === 'games'} size={24} />, 'Партии')}
+                    {navBtn('players', <PlayersTabIcon active={navTab === 'players'} size={24} />, 'Игроки')}
                     {isRoot ? navBtn('admins', <AccessTabIcon active={navTab === 'admins'} size={24} />, 'Доступ') : null}
                 </div>
             </nav>

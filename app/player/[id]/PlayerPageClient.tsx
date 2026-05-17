@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { scoresForPlayerTeam } from '@/lib/playerGameScore'
 import { formatPointsRu, formatWinsGamesLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import Tabs from '../../components/Tabs'
@@ -48,23 +49,40 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
         const load = async () => {
             try {
                 const supabase = createClient()
-                const { data, error: queryError } = await supabase
-                    .from('clubtac_players_hall_of_fame_v3')
-                    .select('*')
-                    .eq('user_id', playerId)
-                    .single()
+                const uid = Number(playerId)
+                const [{ data: eloData }, { data: hallData }] = await Promise.all([
+                    supabase
+                        .from('clubtac_elo_leaderboard')
+                        .select('*')
+                        .eq('user_id', playerId)
+                        .maybeSingle(),
+                    supabase
+                        .from('clubtac_players_hall_of_fame_v3')
+                        .select('*')
+                        .eq('user_id', playerId)
+                        .maybeSingle(),
+                ])
 
-                if (queryError) {
-                    console.error('Supabase error:', queryError)
-                    setError(queryError.message)
+                if (!eloData && !hallData) {
+                    setError('Игрок не найден')
                     setLoading(false)
                     return
                 }
 
+                const eloRating =
+                    eloData?.rating != null && eloData.rating !== ''
+                        ? Number(eloData.rating)
+                        : null
+                const hallPoints =
+                    hallData?.points != null
+                        ? Number(hallData.points)
+                        : hallData?.total_points != null
+                          ? Number(hallData.total_points)
+                          : null
+
                 let userpic: string | null = null
                 let takoff = false
-                const uid = (data as { user_id?: number }).user_id ?? Number(playerId)
-                if (uid && !Number.isNaN(uid)) {
+                if (Number.isFinite(uid) && uid > 0) {
                     const { data: userRow } = await supabase
                         .from('clubtac_users')
                         .select('userpic, takoff')
@@ -75,7 +93,20 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                     takoff = row?.takoff === true
                 }
 
-                setPlayer({ ...data, userpic, takoff })
+                setPlayer({
+                    ...(hallData || {}),
+                    ...(eloData || {}),
+                    user_id: eloData?.user_id ?? hallData?.user_id ?? uid,
+                    place: eloData?.place ?? hallData?.place,
+                    points: eloRating ?? hallPoints,
+                    rating: eloRating,
+                    nickname: eloData?.nickname ?? hallData?.nickname,
+                    games_played: hallData?.games_played,
+                    wins: hallData?.wins,
+                    win_rate: hallData?.win_rate,
+                    userpic,
+                    takoff,
+                })
             } catch (err) {
                 console.error('Error loading player:', err)
                 setError(err instanceof Error ? err.message : 'Unknown error')
@@ -391,11 +422,13 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                             )}
                             {displayPublicNickname(player.nickname, player.takoff)}
                         </h2>
-                        {player.points != null && (
+                        {(player.points != null || player.rating != null) && (
                             <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
                                 <span style={{ color: '#1D1D1B', fontWeight: 500 }}>
                                     <BrandStarIcon size={14} />{' '}
-                                    {formatPointsRu(Math.round(Number(player.points)))}
+                                    {formatPointsRu(
+                                        Math.round(Number(player.points ?? player.rating))
+                                    )}
                                 </span>
                             </div>
                         )}
@@ -527,6 +560,11 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                         : game.player_2_1
                                 const opponent1 = isTeam1 ? game.player_2_1 : game.player_1_1
                                 const opponent2 = isTeam1 ? game.player_2_2 : game.player_1_2
+                                const { playerScore, opponentScore } = scoresForPlayerTeam(
+                                    game.score_1,
+                                    game.score_2,
+                                    Boolean(isTeam1)
+                                )
 
                                 return (
                                     <div key={game.game_id}>
@@ -541,7 +579,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                                 <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                                                    {won ? '✅ Победа' : '❌ Поражение'} {game.score_1} : {game.score_2}
+                                                    {won ? '✅ Победа' : '❌ Поражение'} {playerScore} : {opponentScore}
                                                 </div>
                                                 <div className="date-muted">{formatDate(game.created_at)}</div>
                                             </div>

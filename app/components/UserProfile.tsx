@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { scoresForPlayerTeam } from '@/lib/playerGameScore'
 import { formatPointsRu, formatWinsGamesLine } from '@/lib/ruCountPhrases'
 import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import { TELEGRAM_INIT_DATA_HEADER } from '@/lib/admin/constants'
@@ -663,7 +664,7 @@ export default function UserProfile() {
         return isTeam1 ? game.score_1 > game.score_2 : game.score_2 > game.score_1
     }
 
-    // Показатели из clubtac_players_hall_of_fame_v3 (названия полей могли измениться)
+    // Место и очки — новый Elo (через /api/user/stats); игры/победы — из hall_of_fame при наличии
     const s = stats?.stats as {
         points?: number
         total_points?: number
@@ -853,6 +854,11 @@ export default function UserProfile() {
                                                 : game.player_2_1
                                         const opponent1 = isTeam1 ? game.player_2_1 : game.player_1_1
                                         const opponent2 = isTeam1 ? game.player_2_2 : game.player_1_2
+                                        const { playerScore, opponentScore } = scoresForPlayerTeam(
+                                            game.score_1,
+                                            game.score_2,
+                                            Boolean(isTeam1)
+                                        )
 
                                         return (
                                             <div key={game.game_id}>
@@ -874,8 +880,8 @@ export default function UserProfile() {
                                                         }}
                                                     >
                                                         <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                                                            {won ? '✅ Победа' : '❌ Поражение'} {game.score_1} :{' '}
-                                                            {game.score_2}
+                                                            {won ? '✅ Победа' : '❌ Поражение'} {playerScore} :{' '}
+                                                            {opponentScore}
                                                         </div>
                                                         <div className="date-muted">{formatDate(game.created_at)}</div>
                                                     </div>
