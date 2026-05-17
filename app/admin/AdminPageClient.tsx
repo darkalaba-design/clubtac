@@ -192,6 +192,7 @@ function adminFetch(input: RequestInfo | URL, init: RequestInit = {}) {
 }
 
 type AdminNavTab = 'events' | 'games' | 'players' | 'admins'
+type EventModalTab = 'participants' | 'games' | 'details'
 
 type AdminPlayerRow = {
     user_id: number
@@ -239,6 +240,7 @@ export default function AdminPageClient() {
     const [eventModalDraft, setEventModalDraft] = useState<EventModalDraft | null>(null)
     const [eventModalCoverBusy, setEventModalCoverBusy] = useState(false)
     const [eventModalCoverMessage, setEventModalCoverMessage] = useState<string | null>(null)
+    const [eventModalTab, setEventModalTab] = useState<EventModalTab>('participants')
 
     const creatingEventRef = useRef(false)
     const [creatingEvent, setCreatingEvent] = useState(false)
@@ -466,6 +468,7 @@ export default function AdminPageClient() {
 
     const openEventModal = (id: string) => {
         setEventModalId(id)
+        setEventModalTab('participants')
         setEventModalEditing(false)
         setEventModalDraft(null)
         setEventModalCoverMessage(null)
@@ -475,6 +478,7 @@ export default function AdminPageClient() {
 
     const closeEventModal = () => {
         setEventModalId(null)
+        setEventModalTab('participants')
         setEventModalLoading(false)
         setEventModalErr(null)
         setEventModalEvent(null)
@@ -658,6 +662,40 @@ export default function AdminPageClient() {
             <span style={{ fontSize: '10px' }}>{label}</span>
         </button>
     )
+
+    const eventModalTabBtn = (tab: EventModalTab, label: string) => (
+        <button
+            key={tab}
+            type="button"
+            onClick={() => setEventModalTab(tab)}
+            style={{
+                flex: 1,
+                padding: '10px 8px',
+                border: 'none',
+                borderBottom: eventModalTab === tab ? '3px solid #FFDF00' : '3px solid transparent',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontWeight: eventModalTab === tab ? 700 : 500,
+                fontSize: '14px',
+                color: eventModalTab === tab ? '#1D1D1B' : '#6B6B69',
+            }}
+        >
+            {label}
+        </button>
+    )
+
+    const eventModalHeaderTitle =
+        eventModalEditing && eventModalDraft
+            ? eventModalDraft.title.trim() || 'Событие'
+            : eventModalEvent?.title?.trim() || 'Событие'
+    const eventModalHeaderDateTime =
+        eventModalEditing && eventModalDraft
+            ? eventModalDraft.startsAtLocal
+                ? formatEventModalDateTime(startsAtLocalToIso(eventModalDraft.startsAtLocal) ?? '')
+                : null
+            : eventModalEvent
+              ? formatEventModalDateTime(eventModalEvent.starts_at)
+              : null
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
@@ -1345,7 +1383,7 @@ export default function AdminPageClient() {
                             style={{
                                 flexShrink: 0,
                                 display: 'flex',
-                                alignItems: 'center',
+                                alignItems: 'flex-start',
                                 justifyContent: 'space-between',
                                 gap: '10px',
                                 padding: '12px 14px',
@@ -1353,7 +1391,26 @@ export default function AdminPageClient() {
                                 backgroundColor: '#FFFFFF',
                             }}
                         >
-                            <div style={{ fontWeight: 700, fontSize: '16px', color: '#1D1D1B' }}>Событие</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                    style={{
+                                        fontWeight: 700,
+                                        fontSize: '17px',
+                                        color: '#1D1D1B',
+                                        lineHeight: 1.25,
+                                        marginBottom: eventModalHeaderDateTime ? '4px' : 0,
+                                    }}
+                                >
+                                    {eventModalHeaderTitle}
+                                </div>
+                                {eventModalHeaderDateTime ? (
+                                    <div style={{ fontSize: '14px', color: '#6B6B69', fontWeight: 500 }}>
+                                        {eventModalHeaderDateTime}
+                                    </div>
+                                ) : eventModalLoading ? (
+                                    <div style={{ fontSize: '14px', color: '#6B6B69' }}>Загрузка…</div>
+                                ) : null}
+                            </div>
                             <button
                                 type="button"
                                 onClick={closeEventModal}
@@ -1373,6 +1430,21 @@ export default function AdminPageClient() {
                                 ×
                             </button>
                         </div>
+
+                        {eventModalEvent && !eventModalEditing ? (
+                            <div
+                                style={{
+                                    flexShrink: 0,
+                                    display: 'flex',
+                                    borderBottom: '1px solid #EBE8E0',
+                                    backgroundColor: '#FFFFFF',
+                                }}
+                            >
+                                {eventModalTabBtn('participants', 'Участники')}
+                                {eventModalTabBtn('games', 'Партии')}
+                                {eventModalTabBtn('details', 'Детали')}
+                            </div>
+                        ) : null}
 
                         <div
                             style={{
@@ -1409,194 +1481,11 @@ export default function AdminPageClient() {
                                         <p style={{ margin: '0 0 12px', color: '#B71C1C', fontSize: '13px' }}>{eventModalErr}</p>
                                     ) : null}
 
-                                    {!eventModalEditing ? (
-                                        <>
-                                            {eventModalEvent.cover?.trim() ? (
-                                                <div
-                                                    style={{
-                                                        width: '100%',
-                                                        aspectRatio: '2 / 1',
-                                                        maxHeight: 220,
-                                                        borderRadius: '8px',
-                                                        overflow: 'hidden',
-                                                        backgroundColor: '#EBE8E0',
-                                                        marginBottom: '14px',
-                                                    }}
-                                                >
-                                                    <img
-                                                        src={eventModalEvent.cover.trim()}
-                                                        alt=""
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    style={{
-                                                        marginBottom: '14px',
-                                                        padding: '14px 16px',
-                                                        borderRadius: '8px',
-                                                        backgroundColor: '#F5F5F5',
-                                                        border: '1px dashed #C4C4C2',
-                                                        fontSize: '14px',
-                                                        color: '#6B6B69',
-                                                        lineHeight: 1.45,
-                                                    }}
-                                                >
-                                                    Обложки пока нет (например, Make ещё не успел сгенерировать). В режиме
-                                                    «Редактировать» можно отправить запрос на генерацию ещё раз.
-                                                </div>
-                                            )}
-
-                                            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: '#1D1D1B' }}>
-                                                {eventModalEvent.title}
-                                            </h3>
-                                            <p style={{ margin: '0 0 14px', fontSize: '15px', color: '#1D1D1B', fontWeight: 600 }}>
-                                                {formatEventModalDateTime(eventModalEvent.starts_at)}
-                                            </p>
-                                            <AdminAddressLine address={eventModalEvent.address} style={{ marginBottom: '8px' }} />
-                                            {eventModalEvent.duration_minutes != null ? (
-                                                <p style={{ margin: '0 0 8px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
-                                                    ⏱ {eventModalEvent.duration_minutes} мин
-                                                </p>
-                                            ) : null}
-                                            <p style={{ margin: '0 0 14px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
-                                                {eventModalEvent.price != null && eventModalEvent.price > 0
-                                                    ? `💰 ${eventModalEvent.price} ₽`
-                                                    : '💰 Бесплатно'}
-                                            </p>
-
-                                            <div style={{ margin: '0 0 20px' }}>
-                                                <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '4px' }}>Описание</div>
-                                                <div
-                                                    style={{
-                                                        fontSize: '14px',
-                                                        lineHeight: 1.5,
-                                                        whiteSpace: 'pre-wrap',
-                                                        color: '#1D1D1B',
-                                                    }}
-                                                >
-                                                    {eventModalEvent.description?.trim() ? eventModalEvent.description : '—'}
-                                                </div>
-                                            </div>
-
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Тип</div>
-                                                    <div style={{ fontSize: '13px' }}>
-                                                        {getEventTypeNameRu(eventModalEvent.type)} ({eventModalEvent.type})
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Статус</div>
-                                                    <div style={{ fontSize: '13px' }}>
-                                                        {eventStatusLabelRu(eventModalEvent.status)}{' '}
-                                                        <span style={{ color: '#6B6B69' }}>({eventModalEvent.status})</span>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>
-                                                        Макс. участников
-                                                    </div>
-                                                    <div style={{ fontSize: '13px' }}>
-                                                        {eventModalEvent.players_limit != null
-                                                            ? String(eventModalEvent.players_limit)
-                                                            : '—'}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '10px' }}>Участники</div>
-                                            {eventModalParticipants.length === 0 ? (
-                                                <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#6B6B69' }}>Пока никто не записан.</p>
-                                            ) : (
-                                                <ul
-                                                    style={{
-                                                        margin: '0 0 16px',
-                                                        padding: 0,
-                                                        listStyle: 'none',
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        gap: '10px',
-                                                    }}
-                                                >
-                                                    {eventModalParticipants.map((p) => (
-                                                        <li
-                                                            key={`${p.user_id}-${p.created_at ?? ''}-${p.payment_status}`}
-                                                            style={{
-                                                                border: '1px solid #EBE8E0',
-                                                                borderRadius: '8px',
-                                                                padding: '10px 12px',
-                                                                fontSize: '14px',
-                                                            }}
-                                                        >
-                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'baseline' }}>
-                                                                <Link
-                                                                    href={`/player/${p.user_id}`}
-                                                                    style={{ fontWeight: 600, color: '#1B5E20' }}
-                                                                >
-                                                                    {formatParticipantDisplay(p)}
-                                                                </Link>
-                                                                <span style={{ fontSize: '12px', color: '#6B6B69' }}>
-                                                                    {paymentStatusLabelRu(p.payment_status)}
-                                                                </span>
-                                                            </div>
-                                                            <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                                                                user_id: {p.user_id}
-                                                                {p.created_at
-                                                                    ? ` · ${new Date(p.created_at).toLocaleString('ru-RU')}`
-                                                                    : ''}
-                                                            </div>
-                                                            {p.paylink?.trim() ? (
-                                                                <a
-                                                                    href={p.paylink.trim()}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    style={{ fontSize: '13px', color: '#1565C0', marginTop: '6px', display: 'inline-block' }}
-                                                                >
-                                                                    Ссылка на оплату
-                                                                </a>
-                                                            ) : null}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            )}
-
-                                            <p
-                                                style={{
-                                                    margin: '0 0 14px',
-                                                    fontSize: '14px',
-                                                    color: '#6B6B69',
-                                                    lineHeight: 1.45,
-                                                }}
-                                            >
-                                                🏢 {adminClubs.find((c) => c.id === eventModalEvent.club_id)?.name ?? '—'}
-                                            </p>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setEventModalEditing(true)
-                                                    setEventModalDraft(eventToModalDraft(eventModalEvent))
-                                                    setEventModalErr(null)
-                                                    setEventModalCoverMessage(null)
-                                                }}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '12px',
-                                                    borderRadius: '8px',
-                                                    border: 'none',
-                                                    backgroundColor: '#FFDF00',
-                                                    color: '#1D1D1B',
-                                                    fontWeight: 700,
-                                                    cursor: 'pointer',
-                                                    fontSize: '15px',
-                                                }}
-                                            >
-                                                Редактировать
-                                            </button>
-                                        </>
-                                    ) : eventModalDraft ? (
+                                    {eventModalEditing && eventModalDraft ? (
                                         <form onSubmit={saveEventModal} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#6B6B69' }}>
+                                                Редактирование события
+                                            </p>
                                             <div>
                                                 <div style={fieldLabel}>Название</div>
                                                 <input
@@ -1824,8 +1713,8 @@ export default function AdminPageClient() {
                                                             margin: '10px 0 0',
                                                             fontSize: '13px',
                                                             color: eventModalCoverMessage.includes('отправлен')
-                                                            ? '#2E7D32'
-                                                            : '#B71C1C',
+                                                                ? '#2E7D32'
+                                                                : '#B71C1C',
                                                             lineHeight: 1.45,
                                                         }}
                                                     >
@@ -1890,7 +1779,246 @@ export default function AdminPageClient() {
                                                 </button>
                                             </div>
                                         </form>
-                                    ) : null}
+                                    ) : (
+                                        <>
+                                            {eventModalTab === 'participants' ? (
+                                                <>
+                                                    <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '10px' }}>
+                                                        Участники
+                                                        <span style={{ fontWeight: 500, color: '#6B6B69', fontSize: '14px' }}>
+                                                            {' '}
+                                                            ({eventModalParticipants.length})
+                                                        </span>
+                                                    </div>
+                                                    {eventModalParticipants.length === 0 ? (
+                                                        <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>
+                                                            Пока никто не записан.
+                                                        </p>
+                                                    ) : (
+                                                        <ul
+                                                            style={{
+                                                                margin: 0,
+                                                                padding: 0,
+                                                                listStyle: 'none',
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                gap: '10px',
+                                                            }}
+                                                        >
+                                                            {eventModalParticipants.map((p) => (
+                                                                <li
+                                                                    key={`${p.user_id}-${p.created_at ?? ''}-${p.payment_status}`}
+                                                                    style={{
+                                                                        border: '1px solid #EBE8E0',
+                                                                        borderRadius: '8px',
+                                                                        padding: '10px 12px',
+                                                                        fontSize: '14px',
+                                                                    }}
+                                                                >
+                                                                    <div
+                                                                        style={{
+                                                                            display: 'flex',
+                                                                            flexWrap: 'wrap',
+                                                                            gap: '8px',
+                                                                            alignItems: 'baseline',
+                                                                        }}
+                                                                    >
+                                                                        <Link
+                                                                            href={`/player/${p.user_id}`}
+                                                                            style={{ fontWeight: 600, color: '#1B5E20' }}
+                                                                        >
+                                                                            {formatParticipantDisplay(p)}
+                                                                        </Link>
+                                                                        <span style={{ fontSize: '12px', color: '#6B6B69' }}>
+                                                                            {paymentStatusLabelRu(p.payment_status)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div
+                                                                        style={{
+                                                                            fontSize: '12px',
+                                                                            color: '#6B6B69',
+                                                                            marginTop: '4px',
+                                                                        }}
+                                                                    >
+                                                                        user_id: {p.user_id}
+                                                                        {p.created_at
+                                                                            ? ` · ${new Date(p.created_at).toLocaleString('ru-RU')}`
+                                                                            : ''}
+                                                                    </div>
+                                                                    {p.paylink?.trim() ? (
+                                                                        <a
+                                                                            href={p.paylink.trim()}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            style={{
+                                                                                fontSize: '13px',
+                                                                                color: '#1565C0',
+                                                                                marginTop: '6px',
+                                                                                display: 'inline-block',
+                                                                            }}
+                                                                        >
+                                                                            Ссылка на оплату
+                                                                        </a>
+                                                                    ) : null}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </>
+                                            ) : null}
+
+                                            {eventModalTab === 'games' ? (
+                                                <>
+                                                    <p style={{ margin: '0 0 14px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
+                                                        Партии, сыгранные участниками на этом событии.
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '12px',
+                                                            borderRadius: '8px',
+                                                            border: 'none',
+                                                            backgroundColor: '#FFDF00',
+                                                            color: '#1D1D1B',
+                                                            fontWeight: 700,
+                                                            cursor: 'pointer',
+                                                            fontSize: '15px',
+                                                        }}
+                                                    >
+                                                        Добавить партию
+                                                    </button>
+                                                </>
+                                            ) : null}
+
+                                            {eventModalTab === 'details' ? (
+                                                <>
+                                            {eventModalEvent.cover?.trim() ? (
+                                                <div
+                                                    style={{
+                                                        width: '100%',
+                                                        aspectRatio: '2 / 1',
+                                                        maxHeight: 220,
+                                                        borderRadius: '8px',
+                                                        overflow: 'hidden',
+                                                        backgroundColor: '#EBE8E0',
+                                                        marginBottom: '14px',
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={eventModalEvent.cover.trim()}
+                                                        alt=""
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    style={{
+                                                        marginBottom: '14px',
+                                                        padding: '14px 16px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: '#F5F5F5',
+                                                        border: '1px dashed #C4C4C2',
+                                                        fontSize: '14px',
+                                                        color: '#6B6B69',
+                                                        lineHeight: 1.45,
+                                                    }}
+                                                >
+                                                    Обложки пока нет (например, Make ещё не успел сгенерировать). В режиме
+                                                    «Редактировать» можно отправить запрос на генерацию ещё раз.
+                                                </div>
+                                            )}
+
+                                            <AdminAddressLine address={eventModalEvent.address} style={{ marginBottom: '8px' }} />
+                                            {eventModalEvent.duration_minutes != null ? (
+                                                <p style={{ margin: '0 0 8px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
+                                                    ⏱ {eventModalEvent.duration_minutes} мин
+                                                </p>
+                                            ) : null}
+                                            <p style={{ margin: '0 0 14px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
+                                                {eventModalEvent.price != null && eventModalEvent.price > 0
+                                                    ? `💰 ${eventModalEvent.price} ₽`
+                                                    : '💰 Бесплатно'}
+                                            </p>
+
+                                            <div style={{ margin: '0 0 20px' }}>
+                                                <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '4px' }}>Описание</div>
+                                                <div
+                                                    style={{
+                                                        fontSize: '14px',
+                                                        lineHeight: 1.5,
+                                                        whiteSpace: 'pre-wrap',
+                                                        color: '#1D1D1B',
+                                                    }}
+                                                >
+                                                    {eventModalEvent.description?.trim() ? eventModalEvent.description : '—'}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Тип</div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {getEventTypeNameRu(eventModalEvent.type)} ({eventModalEvent.type})
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>Статус</div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {eventStatusLabelRu(eventModalEvent.status)}{' '}
+                                                        <span style={{ color: '#6B6B69' }}>({eventModalEvent.status})</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginBottom: '2px' }}>
+                                                        Макс. участников
+                                                    </div>
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        {eventModalEvent.players_limit != null
+                                                            ? String(eventModalEvent.players_limit)
+                                                            : '—'}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <p
+                                                style={{
+                                                    margin: '0 0 14px',
+                                                    fontSize: '14px',
+                                                    color: '#6B6B69',
+                                                    lineHeight: 1.45,
+                                                }}
+                                            >
+                                                🏢 {adminClubs.find((c) => c.id === eventModalEvent.club_id)?.name ?? '—'}
+                                            </p>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setEventModalTab('details')
+                                                    setEventModalEditing(true)
+                                                    setEventModalDraft(eventToModalDraft(eventModalEvent))
+                                                    setEventModalErr(null)
+                                                    setEventModalCoverMessage(null)
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px',
+                                                    borderRadius: '8px',
+                                                    border: 'none',
+                                                    backgroundColor: '#FFDF00',
+                                                    color: '#1D1D1B',
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer',
+                                                    fontSize: '15px',
+                                                }}
+                                            >
+                                                Редактировать
+                                            </button>
+                                                </>
+                                            ) : null}
+                                        </>
+                                    )}
                                 </>
                             ) : null}
                         </div>
