@@ -9,6 +9,7 @@ import { useUser } from '../contexts/UserContext'
 import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 import GeoIcon from './GeoIcon'
 import ClubIcon from './ClubIcon'
+import ExpandChevronIcon from './ExpandChevronIcon'
 
 function EventAddressLine({ address }: { address: string }) {
     return (
@@ -1654,15 +1655,13 @@ export default function GamesList() {
                                 </div>
                                 <div
                                     style={{
-                                        fontSize: '20px',
-                                        color: '#6B6B69',
-                                        transition: 'transform 0.3s',
-                                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                                         marginLeft: '12px',
                                         flexShrink: 0,
+                                        display: 'flex',
+                                        alignItems: 'center',
                                     }}
                                 >
-                                    ▼
+                                    <ExpandChevronIcon open={isExpanded} size={24} />
                                 </div>
                             </div>
 

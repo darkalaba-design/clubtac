@@ -19,8 +19,8 @@ function tabButtonStyle(isActive: boolean): React.CSSProperties {
         gap: '4px',
         padding: '8px',
         border: 'none',
-        borderRadius: isActive ? '8px' : 0,
-        background: isActive ? '#FFDF00' : 'transparent',
+        borderBottom: isActive ? '3px solid #FFDF00' : '3px solid transparent',
+        background: 'transparent',
         cursor: 'pointer',
         color: isActive ? '#1D1D1B' : '#6B6B69',
     }
@@ -72,9 +72,8 @@ export default function Tabs({
                     marginLeft: 'auto',
                     marginRight: 'auto',
                     display: 'flex',
-                    gap: '4px',
+                    gap: 0,
                     minWidth: 0,
-                    padding: '0 8px',
                 }}
             >
             <button onClick={() => onChange('games')} style={tabButtonStyle(active === 'games')}>
