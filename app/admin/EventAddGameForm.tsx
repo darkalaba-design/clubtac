@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { AdminPlayerSearchField, type AdminPlayerOption } from './AdminPlayerSearchField'
 
 export type EventGameDraft = {
@@ -22,7 +22,8 @@ const EMPTY_DRAFT: EventGameDraft = {
 }
 
 const SCORE_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8] as const
-const FIELD_LABEL_WIDTH = 68
+
+type ScoreOutcome = 'neutral' | 'win' | 'lose' | 'tie'
 
 type Props = {
     players: AdminPlayerOption[]
@@ -30,72 +31,124 @@ type Props = {
     onSubmit: (draft: EventGameDraft) => void
 }
 
+function scoreOutcomeForTeam(
+    myScore: number | null,
+    otherScore: number | null
+): ScoreOutcome {
+    if (myScore == null || otherScore == null) return 'neutral'
+    if (myScore === otherScore) return 'tie'
+    if (myScore > otherScore) return 'win'
+    return 'lose'
+}
+
+function scorePickerStyles(outcome: ScoreOutcome, digitActive: boolean): {
+    bar: CSSProperties
+    digit: CSSProperties
+} {
+    if (outcome === 'win') {
+        return {
+            bar: {
+                border: '1px solid #81C784',
+                backgroundColor: '#F1F8E9',
+            },
+            digit: {
+                backgroundColor: digitActive ? '#C8E6C9' : '#F1F8E9',
+                color: '#1B5E20',
+                fontWeight: digitActive ? 700 : 500,
+            },
+        }
+    }
+    if (outcome === 'lose') {
+        return {
+            bar: {
+                border: '1px solid #E57373',
+                backgroundColor: '#FFF5F5',
+            },
+            digit: {
+                backgroundColor: digitActive ? '#FFCDD2' : '#FFF5F5',
+                color: '#B71C1C',
+                fontWeight: digitActive ? 700 : 500,
+            },
+        }
+    }
+    if (outcome === 'tie') {
+        return {
+            bar: {
+                border: '1px solid #D0D0CE',
+                backgroundColor: '#F0F0EE',
+            },
+            digit: {
+                backgroundColor: digitActive ? '#E0E0DE' : '#F0F0EE',
+                color: '#6B6B69',
+                fontWeight: digitActive ? 700 : 500,
+            },
+        }
+    }
+    return {
+        bar: {
+            border: '1px solid #EBE8E0',
+            backgroundColor: '#FFFFFF',
+        },
+        digit: {
+            backgroundColor: digitActive ? '#E8E8E6' : '#FFFFFF',
+            color: '#1D1D1B',
+            fontWeight: digitActive ? 700 : 500,
+        },
+    }
+}
+
 function ScorePicker({
-    label,
     value,
+    outcome,
     onChange,
 }: {
-    label: string
     value: number | null
+    outcome: ScoreOutcome
     onChange: (score: number) => void
 }) {
+    const { bar } = scorePickerStyles(outcome, false)
+
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <div
-                style={{
-                    flexShrink: 0,
-                    width: FIELD_LABEL_WIDTH,
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#1D1D1B',
-                    lineHeight: 1.2,
-                }}
-            >
-                {label}
-            </div>
-            <div
-                style={{
-                    flex: 1,
-                    minWidth: 0,
-                    display: 'flex',
-                    border: '1px solid #EBE8E0',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    backgroundColor: '#FFFFFF',
-                }}
-                role="group"
-                aria-label={label}
-            >
-                {SCORE_OPTIONS.map((n, index) => {
-                    const active = value === n
-                    return (
-                        <button
-                            key={n}
-                            type="button"
-                            onClick={() => onChange(n)}
-                            aria-pressed={active}
-                            style={{
-                                flex: 1,
-                                minWidth: 0,
-                                height: '38px',
-                                margin: 0,
-                                padding: 0,
-                                border: 'none',
-                                borderLeft: index > 0 ? '1px solid #EBE8E0' : undefined,
-                                borderRadius: 0,
-                                backgroundColor: active ? '#E8F5E9' : '#FFFFFF',
-                                color: active ? '#1B5E20' : '#1D1D1B',
-                                fontWeight: active ? 700 : 500,
-                                fontSize: '15px',
-                                lineHeight: 1,
-                                cursor: 'pointer',
-                            }}
-                        >
-                            {n}
-                        </button>
-                    )
-                })}
-            </div>
+        <div
+            style={{
+                width: '100%',
+                display: 'flex',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                marginBottom: '4px',
+                ...bar,
+            }}
+            role="group"
+            aria-label="Счёт команды"
+        >
+            {SCORE_OPTIONS.map((n, index) => {
+                const active = value === n
+                const { digit } = scorePickerStyles(outcome, active)
+                return (
+                    <button
+                        key={n}
+                        type="button"
+                        onClick={() => onChange(n)}
+                        aria-pressed={active}
+                        style={{
+                            flex: 1,
+                            minWidth: 0,
+                            height: '38px',
+                            margin: 0,
+                            padding: 0,
+                            border: 'none',
+                            borderLeft: index > 0 ? '1px solid rgba(0,0,0,0.08)' : undefined,
+                            borderRadius: 0,
+                            fontSize: '15px',
+                            lineHeight: 1,
+                            cursor: 'pointer',
+                            ...digit,
+                        }}
+                    >
+                        {n}
+                    </button>
+                )
+            })}
         </div>
     )
 }
@@ -106,6 +159,7 @@ function TeamBlock({
     player1,
     player2,
     score,
+    scoreOutcome,
     excludeForPlayer1,
     excludeForPlayer2,
     onPlayer1Change,
@@ -117,6 +171,7 @@ function TeamBlock({
     player1: AdminPlayerOption | null
     player2: AdminPlayerOption | null
     score: number | null
+    scoreOutcome: ScoreOutcome
     excludeForPlayer1: number[]
     excludeForPlayer2: number[]
     onPlayer1Change: (p: AdminPlayerOption | null) => void
@@ -130,7 +185,7 @@ function TeamBlock({
                 padding: '14px',
                 borderRadius: '8px',
                 border: '1px solid #EBE8E0',
-                backgroundColor: '#FFFEF7',
+                backgroundColor: '#F5F5F5',
             }}
         >
             <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: '#1D1D1B' }}>{title}</h3>
@@ -148,7 +203,7 @@ function TeamBlock({
                 value={player2}
                 onChange={onPlayer2Change}
             />
-            <ScorePicker label="Счёт" value={score} onChange={onScoreChange} />
+            <ScorePicker value={score} outcome={scoreOutcome} onChange={onScoreChange} />
         </section>
     )
 }
@@ -165,6 +220,9 @@ export function EventAddGameForm({ players, onCancel, onSubmit }: Props) {
         if (draft.team2Player2) ids.push(draft.team2Player2.user_id)
         return ids
     }, [draft])
+
+    const team1ScoreOutcome = scoreOutcomeForTeam(draft.team1Score, draft.team2Score)
+    const team2ScoreOutcome = scoreOutcomeForTeam(draft.team2Score, draft.team1Score)
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -190,6 +248,7 @@ export function EventAddGameForm({ players, onCancel, onSubmit }: Props) {
                 player1={draft.team1Player1}
                 player2={draft.team1Player2}
                 score={draft.team1Score}
+                scoreOutcome={team1ScoreOutcome}
                 excludeForPlayer1={selectedIds.filter((id) => id !== draft.team1Player1?.user_id)}
                 excludeForPlayer2={selectedIds.filter((id) => id !== draft.team1Player2?.user_id)}
                 onPlayer1Change={(p) => setDraft((d) => ({ ...d, team1Player1: p }))}
@@ -203,6 +262,7 @@ export function EventAddGameForm({ players, onCancel, onSubmit }: Props) {
                 player1={draft.team2Player1}
                 player2={draft.team2Player2}
                 score={draft.team2Score}
+                scoreOutcome={team2ScoreOutcome}
                 excludeForPlayer1={selectedIds.filter((id) => id !== draft.team2Player1?.user_id)}
                 excludeForPlayer2={selectedIds.filter((id) => id !== draft.team2Player2?.user_id)}
                 onPlayer1Change={(p) => setDraft((d) => ({ ...d, team2Player1: p }))}

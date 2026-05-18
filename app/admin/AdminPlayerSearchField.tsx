@@ -124,7 +124,7 @@ export function AdminPlayerSearchField({
                 </div>
                 <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
                     <input
-                        type="search"
+                        type="text"
                         value={query}
                         disabled={disabled}
                         onChange={(e) => {
