@@ -22,6 +22,8 @@ type Props = {
     disabled?: boolean
 }
 
+const LABEL_WIDTH = 68
+
 export function adminPlayerDisplayName(p: AdminPlayerOption): string {
     if (p.takoff) return displayPublicNickname(null, true)
     if (p.nickname?.trim()) return p.nickname.trim()
@@ -103,59 +105,85 @@ export function AdminPlayerSearchField({
         setDropdownOpen(false)
     }
 
+    const showClear = Boolean(value)
+
     return (
-        <div ref={rootRef} style={{ marginBottom: '12px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#1D1D1B', marginBottom: '6px' }}>
-                {label}
-            </div>
-            <input
-                type="search"
-                value={query}
-                disabled={disabled}
-                onChange={(e) => {
-                    const v = e.target.value
-                    setQuery(v)
-                    if (value && v !== adminPlayerDisplayName(value)) {
-                        onChange(null)
-                    }
-                    setDropdownOpen(true)
-                }}
-                onFocus={() => setDropdownOpen(true)}
-                placeholder="Ник, имя, @username, id…"
-                autoComplete="off"
-                style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #EBE8E0',
-                    boxSizing: 'border-box',
-                    fontSize: '15px',
-                    backgroundColor: disabled ? '#F5F5F5' : '#FFFFFF',
-                }}
-            />
-            {value ? (
-                <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={clearField}
+        <div ref={rootRef} style={{ marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
                     style={{
-                        marginTop: '4px',
-                        padding: 0,
-                        border: 'none',
-                        background: 'none',
-                        color: '#6B6B69',
-                        fontSize: '12px',
-                        cursor: disabled ? 'not-allowed' : 'pointer',
-                        textDecoration: 'underline',
+                        flexShrink: 0,
+                        width: LABEL_WIDTH,
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#1D1D1B',
+                        lineHeight: 1.2,
                     }}
                 >
-                    Сбросить выбор
-                </button>
-            ) : null}
+                    {label}
+                </div>
+                <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+                    <input
+                        type="search"
+                        value={query}
+                        disabled={disabled}
+                        onChange={(e) => {
+                            const v = e.target.value
+                            setQuery(v)
+                            if (value && v !== adminPlayerDisplayName(value)) {
+                                onChange(null)
+                            }
+                            setDropdownOpen(true)
+                        }}
+                        onFocus={() => setDropdownOpen(true)}
+                        placeholder="Поиск…"
+                        autoComplete="off"
+                        style={{
+                            width: '100%',
+                            padding: showClear ? '9px 36px 9px 10px' : '9px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid #EBE8E0',
+                            boxSizing: 'border-box',
+                            fontSize: '14px',
+                            backgroundColor: disabled ? '#F5F5F5' : '#FFFFFF',
+                        }}
+                    />
+                    {showClear ? (
+                        <button
+                            type="button"
+                            disabled={disabled}
+                            onClick={clearField}
+                            aria-label="Сбросить выбор"
+                            style={{
+                                position: 'absolute',
+                                right: '4px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                width: '28px',
+                                height: '28px',
+                                padding: 0,
+                                border: 'none',
+                                borderRadius: '6px',
+                                background: '#F5F5F5',
+                                color: '#6B6B69',
+                                fontSize: '18px',
+                                lineHeight: 1,
+                                cursor: disabled ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            ×
+                        </button>
+                    ) : null}
+                </div>
+            </div>
             {dropdownOpen && filteredPlayers.length > 0 ? (
                 <ul
                     style={{
                         margin: '4px 0 0',
+                        marginLeft: LABEL_WIDTH + 8,
                         padding: 0,
                         listStyle: 'none',
                         border: '1px solid #EBE8E0',
@@ -194,7 +222,16 @@ export function AdminPlayerSearchField({
                 </ul>
             ) : null}
             {dropdownOpen && query.trim() && filteredPlayers.length === 0 ? (
-                <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#6B6B69' }}>Никого не найдено.</p>
+                <p
+                    style={{
+                        margin: '6px 0 0',
+                        marginLeft: LABEL_WIDTH + 8,
+                        fontSize: '13px',
+                        color: '#6B6B69',
+                    }}
+                >
+                    Никого не найдено.
+                </p>
             ) : null}
         </div>
     )

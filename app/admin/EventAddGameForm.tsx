@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useMemo, useState } from 'react'
 import { AdminPlayerSearchField, type AdminPlayerOption } from './AdminPlayerSearchField'
 
 export type EventGameDraft = {
@@ -22,26 +22,12 @@ const EMPTY_DRAFT: EventGameDraft = {
 }
 
 const SCORE_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8] as const
+const FIELD_LABEL_WIDTH = 68
 
 type Props = {
     players: AdminPlayerOption[]
     onCancel: () => void
     onSubmit: (draft: EventGameDraft) => void
-}
-
-function scoreChipStyle(active: boolean): CSSProperties {
-    return {
-        minWidth: '36px',
-        height: '36px',
-        padding: '0 10px',
-        fontSize: '15px',
-        fontWeight: active ? 700 : 500,
-        borderRadius: '8px',
-        border: active ? '2px solid #1B5E20' : '1px solid #EBE8E0',
-        backgroundColor: active ? '#E8F5E9' : '#FFFFFF',
-        color: '#1D1D1B',
-        cursor: 'pointer',
-    }
 }
 
 function ScorePicker({
@@ -54,20 +40,61 @@ function ScorePicker({
     onChange: (score: number) => void
 }) {
     return (
-        <div style={{ marginBottom: '4px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#1D1D1B', marginBottom: '8px' }}>{label}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {SCORE_OPTIONS.map((n) => (
-                    <button
-                        key={n}
-                        type="button"
-                        onClick={() => onChange(n)}
-                        style={scoreChipStyle(value === n)}
-                        aria-pressed={value === n}
-                    >
-                        {n}
-                    </button>
-                ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <div
+                style={{
+                    flexShrink: 0,
+                    width: FIELD_LABEL_WIDTH,
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#1D1D1B',
+                    lineHeight: 1.2,
+                }}
+            >
+                {label}
+            </div>
+            <div
+                style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: 'flex',
+                    border: '1px solid #EBE8E0',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    backgroundColor: '#FFFFFF',
+                }}
+                role="group"
+                aria-label={label}
+            >
+                {SCORE_OPTIONS.map((n, index) => {
+                    const active = value === n
+                    return (
+                        <button
+                            key={n}
+                            type="button"
+                            onClick={() => onChange(n)}
+                            aria-pressed={active}
+                            style={{
+                                flex: 1,
+                                minWidth: 0,
+                                height: '38px',
+                                margin: 0,
+                                padding: 0,
+                                border: 'none',
+                                borderLeft: index > 0 ? '1px solid #EBE8E0' : undefined,
+                                borderRadius: 0,
+                                backgroundColor: active ? '#E8F5E9' : '#FFFFFF',
+                                color: active ? '#1B5E20' : '#1D1D1B',
+                                fontWeight: active ? 700 : 500,
+                                fontSize: '15px',
+                                lineHeight: 1,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            {n}
+                        </button>
+                    )
+                })}
             </div>
         </div>
     )
