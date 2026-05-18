@@ -15,6 +15,8 @@ import {
 import { EventParticipantAdminCard } from './EventParticipantAdminCard'
 import { EventAddParticipantPicker } from './EventAddParticipantPicker'
 import { EventAddGameForm, type EventGameDraft } from './EventAddGameForm'
+import type { EventGameSummaryRow } from '@/lib/admin/eventGames'
+import { PlayedGameRow } from '../components/PlayedGameRow'
 import { participantRefundAmount } from '@/lib/admin/eventParticipantWallet'
 import GeoIcon from '../components/GeoIcon'
 import GamesTabIcon from '../components/GamesTabIcon'
@@ -270,6 +272,8 @@ export default function AdminPageClient() {
     const [eventModalParticipants, setEventModalParticipants] = useState<EventParticipantRow[]>([])
     const [eventModalEditing, setEventModalEditing] = useState(false)
     const [eventModalAddingGame, setEventModalAddingGame] = useState(false)
+    const [eventModalGames, setEventModalGames] = useState<EventGameSummaryRow[]>([])
+    const [eventModalGamesLoading, setEventModalGamesLoading] = useState(false)
     const [eventModalDraft, setEventModalDraft] = useState<EventModalDraft | null>(null)
     const [eventModalCoverBusy, setEventModalCoverBusy] = useState(false)
     const [eventModalCoverMessage, setEventModalCoverMessage] = useState<string | null>(null)
@@ -458,21 +462,46 @@ export default function AdminPageClient() {
         }
     }
 
+    const refetchEventGames = useCallback(async (id: string) => {
+        setEventModalGamesLoading(true)
+        try {
+            const r = await adminFetch(`/api/admin/events/${encodeURIComponent(id)}/games`)
+            const j = await r.json().catch(() => ({}))
+            if (!r.ok) throw new Error(typeof j.error === 'string' ? j.error : r.statusText)
+            setEventModalGames((j.games as EventGameSummaryRow[]) || [])
+        } catch {
+            setEventModalGames([])
+        } finally {
+            setEventModalGamesLoading(false)
+        }
+    }, [])
+
     const refetchEventModal = useCallback(async (id: string) => {
         setEventModalLoading(true)
         setEventModalErr(null)
         try {
-            const r = await adminFetch(`/api/admin/events/${encodeURIComponent(id)}`)
-            const j = await r.json().catch(() => ({}))
-            if (!r.ok) throw new Error(typeof j.error === 'string' ? j.error : r.statusText)
-            setEventModalEvent(j.event as EventRow)
-            setEventModalParticipants((j.participants as EventParticipantRow[]) || [])
+            const [evRes, gamesRes] = await Promise.all([
+                adminFetch(`/api/admin/events/${encodeURIComponent(id)}`),
+                adminFetch(`/api/admin/events/${encodeURIComponent(id)}/games`),
+            ])
+            const ej = await evRes.json().catch(() => ({}))
+            const gj = await gamesRes.json().catch(() => ({}))
+            if (!evRes.ok) throw new Error(typeof ej.error === 'string' ? ej.error : evRes.statusText)
+            setEventModalEvent(ej.event as EventRow)
+            setEventModalParticipants((ej.participants as EventParticipantRow[]) || [])
+            if (gamesRes.ok) {
+                setEventModalGames((gj.games as EventGameSummaryRow[]) || [])
+            } else {
+                setEventModalGames([])
+            }
         } catch (e) {
             setEventModalErr(e instanceof Error ? e.message : 'Ошибка загрузки')
             setEventModalEvent(null)
             setEventModalParticipants([])
+            setEventModalGames([])
         } finally {
             setEventModalLoading(false)
+            setEventModalGamesLoading(false)
         }
     }, [])
 
@@ -523,6 +552,8 @@ export default function AdminPageClient() {
         setEventModalErr(null)
         setEventModalEvent(null)
         setEventModalParticipants([])
+        setEventModalGames([])
+        setEventModalGamesLoading(false)
         setEventModalEditing(false)
         setEventModalAddingGame(false)
         setEventModalDraft(null)
@@ -538,9 +569,45 @@ export default function AdminPageClient() {
         setEventModalErr(null)
     }
 
-    const submitAddEventGame = (_draft: EventGameDraft) => {
-        // Сохранение в БД — отдельным шагом
-        setEventModalAddingGame(false)
+    const submitAddEventGame = async (draft: EventGameDraft) => {
+        if (!eventModalId || participantBusy) return
+        if (
+            !draft.team1Player1 ||
+            !draft.team1Player2 ||
+            !draft.team2Player1 ||
+            !draft.team2Player2 ||
+            draft.team1Score == null ||
+            draft.team2Score == null
+        ) {
+            return
+        }
+        setParticipantBusy(true)
+        setEventModalErr(null)
+        try {
+            const res = await adminFetch(`/api/admin/events/${encodeURIComponent(eventModalId)}/games`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    team1_player1_id: draft.team1Player1.user_id,
+                    team1_player2_id: draft.team1Player2.user_id,
+                    team1_score: draft.team1Score,
+                    team2_player1_id: draft.team2Player1.user_id,
+                    team2_player2_id: draft.team2Player2.user_id,
+                    team2_score: draft.team2Score,
+                }),
+            })
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+            }
+            setEventModalAddingGame(false)
+            await refetchEventGames(eventModalId)
+        } catch (e) {
+            setEventModalErr(e instanceof Error ? e.message : 'Не удалось добавить партию')
+            throw e
+        } finally {
+            setParticipantBusy(false)
+        }
     }
 
     const admitParticipant = async (participantId: string | number, method: 'cash' | 'free') => {
@@ -1962,9 +2029,7 @@ export default function AdminPageClient() {
                                                         activeParticipantUserIds={eventModalActiveParticipantUserIds}
                                                         eventPrice={eventModalEvent?.price ?? null}
                                                         busy={participantBusy}
-                                                        onAdd={async (userId, method) => {
-                                                            await addEventParticipant(userId, method)
-                                                        }}
+                                                        onAdd={addEventParticipant}
                                                     />
                                                     {eventModalParticipants.length === 0 ? (
                                                         <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>
@@ -2019,6 +2084,36 @@ export default function AdminPageClient() {
                                                     <p style={{ margin: '0 0 14px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
                                                         Партии, сыгранные участниками на этом событии.
                                                     </p>
+                                                    {eventModalGamesLoading ? (
+                                                        <p style={{ margin: '0 0 14px', fontSize: '14px', color: '#6B6B69' }}>
+                                                            Загрузка партий…
+                                                        </p>
+                                                    ) : null}
+                                                    {!eventModalGamesLoading && eventModalGames.length > 0 ? (
+                                                        <div
+                                                            style={{
+                                                                marginBottom: '14px',
+                                                                border: '1px solid #EBE8E0',
+                                                                borderRadius: '8px',
+                                                                overflow: 'hidden',
+                                                                backgroundColor: '#FFFFFF',
+                                                            }}
+                                                        >
+                                                            {eventModalGames.map((game, index) => (
+                                                                <PlayedGameRow
+                                                                    key={game.game_id}
+                                                                    game={game}
+                                                                    playerUserIds={game.player_user_ids}
+                                                                    showDividerTop={index > 0}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    ) : null}
+                                                    {!eventModalGamesLoading && eventModalGames.length === 0 ? (
+                                                        <p style={{ margin: '0 0 14px', fontSize: '14px', color: '#6B6B69' }}>
+                                                            Партий пока нет.
+                                                        </p>
+                                                    ) : null}
                                                     <button
                                                         type="button"
                                                         onClick={() => {
