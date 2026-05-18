@@ -126,13 +126,11 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
         }
         participant = updated as EventParticipantRow
     } else {
-        const orderId = randomUUID()
         const { data: inserted, error: insertErr } = await supabase
             .from('clubtac_event_participants')
             .insert({
                 event_id: eventId,
                 user_id: userId,
-                order_id: orderId,
                 ...participantPatch,
             })
             .select('id, order_id, event_id, user_id, payment_status, price_paid')
@@ -154,20 +152,9 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
         })
     }
 
-    let walletOrderId = walletOrderIdFromParticipant(participant)
-    if (!walletOrderId) {
-        walletOrderId = randomUUID()
-        const { error: orderPatchErr } = await supabase
-            .from('clubtac_event_participants')
-            .update({ order_id: walletOrderId })
-            .eq('id', participant.id)
-            .eq('event_id', eventId)
-
-        if (orderPatchErr) {
-            console.error('POST participants order_id patch:', orderPatchErr)
-            return NextResponse.json({ error: orderPatchErr.message }, { status: 500 })
-        }
-    }
+    // order_id в clubtac_event_participants — bigint (платёжный заказ), не UUID.
+    // Для кошелька нужен UUID: id участника (если UUID) или новый order_id только в wallet_transactions.
+    const walletOrderId = walletOrderIdFromParticipant(participant) ?? randomUUID()
 
     const walletRows = [
         {
