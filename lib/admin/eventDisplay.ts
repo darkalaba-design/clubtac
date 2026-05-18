@@ -50,7 +50,19 @@ export function getEventTypeNameRu(type: string): string {
     }
 }
 
-export function paymentStatusBadgeStyle(status: string): { backgroundColor: string; color: string } {
+function isFreeParticipantPrice(pricePaid: number | null | undefined): boolean {
+    if (pricePaid == null) return false
+    const n = Number(pricePaid)
+    return Number.isFinite(n) && n === 0
+}
+
+export function paymentStatusBadgeStyle(
+    status: string,
+    pricePaid?: number | null
+): { backgroundColor: string; color: string } {
+    if (status === 'paid' && isFreeParticipantPrice(pricePaid)) {
+        return { backgroundColor: '#E3F2FD', color: '#1565C0' }
+    }
     switch (status) {
         case 'paid':
             return { backgroundColor: '#E8F5E9', color: '#1B5E20' }
@@ -61,7 +73,10 @@ export function paymentStatusBadgeStyle(status: string): { backgroundColor: stri
     }
 }
 
-export function paymentStatusLabelRu(status: string): string {
+export function paymentStatusLabelRu(status: string, pricePaid?: number | null): string {
+    if (status === 'paid' && isFreeParticipantPrice(pricePaid)) {
+        return 'Бесплатно'
+    }
     switch (status) {
         case 'paid':
             return 'Оплачено'

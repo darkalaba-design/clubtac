@@ -54,7 +54,7 @@ export function EventParticipantAdminCard({
 }: EventParticipantAdminCardProps) {
     const displayName = formatParticipantDisplay(p)
     const avatarUrl = !p.takoff && p.userpic?.trim() ? p.userpic.trim() : null
-    const statusBadge = paymentStatusBadgeStyle(p.payment_status)
+    const statusBadge = paymentStatusBadgeStyle(p.payment_status, p.price_paid)
     const hasPaylink = Boolean(p.paylink?.trim())
     const dateStr = p.created_at ? formatEventCardDayMonthAndTime(p.created_at) : null
     const priceStr =
@@ -153,7 +153,7 @@ export function EventParticipantAdminCard({
                                 color: statusBadge.color,
                             }}
                         >
-                            {paymentStatusLabelRu(p.payment_status)}
+                            {paymentStatusLabelRu(p.payment_status, p.price_paid)}
                         </span>
                     </div>
                 </div>
