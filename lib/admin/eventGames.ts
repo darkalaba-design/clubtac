@@ -1,5 +1,33 @@
 import { formatParticipantDisplay, type ParticipantDisplayInput } from '@/lib/admin/formatParticipantDisplay'
 
+export type EventGamePlayerOption = {
+    user_id: number
+    telegram_id?: number
+    first_name?: string | null
+    last_name?: string | null
+    username?: string | null
+    nickname?: string | null
+    takoff?: boolean
+}
+
+export type EventGameDraft = {
+    team1Player1: EventGamePlayerOption | null
+    team1Player2: EventGamePlayerOption | null
+    team1Score: number | null
+    team2Player1: EventGamePlayerOption | null
+    team2Player2: EventGamePlayerOption | null
+    team2Score: number | null
+}
+
+export const EMPTY_EVENT_GAME_DRAFT: EventGameDraft = {
+    team1Player1: null,
+    team1Player2: null,
+    team1Score: null,
+    team2Player1: null,
+    team2Player2: null,
+    team2Score: null,
+}
+
 export type EventGameSummaryRow = {
     game_id: number
     created_at: string
@@ -82,4 +110,26 @@ export function buildEventGameSummaries(
     }
 
     return summaries
+}
+
+function playerOptionFromList(
+    players: EventGamePlayerOption[],
+    userId: number
+): EventGamePlayerOption | null {
+    return players.find((p) => p.user_id === userId) ?? null
+}
+
+export function eventGameSummaryToDraft(
+    game: EventGameSummaryRow,
+    players: EventGamePlayerOption[]
+): EventGameDraft {
+    const ids = game.player_user_ids
+    return {
+        team1Player1: playerOptionFromList(players, ids.player_1_1),
+        team1Player2: playerOptionFromList(players, ids.player_1_2),
+        team2Player1: playerOptionFromList(players, ids.player_2_1),
+        team2Player2: playerOptionFromList(players, ids.player_2_2),
+        team1Score: game.score_1,
+        team2Score: game.score_2,
+    }
 }

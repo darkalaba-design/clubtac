@@ -14,9 +14,9 @@ import {
 } from '@/lib/admin/eventDisplay'
 import { EventParticipantAdminCard } from './EventParticipantAdminCard'
 import { EventAddParticipantPicker } from './EventAddParticipantPicker'
-import { EventAddGameForm, type EventGameDraft } from './EventAddGameForm'
-import type { EventGameSummaryRow } from '@/lib/admin/eventGames'
-import { PlayedGameRow } from '../components/PlayedGameRow'
+import { EventGameForm, type EventGameDraft } from './EventGameForm'
+import { eventGameSummaryToDraft, type EventGameSummaryRow } from '@/lib/admin/eventGames'
+import { AdminEventGameRow } from './AdminEventGameRow'
 import { participantRefundAmount } from '@/lib/admin/eventParticipantWallet'
 import GeoIcon from '../components/GeoIcon'
 import GamesTabIcon from '../components/GamesTabIcon'
@@ -272,6 +272,7 @@ export default function AdminPageClient() {
     const [eventModalParticipants, setEventModalParticipants] = useState<EventParticipantRow[]>([])
     const [eventModalEditing, setEventModalEditing] = useState(false)
     const [eventModalAddingGame, setEventModalAddingGame] = useState(false)
+    const [eventModalEditingGameId, setEventModalEditingGameId] = useState<number | null>(null)
     const [eventModalGames, setEventModalGames] = useState<EventGameSummaryRow[]>([])
     const [eventModalGamesLoading, setEventModalGamesLoading] = useState(false)
     const [eventModalDraft, setEventModalDraft] = useState<EventModalDraft | null>(null)
@@ -539,6 +540,7 @@ export default function AdminPageClient() {
         setParticipantBusy(false)
         setEventModalEditing(false)
         setEventModalAddingGame(false)
+        setEventModalEditingGameId(null)
         setEventModalDraft(null)
         setEventModalCoverMessage(null)
         setEventModalCoverBusy(false)
@@ -556,6 +558,7 @@ export default function AdminPageClient() {
         setEventModalGamesLoading(false)
         setEventModalEditing(false)
         setEventModalAddingGame(false)
+        setEventModalEditingGameId(null)
         setEventModalDraft(null)
         setEventModalCoverBusy(false)
         setEventModalCoverMessage(null)
@@ -564,8 +567,17 @@ export default function AdminPageClient() {
         setParticipantBusy(false)
     }
 
-    const cancelAddEventGame = () => {
+    const cancelEventGameForm = () => {
         setEventModalAddingGame(false)
+        setEventModalEditingGameId(null)
+        setEventModalErr(null)
+    }
+
+    const openEditEventGame = (gameId: number) => {
+        setEventModalEditing(false)
+        setEventModalDraft(null)
+        setEventModalAddingGame(false)
+        setEventModalEditingGameId(gameId)
         setEventModalErr(null)
     }
 
@@ -608,6 +620,14 @@ export default function AdminPageClient() {
         } finally {
             setParticipantBusy(false)
         }
+    }
+
+    const submitEditEventGame = async (_draft: EventGameDraft) => {
+        // Сохранение изменений в БД — позже
+    }
+
+    const requestDeleteEventGame = () => {
+        // Удаление из БД — позже
     }
 
     const admitParticipant = async (participantId: string | number, method: 'cash' | 'free') => {
@@ -1662,7 +1682,7 @@ export default function AdminPageClient() {
                             </button>
                         </div>
 
-                        {eventModalEvent && !eventModalEditing && !eventModalAddingGame ? (
+                        {eventModalEvent && !eventModalEditing && !eventModalAddingGame && eventModalEditingGameId == null ? (
                             <div
                                 style={{
                                     flexShrink: 0,
@@ -1716,11 +1736,39 @@ export default function AdminPageClient() {
                                     ) : null}
 
                                     {eventModalAddingGame ? (
-                                        <EventAddGameForm
+                                        <EventGameForm
+                                            mode="add"
                                             players={adminPlayers}
-                                            onCancel={cancelAddEventGame}
+                                            onCancel={cancelEventGameForm}
                                             onSubmit={submitAddEventGame}
                                         />
+                                    ) : eventModalEditingGameId != null ? (
+                                        (() => {
+                                            const editingGame = eventModalGames.find(
+                                                (g) => g.game_id === eventModalEditingGameId
+                                            )
+                                            if (!editingGame) {
+                                                return (
+                                                    <p style={{ margin: 0, color: '#B71C1C', fontSize: '14px' }}>
+                                                        Партия не найдена.
+                                                    </p>
+                                                )
+                                            }
+                                            return (
+                                                <EventGameForm
+                                                    mode="edit"
+                                                    gameId={editingGame.game_id}
+                                                    initialDraft={eventGameSummaryToDraft(
+                                                        editingGame,
+                                                        adminPlayers
+                                                    )}
+                                                    players={adminPlayers}
+                                                    onCancel={cancelEventGameForm}
+                                                    onSubmit={submitEditEventGame}
+                                                    onDeleteConfirm={requestDeleteEventGame}
+                                                />
+                                            )
+                                        })()
                                     ) : eventModalEditing && eventModalDraft ? (
                                         <form onSubmit={saveEventModal} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                             <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#6B6B69' }}>
@@ -2100,11 +2148,11 @@ export default function AdminPageClient() {
                                                             }}
                                                         >
                                                             {eventModalGames.map((game, index) => (
-                                                                <PlayedGameRow
+                                                                <AdminEventGameRow
                                                                     key={game.game_id}
                                                                     game={game}
-                                                                    playerUserIds={game.player_user_ids}
                                                                     showDividerTop={index > 0}
+                                                                    onClick={() => openEditEventGame(game.game_id)}
                                                                 />
                                                             ))}
                                                         </div>
@@ -2119,6 +2167,7 @@ export default function AdminPageClient() {
                                                         onClick={() => {
                                                             setEventModalEditing(false)
                                                             setEventModalDraft(null)
+                                                            setEventModalEditingGameId(null)
                                                             setEventModalAddingGame(true)
                                                             setEventModalErr(null)
                                                         }}
@@ -2245,6 +2294,7 @@ export default function AdminPageClient() {
                                                 onClick={() => {
                                                     setEventModalTab('details')
                                                     setEventModalAddingGame(false)
+                                                    setEventModalEditingGameId(null)
                                                     setEventModalEditing(true)
                                                     setEventModalDraft(eventToModalDraft(eventModalEvent))
                                                     setEventModalErr(null)
