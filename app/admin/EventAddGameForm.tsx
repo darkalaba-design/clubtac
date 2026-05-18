@@ -44,6 +44,7 @@ function scoreOutcomeForTeam(
 function scorePickerStyles(outcome: ScoreOutcome, digitActive: boolean): {
     bar: CSSProperties
     digit: CSSProperties
+    divider: string
 } {
     if (outcome === 'win') {
         return {
@@ -51,6 +52,7 @@ function scorePickerStyles(outcome: ScoreOutcome, digitActive: boolean): {
                 border: '1px solid #81C784',
                 backgroundColor: '#F1F8E9',
             },
+            divider: '#81C784',
             digit: {
                 backgroundColor: digitActive ? '#C8E6C9' : '#F1F8E9',
                 color: '#1B5E20',
@@ -64,6 +66,7 @@ function scorePickerStyles(outcome: ScoreOutcome, digitActive: boolean): {
                 border: '1px solid #E57373',
                 backgroundColor: '#FFF5F5',
             },
+            divider: '#E57373',
             digit: {
                 backgroundColor: digitActive ? '#FFCDD2' : '#FFF5F5',
                 color: '#B71C1C',
@@ -77,6 +80,7 @@ function scorePickerStyles(outcome: ScoreOutcome, digitActive: boolean): {
                 border: '1px solid #D0D0CE',
                 backgroundColor: '#F0F0EE',
             },
+            divider: '#D0D0CE',
             digit: {
                 backgroundColor: digitActive ? '#E0E0DE' : '#F0F0EE',
                 color: '#6B6B69',
@@ -89,6 +93,7 @@ function scorePickerStyles(outcome: ScoreOutcome, digitActive: boolean): {
             border: '1px solid #EBE8E0',
             backgroundColor: '#FFFFFF',
         },
+        divider: '#EBE8E0',
         digit: {
             backgroundColor: digitActive ? '#E8E8E6' : '#FFFFFF',
             color: '#1D1D1B',
@@ -106,7 +111,7 @@ function ScorePicker({
     outcome: ScoreOutcome
     onChange: (score: number) => void
 }) {
-    const { bar } = scorePickerStyles(outcome, false)
+    const { bar, divider } = scorePickerStyles(outcome, false)
 
     return (
         <div
@@ -137,7 +142,7 @@ function ScorePicker({
                             margin: 0,
                             padding: 0,
                             border: 'none',
-                            borderLeft: index > 0 ? '1px solid rgba(0,0,0,0.08)' : undefined,
+                            borderLeft: index > 0 ? `1px solid ${divider}` : undefined,
                             borderRadius: 0,
                             fontSize: '15px',
                             lineHeight: 1,
