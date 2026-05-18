@@ -13,6 +13,7 @@ import {
     eventStatusLabelRu,
 } from '@/lib/admin/eventDisplay'
 import { EventParticipantAdminCard } from './EventParticipantAdminCard'
+import { EventAddParticipantPicker } from './EventAddParticipantPicker'
 import { participantRefundAmount } from '@/lib/admin/eventParticipantWallet'
 import GeoIcon from '../components/GeoIcon'
 import GamesTabIcon from '../components/GamesTabIcon'
@@ -576,6 +577,33 @@ export default function AdminPageClient() {
         }
     }
 
+    const addEventParticipant = async (userId: number, method: 'cash' | 'free') => {
+        if (!eventModalId || participantBusy) return
+        setParticipantBusy(true)
+        setEventModalErr(null)
+        try {
+            const res = await adminFetch(
+                `/api/admin/events/${encodeURIComponent(eventModalId)}/participants`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, method }),
+                }
+            )
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+            }
+            await refetchEventModal(eventModalId)
+            if (session?.app_role) await loadLists(session.app_role)
+        } catch (e) {
+            setEventModalErr(e instanceof Error ? e.message : 'Не удалось добавить участника')
+            throw e
+        } finally {
+            setParticipantBusy(false)
+        }
+    }
+
     const saveEventModal = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!eventModalId || !eventModalDraft) return
@@ -654,6 +682,11 @@ export default function AdminPageClient() {
     const filteredAdminPlayers = useMemo(
         () => adminPlayers.filter((p) => adminPlayerMatchesSearch(p, adminPlayersSearch)),
         [adminPlayers, adminPlayersSearch]
+    )
+
+    const eventModalActiveParticipantUserIds = useMemo(
+        () => eventModalParticipants.map((p) => p.user_id),
+        [eventModalParticipants]
     )
 
     const pageSection: React.CSSProperties = {
@@ -1903,6 +1936,16 @@ export default function AdminPageClient() {
                                         <>
                                             {eventModalTab === 'participants' ? (
                                                 <>
+                                                    <EventAddParticipantPicker
+                                                        key={eventModalId ?? 'event'}
+                                                        players={adminPlayers}
+                                                        activeParticipantUserIds={eventModalActiveParticipantUserIds}
+                                                        eventPrice={eventModalEvent?.price ?? null}
+                                                        busy={participantBusy}
+                                                        onAdd={async (userId, method) => {
+                                                            await addEventParticipant(userId, method)
+                                                        }}
+                                                    />
                                                     {eventModalParticipants.length === 0 ? (
                                                         <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>
                                                             Пока никто не записан.
