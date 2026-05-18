@@ -168,6 +168,7 @@ function TeamBlock({
     onPlayer1Change,
     onPlayer2Change,
     onScoreChange,
+    playersDisabled = false,
 }: {
     title: string
     players: AdminPlayerOption[]
@@ -180,6 +181,7 @@ function TeamBlock({
     onPlayer1Change: (p: EventGamePlayerOption | null) => void
     onPlayer2Change: (p: EventGamePlayerOption | null) => void
     onScoreChange: (n: number) => void
+    playersDisabled?: boolean
 }) {
     return (
         <section
@@ -198,6 +200,7 @@ function TeamBlock({
                 excludeUserIds={excludeForPlayer1}
                 value={player1}
                 onChange={onPlayer1Change}
+                disabled={playersDisabled}
             />
             <AdminPlayerSearchField
                 label="Игрок 2"
@@ -205,6 +208,7 @@ function TeamBlock({
                 excludeUserIds={excludeForPlayer2}
                 value={player2}
                 onChange={onPlayer2Change}
+                disabled={playersDisabled}
             />
             <ScorePicker value={score} outcome={scoreOutcome} onChange={onScoreChange} />
         </section>
@@ -277,6 +281,7 @@ export function EventGameForm({
                 onPlayer1Change={(p) => setDraft((d) => ({ ...d, team1Player1: p }))}
                 onPlayer2Change={(p) => setDraft((d) => ({ ...d, team1Player2: p }))}
                 onScoreChange={(n) => setDraft((d) => ({ ...d, team1Score: n }))}
+                playersDisabled={isEdit}
             />
 
             <TeamBlock
@@ -291,6 +296,7 @@ export function EventGameForm({
                 onPlayer1Change={(p) => setDraft((d) => ({ ...d, team2Player1: p }))}
                 onPlayer2Change={(p) => setDraft((d) => ({ ...d, team2Player2: p }))}
                 onScoreChange={(n) => setDraft((d) => ({ ...d, team2Score: n }))}
+                playersDisabled={isEdit}
             />
 
             {validationErr ? (
