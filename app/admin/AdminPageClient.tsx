@@ -14,6 +14,7 @@ import {
 } from '@/lib/admin/eventDisplay'
 import { EventParticipantAdminCard } from './EventParticipantAdminCard'
 import { EventAddParticipantPicker } from './EventAddParticipantPicker'
+import { EventAddGameForm, type EventGameDraft } from './EventAddGameForm'
 import { participantRefundAmount } from '@/lib/admin/eventParticipantWallet'
 import GeoIcon from '../components/GeoIcon'
 import GamesTabIcon from '../components/GamesTabIcon'
@@ -268,6 +269,7 @@ export default function AdminPageClient() {
     const [eventModalEvent, setEventModalEvent] = useState<EventRow | null>(null)
     const [eventModalParticipants, setEventModalParticipants] = useState<EventParticipantRow[]>([])
     const [eventModalEditing, setEventModalEditing] = useState(false)
+    const [eventModalAddingGame, setEventModalAddingGame] = useState(false)
     const [eventModalDraft, setEventModalDraft] = useState<EventModalDraft | null>(null)
     const [eventModalCoverBusy, setEventModalCoverBusy] = useState(false)
     const [eventModalCoverMessage, setEventModalCoverMessage] = useState<string | null>(null)
@@ -507,6 +509,7 @@ export default function AdminPageClient() {
         setExcludePromptParticipantId(null)
         setParticipantBusy(false)
         setEventModalEditing(false)
+        setEventModalAddingGame(false)
         setEventModalDraft(null)
         setEventModalCoverMessage(null)
         setEventModalCoverBusy(false)
@@ -521,12 +524,23 @@ export default function AdminPageClient() {
         setEventModalEvent(null)
         setEventModalParticipants([])
         setEventModalEditing(false)
+        setEventModalAddingGame(false)
         setEventModalDraft(null)
         setEventModalCoverBusy(false)
         setEventModalCoverMessage(null)
         setAdmitPromptParticipantId(null)
         setExcludePromptParticipantId(null)
         setParticipantBusy(false)
+    }
+
+    const cancelAddEventGame = () => {
+        setEventModalAddingGame(false)
+        setEventModalErr(null)
+    }
+
+    const submitAddEventGame = (_draft: EventGameDraft) => {
+        // Сохранение в БД — отдельным шагом
+        setEventModalAddingGame(false)
     }
 
     const admitParticipant = async (participantId: string | number, method: 'cash' | 'free') => {
@@ -1581,7 +1595,7 @@ export default function AdminPageClient() {
                             </button>
                         </div>
 
-                        {eventModalEvent && !eventModalEditing ? (
+                        {eventModalEvent && !eventModalEditing && !eventModalAddingGame ? (
                             <div
                                 style={{
                                     flexShrink: 0,
@@ -1634,7 +1648,13 @@ export default function AdminPageClient() {
                                         <p style={{ margin: '0 0 12px', color: '#B71C1C', fontSize: '13px' }}>{eventModalErr}</p>
                                     ) : null}
 
-                                    {eventModalEditing && eventModalDraft ? (
+                                    {eventModalAddingGame ? (
+                                        <EventAddGameForm
+                                            players={adminPlayers}
+                                            onCancel={cancelAddEventGame}
+                                            onSubmit={submitAddEventGame}
+                                        />
+                                    ) : eventModalEditing && eventModalDraft ? (
                                         <form onSubmit={saveEventModal} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                             <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#6B6B69' }}>
                                                 Редактирование события
@@ -2001,6 +2021,12 @@ export default function AdminPageClient() {
                                                     </p>
                                                     <button
                                                         type="button"
+                                                        onClick={() => {
+                                                            setEventModalEditing(false)
+                                                            setEventModalDraft(null)
+                                                            setEventModalAddingGame(true)
+                                                            setEventModalErr(null)
+                                                        }}
                                                         style={{
                                                             width: '100%',
                                                             padding: '12px',
@@ -2123,6 +2149,7 @@ export default function AdminPageClient() {
                                                 type="button"
                                                 onClick={() => {
                                                     setEventModalTab('details')
+                                                    setEventModalAddingGame(false)
                                                     setEventModalEditing(true)
                                                     setEventModalDraft(eventToModalDraft(eventModalEvent))
                                                     setEventModalErr(null)
