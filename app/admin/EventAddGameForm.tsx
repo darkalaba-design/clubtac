@@ -41,64 +41,124 @@ function scoreOutcomeForTeam(
     return 'lose'
 }
 
-function scorePickerStyles(outcome: ScoreOutcome, digitActive: boolean): {
+function scorePickerStyles(
+    outcome: ScoreOutcome,
+    digitActive: boolean,
+    hasSelection: boolean
+): {
     bar: CSSProperties
     digit: CSSProperties
     divider: string
 } {
     if (outcome === 'win') {
+        if (!hasSelection) {
+            return {
+                bar: { border: '1px solid #81C784', backgroundColor: '#F1F8E9' },
+                divider: '#C8E6C9',
+                digit: {
+                    backgroundColor: '#F1F8E9',
+                    color: '#1D1D1B',
+                    fontWeight: 500,
+                },
+            }
+        }
         return {
-            bar: {
-                border: '1px solid #81C784',
-                backgroundColor: '#F1F8E9',
-            },
-            divider: '#81C784',
-            digit: {
-                backgroundColor: digitActive ? '#C8E6C9' : '#F1F8E9',
-                color: '#1B5E20',
-                fontWeight: digitActive ? 700 : 500,
-            },
+            bar: { border: '1px solid #81C784', backgroundColor: '#E8F5E9' },
+            divider: '#C8E6C9',
+            digit: digitActive
+                ? {
+                      backgroundColor: '#81C784',
+                      color: '#FFFFFF',
+                      fontWeight: 700,
+                  }
+                : {
+                      backgroundColor: '#E8F5E9',
+                      color: '#A5D6A7',
+                      fontWeight: 500,
+                  },
         }
     }
     if (outcome === 'lose') {
+        if (!hasSelection) {
+            return {
+                bar: { border: '1px solid #E57373', backgroundColor: '#FFF5F5' },
+                divider: '#FFCDD2',
+                digit: {
+                    backgroundColor: '#FFF5F5',
+                    color: '#1D1D1B',
+                    fontWeight: 500,
+                },
+            }
+        }
         return {
-            bar: {
-                border: '1px solid #E57373',
-                backgroundColor: '#FFF5F5',
-            },
-            divider: '#E57373',
-            digit: {
-                backgroundColor: digitActive ? '#FFCDD2' : '#FFF5F5',
-                color: '#B71C1C',
-                fontWeight: digitActive ? 700 : 500,
-            },
+            bar: { border: '1px solid #E57373', backgroundColor: '#FFEBEE' },
+            divider: '#FFCDD2',
+            digit: digitActive
+                ? {
+                      backgroundColor: '#E57373',
+                      color: '#FFFFFF',
+                      fontWeight: 700,
+                  }
+                : {
+                      backgroundColor: '#FFEBEE',
+                      color: '#EF9A9A',
+                      fontWeight: 500,
+                  },
         }
     }
     if (outcome === 'tie') {
+        if (!hasSelection) {
+            return {
+                bar: { border: '1px solid #D0D0CE', backgroundColor: '#F0F0EE' },
+                divider: '#E0E0DE',
+                digit: {
+                    backgroundColor: '#F0F0EE',
+                    color: '#1D1D1B',
+                    fontWeight: 500,
+                },
+            }
+        }
         return {
-            bar: {
-                border: '1px solid #D0D0CE',
-                backgroundColor: '#F0F0EE',
-            },
-            divider: '#D0D0CE',
+            bar: { border: '1px solid #D0D0CE', backgroundColor: '#F5F5F3' },
+            divider: '#E8E8E6',
+            digit: digitActive
+                ? {
+                      backgroundColor: '#BDBDBD',
+                      color: '#FFFFFF',
+                      fontWeight: 700,
+                  }
+                : {
+                      backgroundColor: '#F5F5F3',
+                      color: '#B0B0AE',
+                      fontWeight: 500,
+                  },
+        }
+    }
+    if (!hasSelection) {
+        return {
+            bar: { border: '1px solid #EBE8E0', backgroundColor: '#FFFFFF' },
+            divider: '#EBE8E0',
             digit: {
-                backgroundColor: digitActive ? '#E0E0DE' : '#F0F0EE',
-                color: '#6B6B69',
-                fontWeight: digitActive ? 700 : 500,
+                backgroundColor: '#FFFFFF',
+                color: '#1D1D1B',
+                fontWeight: 500,
             },
         }
     }
     return {
-        bar: {
-            border: '1px solid #EBE8E0',
-            backgroundColor: '#FFFFFF',
-        },
-        divider: '#EBE8E0',
-        digit: {
-            backgroundColor: digitActive ? '#E8E8E6' : '#FFFFFF',
-            color: '#1D1D1B',
-            fontWeight: digitActive ? 700 : 500,
-        },
+        bar: { border: '1px solid #EBE8E0', backgroundColor: '#FAFAFA' },
+        divider: '#F0F0EE',
+        digit: digitActive
+            ? {
+                  backgroundColor: '#E0E0DE',
+                  color: '#1D1D1B',
+                  fontWeight: 700,
+              }
+            : {
+                  backgroundColor: '#FAFAFA',
+                  color: '#B0B0AE',
+                  fontWeight: 500,
+              },
     }
 }
 
@@ -111,7 +171,8 @@ function ScorePicker({
     outcome: ScoreOutcome
     onChange: (score: number) => void
 }) {
-    const { bar, divider } = scorePickerStyles(outcome, false)
+    const hasSelection = value != null
+    const { bar, divider } = scorePickerStyles(outcome, false, hasSelection)
 
     return (
         <div
@@ -128,7 +189,7 @@ function ScorePicker({
         >
             {SCORE_OPTIONS.map((n, index) => {
                 const active = value === n
-                const { digit } = scorePickerStyles(outcome, active)
+                const { digit } = scorePickerStyles(outcome, active, hasSelection)
                 return (
                     <button
                         key={n}
