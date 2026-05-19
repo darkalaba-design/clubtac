@@ -55,14 +55,14 @@ function measureMobileKeyboardInset(): number {
     return Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
 }
 
-/** Сколько нижней части ленты уходит под клавиатуру (в пикселях экрана) */
-function measureListHiddenBelowViewport(listEl: HTMLDivElement): number {
-    const vv = window.visualViewport
-    if (!vv) return measureMobileKeyboardInset()
-
-    const listBottom = listEl.getBoundingClientRect().bottom
-    const visibleBottom = vv.offsetTop + vv.height
-    return Math.max(0, Math.round(listBottom - visibleBottom))
+/** Расстояние от верха ленты сообщений до верха капсулы (по экрану, px) */
+function measureGapListTopToComposerTop(
+    listEl: HTMLDivElement,
+    composerShellEl: HTMLDivElement
+): number {
+    const listTop = listEl.getBoundingClientRect().top
+    const composerTop = composerShellEl.getBoundingClientRect().top
+    return Math.round(composerTop - listTop)
 }
 
 type Props = {
@@ -123,6 +123,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
 
     const listRef = useRef<HTMLDivElement>(null)
     const composerOverlayRef = useRef<HTMLDivElement>(null)
+    const composerShellRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const [listBottomPad, setListBottomPad] = useState(COMPOSER_OVERLAY_PAD_FALLBACK_PX)
     const [keyboardInset, setKeyboardInset] = useState(0)
@@ -130,10 +131,10 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     const prependScrollHeightRef = useRef<number | null>(null)
     const loadOlderInFlightRef = useRef(false)
     const keyboardInsetRef = useRef(0)
-    /** scrollTop и inset в момент фокуса в поле — для сдвига ленты при открытии клавиатуры */
+    /** scrollTop и зазор до капсулы в момент фокуса — сдвиг ленты = на сколько зазор уменьшился */
     const keyboardScrollPreserveRef = useRef<{
         scrollTop: number
-        inset: number
+        gapToComposer: number
         atBottom: boolean
     } | null>(null)
     const keyboardInsetPrevRef = useRef(0)
@@ -145,7 +146,8 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
 
     const applyKeyboardScroll = useCallback(() => {
         const listEl = listRef.current
-        if (!listEl) return
+        const shellEl = composerShellRef.current
+        if (!listEl || !shellEl) return
         if (!composerFocusedRef.current && keyboardInsetRef.current === 0) return
 
         const snap = keyboardScrollPreserveRef.current
@@ -154,8 +156,9 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
             if (snap.atBottom) {
                 listEl.scrollTop = listEl.scrollHeight - listEl.clientHeight
             } else {
-                const hiddenBelow = measureListHiddenBelowViewport(listEl)
-                listEl.scrollTop = Math.max(0, snap.scrollTop + hiddenBelow)
+                const gap = measureGapListTopToComposerTop(listEl, shellEl)
+                const gapShrink = snap.gapToComposer - gap
+                listEl.scrollTop = Math.max(0, snap.scrollTop + gapShrink)
             }
             return
         }
@@ -225,7 +228,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         const inset = keyboardInsetRef.current
         const prevInset = keyboardInsetPrevRef.current
 
-        if (inset > 0 || prevInset > 0) {
+        if (composerFocusedRef.current || inset > 0 || prevInset > 0) {
             applyKeyboardScroll()
         }
 
@@ -238,11 +241,12 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     const handleComposerFocus = useCallback(() => {
         composerFocusedRef.current = true
         const listEl = listRef.current
-        if (listEl) {
+        const shellEl = composerShellRef.current
+        if (listEl && shellEl) {
             const atBottom = isListAtBottom(listEl)
             keyboardScrollPreserveRef.current = {
                 scrollTop: listEl.scrollTop,
-                inset: keyboardInsetRef.current,
+                gapToComposer: measureGapListTopToComposerTop(listEl, shellEl),
                 atBottom,
             }
             stickToBottomRef.current = atBottom
@@ -636,6 +640,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                     }}
                 />
                 <div
+                    ref={composerShellRef}
                     style={{
                         position: 'relative',
                         zIndex: 1,
