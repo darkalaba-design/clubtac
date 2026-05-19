@@ -10,14 +10,11 @@ import {
     formatAdminPlayerTelegramName,
     getAdminPlayerFooterEntries,
     extractPlayerStatsSummary,
-    playerClubStatusChipStyle,
-    playerClubStatusLabel,
-    resolvePlayerClubStatus,
     type AdminPlayerDetailResponse,
 } from '@/lib/admin/adminPlayerDetail'
+import { AdminPlayerStatusChips } from './AdminPlayerStatusChips'
 import { formatPointsRu } from '@/lib/ruCountPhrases'
 import { displayPublicNickname } from '@/lib/takoff'
-import type { AppRole } from '@/lib/admin/appRole'
 
 type Props = {
     detail: AdminPlayerDetailResponse
@@ -77,11 +74,6 @@ export function AdminPlayerProfileTab({ detail, userId }: Props) {
     )
     const tgName = formatAdminPlayerTelegramName(u)
     const userpic = !takoff && typeof u.userpic === 'string' ? u.userpic.trim() : ''
-    const clubStatus = resolvePlayerClubStatus(u)
-    const statusChip = playerClubStatusChipStyle(clubStatus)
-    const appRole = typeof u.app_role === 'string' ? (u.app_role as AppRole) : 'user'
-    const showAppRole = appRole === 'admin' || appRole === 'root'
-
     const stats = extractPlayerStatsSummary(detail)
     const footerEntries = getAdminPlayerFooterEntries(detail)
 
@@ -181,43 +173,7 @@ export function AdminPlayerProfileTab({ detail, userId }: Props) {
                     marginBottom: '14px',
                 }}
             >
-                <div
-                    style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '8px',
-                        alignItems: 'center',
-                        minWidth: 0,
-                    }}
-                >
-                    <span
-                        style={{
-                            display: 'inline-block',
-                            padding: '5px 12px',
-                            borderRadius: '999px',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            ...statusChip,
-                        }}
-                    >
-                        {playerClubStatusLabel(clubStatus)}
-                    </span>
-                    {showAppRole ? (
-                        <span
-                            style={{
-                                display: 'inline-block',
-                                padding: '5px 12px',
-                                borderRadius: '999px',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                backgroundColor: '#FFDF00',
-                                color: '#1D1D1B',
-                            }}
-                        >
-                            {appRole === 'root' ? 'Root' : 'Admin'}
-                        </span>
-                    ) : null}
-                </div>
+                <AdminPlayerStatusChips user={u} />
                 {telegramProfileUrl && telegramUsername ? (
                     <a
                         href={telegramProfileUrl}

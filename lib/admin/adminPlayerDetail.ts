@@ -255,21 +255,11 @@ export function isAdminPlayerZeroFinanceAmount(amount: unknown): boolean {
     return Number.isFinite(n) && n === 0
 }
 
-export function filterAdminPlayerFinanceLists<
-    TW extends { amount?: unknown },
-    TP extends { price_paid?: unknown },
->(
-    walletTransactions: TW[],
-    eventParticipations: TP[],
-): { wallet_transactions: TW[]; event_participations: TP[] } {
-    return {
-        wallet_transactions: walletTransactions.filter(
-            (tx) => !isAdminPlayerZeroFinanceAmount(tx.amount),
-        ),
-        event_participations: eventParticipations.filter(
-            (p) => !isAdminPlayerZeroFinanceAmount(p.price_paid),
-        ),
-    }
+/** Служебные транзакции с amount = 0 не показываем во вкладке «Финансы». */
+export function filterAdminPlayerWalletTransactionsForDisplay<
+    T extends { amount?: unknown },
+>(walletTransactions: T[]): T[] {
+    return walletTransactions.filter((tx) => !isAdminPlayerZeroFinanceAmount(tx.amount))
 }
 
 export function walletTransactionTypeLabel(type: string): string {

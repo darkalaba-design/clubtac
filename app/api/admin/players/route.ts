@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
     const { supabase } = gate
     const { data: users, error } = await supabase
         .from('clubtac_users')
-        .select('id, telegram_id, first_name, last_name, username, nickname, takoff, userpic, created_at')
+        .select(
+            'id, telegram_id, first_name, last_name, username, nickname, takoff, userpic, created_at, app_role, status, club_status, player_status, membership_status'
+        )
         .eq('is_active', true)
         .order('id', { ascending: false })
         .limit(limit)
@@ -76,6 +78,11 @@ export async function GET(request: NextRequest) {
             takoff?: boolean | null
             userpic?: string | null
             created_at?: string | null
+            app_role?: string | null
+            status?: string | null
+            club_status?: string | null
+            player_status?: string | null
+            membership_status?: string | null
         }) => {
             const elo = eloByUserId[u.id]
             return {
@@ -88,6 +95,11 @@ export async function GET(request: NextRequest) {
                 takoff: !!u.takoff,
                 userpic: u.userpic ?? null,
                 created_at: u.created_at ?? null,
+                app_role: u.app_role ?? 'user',
+                status: u.status ?? null,
+                club_status: u.club_status ?? null,
+                player_status: u.player_status ?? null,
+                membership_status: u.membership_status ?? null,
                 rating: elo?.rating ?? null,
                 games_played: elo?.games_played ?? null,
                 place: elo?.place ?? null,

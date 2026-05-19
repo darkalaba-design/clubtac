@@ -4,7 +4,7 @@ import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { formatParticipantDisplay } from '@/lib/admin/formatParticipantDisplay'
 import {
-    filterAdminPlayerFinanceLists,
+    filterAdminPlayerWalletTransactionsForDisplay,
     splitUserFieldsForAdmin,
     type AdminPlayerDetailResponse,
     type AdminPlayerEventParticipation,
@@ -161,10 +161,8 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
         created_at: p.created_at ?? null,
     }))
 
-    const { wallet_transactions, event_participations } = filterAdminPlayerFinanceLists(
-        wallet_transactions_mapped,
-        event_participations_mapped,
-    )
+    const wallet_transactions = filterAdminPlayerWalletTransactionsForDisplay(wallet_transactions_mapped)
+    const event_participations = event_participations_mapped
 
     const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME?.replace(/^@/, '') || ''
     const referralCode = typeof user.referral_code === 'string' ? user.referral_code : null

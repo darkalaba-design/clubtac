@@ -27,6 +27,7 @@ import PlayersTabIcon from '../components/PlayersTabIcon'
 import { displayPublicNickname } from '@/lib/takoff'
 import { adminFetch } from '@/lib/admin/adminFetch'
 import { AdminPlayerModal } from './AdminPlayerModal'
+import { AdminPlayerStatusChips } from './AdminPlayerStatusChips'
 
 function AdminAddressLine({ address, style }: { address: string; style?: CSSProperties }) {
     return (
@@ -221,6 +222,11 @@ type AdminPlayerRow = {
     username?: string | null
     takoff?: boolean
     userpic?: string | null
+    app_role?: string
+    status?: string | null
+    club_status?: string | null
+    player_status?: string | null
+    membership_status?: string | null
 }
 
 const ADMIN_SCROLL_PT = 'calc(52px + env(safe-area-inset-top, 0px))'
@@ -1513,6 +1519,13 @@ export default function AdminPageClient() {
                                 const displayName = adminPlayerDisplayName(p)
                                 const avatarUrl =
                                     !p.takoff && p.userpic?.trim() ? p.userpic.trim() : null
+                                const statusUser: Record<string, unknown> = {
+                                    app_role: p.app_role,
+                                    status: p.status,
+                                    club_status: p.club_status,
+                                    player_status: p.player_status,
+                                    membership_status: p.membership_status,
+                                }
                                 return (
                                     <button
                                         key={p.user_id}
@@ -1575,14 +1588,31 @@ export default function AdminPageClient() {
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div
                                                 style={{
-                                                    fontWeight: 600,
-                                                    color: '#1D1D1B',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    flexWrap: 'wrap',
+                                                    marginBottom: '4px',
                                                 }}
                                             >
-                                                {displayName}
+                                                <div
+                                                    style={{
+                                                        fontWeight: 600,
+                                                        color: '#1D1D1B',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        minWidth: 0,
+                                                        flex: '1 1 auto',
+                                                    }}
+                                                >
+                                                    {displayName}
+                                                </div>
+                                                <AdminPlayerStatusChips
+                                                    user={statusUser}
+                                                    hideStandardClubStatus
+                                                    compact
+                                                />
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                 id {p.user_id}
