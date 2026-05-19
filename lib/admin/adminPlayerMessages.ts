@@ -1,6 +1,11 @@
 export type AdminMessageSender = 'customer' | 'agent' | 'admin'
 
-export type AdminMessageStatus = 'draft' | 'sent' | 'error'
+export type AdminMessageStatus = 'draft' | 'sent' | 'error' | 'sending'
+
+/** Локальный id оптимистичного сообщения до ответа API */
+export function createOptimisticAdminMessageId(): string {
+    return `pending-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
 
 export type AdminPlayerMessage = {
     id: string

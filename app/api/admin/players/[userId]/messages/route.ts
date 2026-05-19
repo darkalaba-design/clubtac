@@ -215,8 +215,21 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
     if (!makeResult.ok) {
         await supabase.from('clubtac_messages').update({ status: 'error' }).eq('id', messageId)
 
+        const { data: errorRow } = await supabase
+            .from('clubtac_messages')
+            .select(MESSAGE_SELECT)
+            .eq('id', messageId)
+            .maybeSingle()
+
+        const failedMessage = errorRow
+            ? parseAdminPlayerMessageRow(errorRow as Record<string, unknown>)
+            : null
+
         const status = makeResult.httpStatus && makeResult.httpStatus >= 500 ? 502 : 400
-        return NextResponse.json({ error: makeResult.error }, { status })
+        return NextResponse.json(
+            { error: makeResult.error, message: failedMessage },
+            { status }
+        )
     }
 
     const { data: finalRow, error: finalErr } = await supabase

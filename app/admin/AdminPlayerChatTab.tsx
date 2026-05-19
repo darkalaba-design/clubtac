@@ -10,6 +10,7 @@ import {
     dayKeyFromIso,
     formatAdminMessageDayLabel,
     formatAdminMessageTime,
+    createOptimisticAdminMessageId,
     mergeAdminPlayerMessages,
     parseAdminPlayerMessageRow,
     type AdminMessageSender,
@@ -82,19 +83,35 @@ function ChatSendIcon({ fill }: { fill: string }) {
     )
 }
 
-function bubbleStyle(sender: AdminMessageSender): {
+function bubbleStyle(m: AdminPlayerMessage): {
     backgroundColor: string
     color: string
     border: string
+    opacity?: number
 } {
-    if (sender === 'customer') {
+    if (m.status === 'error') {
+        return {
+            backgroundColor: '#FFEBEE',
+            color: '#B71C1C',
+            border: '1px solid #FFCDD2',
+        }
+    }
+    if (m.status === 'sending') {
+        return {
+            backgroundColor: '#FFF9E6',
+            color: '#1D1D1B',
+            border: '1px solid #FFE082',
+            opacity: 0.88,
+        }
+    }
+    if (m.sender === 'customer') {
         return {
             backgroundColor: '#F5F5F3',
             color: '#1D1D1B',
             border: '1px solid #EBE8E0',
         }
     }
-    if (sender === 'admin') {
+    if (m.sender === 'admin') {
         return {
             backgroundColor: '#FFF9E6',
             color: '#1D1D1B',
@@ -106,6 +123,12 @@ function bubbleStyle(sender: AdminMessageSender): {
         color: '#1B5E20',
         border: '1px solid #C8E6C9',
     }
+}
+
+function messageStatusHint(m: AdminPlayerMessage): string | null {
+    if (m.status === 'sending') return 'Отправка…'
+    if (m.status === 'error') return 'Не отправлено'
+    return null
 }
 
 function isOutgoingSender(sender: AdminMessageSender): boolean {
@@ -122,7 +145,6 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     const [composerTopFade, setComposerTopFade] = useState(false)
     const [composerExpanded, setComposerExpanded] = useState(false)
     const [sending, setSending] = useState(false)
-    const [sendErr, setSendErr] = useState<string | null>(null)
 
     const listRef = useRef<HTMLDivElement>(null)
     const composerOverlayRef = useRef<HTMLDivElement>(null)
@@ -354,7 +376,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                 limit: String(ADMIN_CHAT_MESSAGES_INITIAL),
             })
             const j = await fetchMessagesPage(params)
-            setMessages(j.messages ?? [])
+            setMessages((j.messages ?? []).filter((m) => m.status !== 'draft'))
             setHasMore(Boolean(j.has_more))
             stickToBottomRef.current = true
         } catch (e) {
@@ -489,9 +511,23 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         const text = draft.trim()
         if (!text || sending) return
 
+        const optimisticId = createOptimisticAdminMessageId()
+        const optimisticMsg: AdminPlayerMessage = {
+            id: optimisticId,
+            user_id: userId,
+            message: text,
+            created_at: new Date().toISOString(),
+            sender: 'admin',
+            status: 'sending',
+        }
+
+        setDraft('')
+            setMessages((prev) => mergeAdminPlayerMessages(prev, [optimisticMsg]))
+        stickToBottomRef.current = true
+        requestAnimationFrame(() => scrollToBottom('auto'))
+        setSending(true)
+
         void (async () => {
-            setSending(true)
-            setSendErr(null)
             try {
                 const res = await adminFetch(`/api/admin/players/${userId}/messages`, {
                     method: 'POST',
@@ -502,15 +538,28 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                     error?: string
                 }
                 if (!res.ok) {
-                    throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+                    setMessages((prev) => {
+                        const rest = prev.filter((m) => m.id !== optimisticId)
+                        const failed =
+                            j.message ??
+                            ({
+                                ...optimisticMsg,
+                                status: 'error' as const,
+                            } satisfies AdminPlayerMessage)
+                        return mergeAdminPlayerMessages(rest, [failed])
+                    })
+                    return
                 }
-                if (j.message) {
-                    setMessages((prev) => mergeAdminPlayerMessages(prev, [j.message]))
-                }
-                setDraft('')
-                stickToBottomRef.current = true
-            } catch (e) {
-                setSendErr(e instanceof Error ? e.message : 'Не удалось отправить сообщение')
+                setMessages((prev) => {
+                    const rest = prev.filter((m) => m.id !== optimisticId)
+                    return j.message ? mergeAdminPlayerMessages(rest, [j.message]) : rest
+                })
+            } catch {
+                setMessages((prev) =>
+                    prev.map((m) =>
+                        m.id === optimisticId ? { ...m, status: 'error' as const } : m
+                    )
+                )
             } finally {
                 setSending(false)
             }
@@ -525,7 +574,8 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
             if (showDay) lastDayKey = dayKey
 
             const outgoing = isOutgoingSender(m.sender)
-            const bubble = bubbleStyle(m.sender)
+            const bubble = bubbleStyle(m)
+            const statusHint = messageStatusHint(m)
 
             return (
                 <div key={m.id}>
@@ -577,7 +627,18 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                         >
                             {m.message || '—'}
                         </div>
-                        <div style={{ fontSize: '10px', color: '#9E9E9C', marginTop: '3px' }}>
+                        <div
+                            style={{
+                                fontSize: '10px',
+                                color: m.status === 'error' ? '#C62828' : '#9E9E9C',
+                                marginTop: '3px',
+                                textAlign: outgoing ? 'right' : 'left',
+                            }}
+                        >
+                            {statusHint ? (
+                                <span style={{ fontWeight: 600 }}>{statusHint}</span>
+                            ) : null}
+                            {statusHint ? ' · ' : null}
                             {formatAdminMessageTime(m.created_at)}
                         </div>
                     </div>
@@ -683,22 +744,6 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                         pointerEvents: 'none',
                     }}
                 />
-                {sendErr ? (
-                    <p
-                        style={{
-                            margin: '0 0 8px',
-                            padding: '8px 10px',
-                            borderRadius: '8px',
-                            backgroundColor: '#FFEBEE',
-                            color: '#B71C1C',
-                            fontSize: '12px',
-                            lineHeight: 1.4,
-                            pointerEvents: 'auto',
-                        }}
-                    >
-                        {sendErr}
-                    </p>
-                ) : null}
                 <div
                     ref={composerShellRef}
                     style={{
