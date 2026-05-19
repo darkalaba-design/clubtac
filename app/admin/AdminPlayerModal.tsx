@@ -12,6 +12,7 @@ import {
 } from '@/lib/admin/adminPlayerDetail'
 import { formatEventCardDayMonthAndTime, paymentStatusLabelRu } from '@/lib/admin/eventDisplay'
 import { displayPublicNickname } from '@/lib/takoff'
+import { AdminPlayerProfileTab } from './AdminPlayerProfileTab'
 
 type PlayerModalTab = 'chat' | 'profile' | 'finance'
 
@@ -370,148 +371,7 @@ export function AdminPlayerModal({ userId, previewName, onClose }: Props) {
                                 ) : null}
 
                                 {tab === 'profile' ? (
-                                    <div>
-                                        <SectionTitle>Профиль</SectionTitle>
-                                        {Object.entries(detail.profile_fields).map(([key, value]) => (
-                                            <DataRow
-                                                key={key}
-                                                label={ADMIN_PLAYER_FIELD_LABELS[key] ?? key}
-                                                value={
-                                                    key === 'userpic' &&
-                                                    typeof value === 'string' &&
-                                                    value.trim() ? (
-                                                        <a
-                                                            href={value.trim()}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            style={{ color: '#1B5E20', wordBreak: 'break-all' }}
-                                                        >
-                                                            {value.trim()}
-                                                        </a>
-                                                    ) : key === 'referred_by_user_id' && detail.inviter ? (
-                                                        `${formatAdminPlayerFieldValue(key, value)} (${detail.inviter.display_name})`
-                                                    ) : (
-                                                        formatAdminPlayerFieldValue(key, value)
-                                                    )
-                                                }
-                                            />
-                                        ))}
-
-                                        <SectionTitle>Рейтинг Elo</SectionTitle>
-                                        {detail.elo_leaderboard || detail.elo_rating ? (
-                                            <>
-                                                {detail.elo_leaderboard ? (
-                                                    <>
-                                                        <DataRow
-                                                            label="Рейтинг"
-                                                            value={formatAdminPlayerFieldValue(
-                                                                'rating',
-                                                                detail.elo_leaderboard.rating
-                                                            )}
-                                                        />
-                                                        <DataRow
-                                                            label="Место"
-                                                            value={formatAdminPlayerFieldValue(
-                                                                'place',
-                                                                detail.elo_leaderboard.place
-                                                            )}
-                                                        />
-                                                        <DataRow
-                                                            label="Игр (Elo)"
-                                                            value={formatAdminPlayerFieldValue(
-                                                                'games_played',
-                                                                detail.elo_leaderboard.games_played
-                                                            )}
-                                                        />
-                                                    </>
-                                                ) : null}
-                                                {detail.elo_rating ? (
-                                                    <DataRow
-                                                        label="Обновление рейтинга"
-                                                        value={formatAdminPlayerFieldValue(
-                                                            'updated_at',
-                                                            detail.elo_rating.updated_at
-                                                        )}
-                                                    />
-                                                ) : null}
-                                            </>
-                                        ) : (
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
-                                                Нет данных в Elo.
-                                            </p>
-                                        )}
-
-                                        <SectionTitle>Зал славы</SectionTitle>
-                                        {detail.hall_of_fame ? (
-                                            Object.entries(detail.hall_of_fame)
-                                                .filter(([k]) => k !== 'user_id')
-                                                .map(([key, value]) => (
-                                                    <DataRow
-                                                        key={key}
-                                                        label={key}
-                                                        value={formatAdminPlayerFieldValue(key, value)}
-                                                    />
-                                                ))
-                                        ) : (
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
-                                                Нет строки в hall of fame.
-                                            </p>
-                                        )}
-
-                                        <SectionTitle>Рефералы</SectionTitle>
-                                        <DataRow label="Приглашено игроков" value={String(detail.invited_count)} />
-                                        <DataRow
-                                            label="Реферальная ссылка"
-                                            value={
-                                                detail.referral_link ? (
-                                                    <span style={{ wordBreak: 'break-all' }}>{detail.referral_link}</span>
-                                                ) : (
-                                                    '—'
-                                                )
-                                            }
-                                        />
-                                        {detail.inviter ? (
-                                            <DataRow
-                                                label="Кто пригласил"
-                                                value={
-                                                    <Link
-                                                        href={`/player/${detail.inviter.id}`}
-                                                        style={{ color: '#1B5E20', fontWeight: 600 }}
-                                                    >
-                                                        {detail.inviter.display_name}
-                                                    </Link>
-                                                }
-                                            />
-                                        ) : (
-                                            <DataRow label="Кто пригласил" value="—" />
-                                        )}
-
-                                        {Object.keys(detail.extra_fields).length > 0 ? (
-                                            <>
-                                                <SectionTitle>Дополнительные поля БД</SectionTitle>
-                                                {Object.entries(detail.extra_fields).map(([key, value]) => (
-                                                    <DataRow
-                                                        key={key}
-                                                        label={key}
-                                                        value={formatAdminPlayerFieldValue(key, value)}
-                                                    />
-                                                ))}
-                                            </>
-                                        ) : null}
-
-                                        <div style={{ marginTop: '16px' }}>
-                                            <Link
-                                                href={`/player/${userId}`}
-                                                style={{
-                                                    fontSize: '14px',
-                                                    color: '#1B5E20',
-                                                    fontWeight: 600,
-                                                }}
-                                            >
-                                                Публичная страница игрока →
-                                            </Link>
-                                        </div>
-                                    </div>
+                                    <AdminPlayerProfileTab detail={detail} userId={userId} />
                                 ) : null}
 
                                 {tab === 'finance' ? (
