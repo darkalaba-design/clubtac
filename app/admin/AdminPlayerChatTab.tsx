@@ -463,8 +463,9 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                         position: 'absolute',
                         left: 0,
                         right: 0,
-                        top: `-${COMPOSER_LIST_FADE_PX}px`,
+                        bottom: 0,
                         height: `${COMPOSER_LIST_FADE_PX}px`,
+                        zIndex: 0,
                         background: `linear-gradient(180deg, rgba(${CHAT_BG_RGB}, 0) 0%, rgba(${CHAT_BG_RGB}, 1) 100%)`,
                         pointerEvents: 'none',
                     }}
@@ -472,6 +473,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                 <div
                     style={{
                         position: 'relative',
+                        zIndex: 1,
                         pointerEvents: 'auto',
                         border: '1px solid #EBE8E0',
                         borderRadius: `${COMPOSER_SHELL_RADIUS}px`,
