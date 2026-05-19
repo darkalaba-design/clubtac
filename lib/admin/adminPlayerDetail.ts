@@ -248,6 +248,30 @@ export function formatAdminPlayerFieldValue(key: string, value: unknown): string
     return String(value)
 }
 
+/** Служебные записи с нулевой суммой не показываем во вкладке «Финансы». */
+export function isAdminPlayerZeroFinanceAmount(amount: unknown): boolean {
+    if (amount == null) return false
+    const n = Number(amount)
+    return Number.isFinite(n) && n === 0
+}
+
+export function filterAdminPlayerFinanceLists<
+    TW extends { amount?: unknown },
+    TP extends { price_paid?: unknown },
+>(
+    walletTransactions: TW[],
+    eventParticipations: TP[],
+): { wallet_transactions: TW[]; event_participations: TP[] } {
+    return {
+        wallet_transactions: walletTransactions.filter(
+            (tx) => !isAdminPlayerZeroFinanceAmount(tx.amount),
+        ),
+        event_participations: eventParticipations.filter(
+            (p) => !isAdminPlayerZeroFinanceAmount(p.price_paid),
+        ),
+    }
+}
+
 export function walletTransactionTypeLabel(type: string): string {
     switch (type) {
         case 'manual_adjustment':

@@ -4,6 +4,7 @@ import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { formatParticipantDisplay } from '@/lib/admin/formatParticipantDisplay'
 import {
+    filterAdminPlayerFinanceLists,
     splitUserFieldsForAdmin,
     type AdminPlayerDetailResponse,
     type AdminPlayerEventParticipation,
@@ -144,13 +145,13 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
         }
     }
 
-    const wallet_transactions: AdminPlayerWalletTransaction[] = walletRows.map((tx) => ({
+    const wallet_transactions_mapped: AdminPlayerWalletTransaction[] = walletRows.map((tx) => ({
         ...tx,
         amount: Number(tx.amount),
         event_title: tx.event_id ? eventById[tx.event_id]?.title ?? null : null,
     }))
 
-    const event_participations: AdminPlayerEventParticipation[] = partRows.map((p) => ({
+    const event_participations_mapped: AdminPlayerEventParticipation[] = partRows.map((p) => ({
         id: p.id,
         event_id: p.event_id,
         event_title: eventById[p.event_id]?.title ?? null,
@@ -159,6 +160,11 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
         price_paid: p.price_paid,
         created_at: p.created_at ?? null,
     }))
+
+    const { wallet_transactions, event_participations } = filterAdminPlayerFinanceLists(
+        wallet_transactions_mapped,
+        event_participations_mapped,
+    )
 
     const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME?.replace(/^@/, '') || ''
     const referralCode = typeof user.referral_code === 'string' ? user.referral_code : null

@@ -15,6 +15,7 @@ import {
 import { EventParticipantAdminCard } from './EventParticipantAdminCard'
 import { EventAddParticipantPicker } from './EventAddParticipantPicker'
 import { EventGameForm, type EventGameDraft } from './EventGameForm'
+import type { AdminGamesByEventGroup } from '@/lib/admin/adminGamesByEvent'
 import { eventGameSummaryToDraft, type EventGameSummaryRow } from '@/lib/admin/eventGames'
 import { AdminEventGameRow } from './AdminEventGameRow'
 import { participantRefundAmount } from '@/lib/admin/eventParticipantWallet'
@@ -133,17 +134,6 @@ type EventRow = {
     participants_paid?: number
 }
 
-type GameRow = {
-    game_id: number
-    created_at: string
-    player_1_1: string
-    player_1_2: string
-    player_2_1: string
-    player_2_2: string
-    score_1: number
-    score_2: number
-}
-
 type AdminClubOption = { id: string; name: string }
 
 type EventParticipantRow = {
@@ -246,7 +236,7 @@ export default function AdminPageClient() {
     const [adminUsersSearch, setAdminUsersSearch] = useState('')
     const [adminClubs, setAdminClubs] = useState<AdminClubOption[]>([])
     const [events, setEvents] = useState<EventRow[]>([])
-    const [games, setGames] = useState<GameRow[]>([])
+    const [gamesByEvent, setGamesByEvent] = useState<AdminGamesByEventGroup[]>([])
     const [adminPlayers, setAdminPlayers] = useState<AdminPlayerRow[]>([])
     const [adminPlayersSearch, setAdminPlayersSearch] = useState('')
     const [playerModalUserId, setPlayerModalUserId] = useState<number | null>(null)
@@ -301,7 +291,7 @@ export default function AdminPageClient() {
                 const [er, cr, gr, pr] = await Promise.all([
                     adminFetch('/api/admin/events'),
                     adminFetch('/api/admin/clubs'),
-                    adminFetch('/api/admin/games?limit=100'),
+                    adminFetch('/api/admin/games?limit=500'),
                     adminFetch('/api/admin/players?limit=500'),
                 ])
                 const ej = await er.json().catch(() => ({}))
@@ -313,12 +303,12 @@ export default function AdminPageClient() {
                 if (cr.ok) setAdminClubs((cj.clubs as AdminClubOption[]) || [])
                 else setAdminClubs([])
                 if (!gr.ok) throw new Error(typeof gj.error === 'string' ? gj.error : gr.statusText)
-                setGames(gj.games || [])
+                setGamesByEvent((gj.groups as AdminGamesByEventGroup[]) || [])
                 if (!pr.ok) throw new Error(typeof pj.error === 'string' ? pj.error : pr.statusText)
                 setAdminPlayers((pj.players as AdminPlayerRow[]) || [])
             } else {
                 setEvents([])
-                setGames([])
+                setGamesByEvent([])
                 setAdminClubs([])
                 setAdminPlayers([])
             }
@@ -460,6 +450,17 @@ export default function AdminPageClient() {
         }
     }
 
+    const refetchAdminGamesByEvent = useCallback(async () => {
+        try {
+            const r = await adminFetch('/api/admin/games?limit=500')
+            const j = await r.json().catch(() => ({}))
+            if (!r.ok) return
+            setGamesByEvent((j.groups as AdminGamesByEventGroup[]) || [])
+        } catch {
+            /* список партий обновится при следующей загрузке */
+        }
+    }, [])
+
     const refetchEventGames = useCallback(async (id: string) => {
         setEventModalGamesLoading(true)
         try {
@@ -529,15 +530,18 @@ export default function AdminPageClient() {
         }
     }
 
-    const openEventModal = (id: string) => {
+    const openEventModal = (
+        id: string,
+        options?: { tab?: EventModalTab; editGameId?: number }
+    ) => {
         setEventModalId(id)
-        setEventModalTab('participants')
+        setEventModalTab(options?.tab ?? 'participants')
         setAdmitPromptParticipantId(null)
         setExcludePromptParticipantId(null)
         setParticipantBusy(false)
         setEventModalEditing(false)
         setEventModalAddingGame(false)
-        setEventModalEditingGameId(null)
+        setEventModalEditingGameId(options?.editGameId ?? null)
         setEventModalDraft(null)
         setEventModalCoverMessage(null)
         setEventModalCoverBusy(false)
@@ -611,6 +615,7 @@ export default function AdminPageClient() {
             }
             setEventModalAddingGame(false)
             await refetchEventGames(eventModalId)
+            void refetchAdminGamesByEvent()
         } catch (e) {
             setEventModalErr(e instanceof Error ? e.message : 'Не удалось добавить партию')
             throw e
@@ -655,6 +660,7 @@ export default function AdminPageClient() {
             }
             setEventModalEditingGameId(null)
             await refetchEventGames(eventModalId)
+            void refetchAdminGamesByEvent()
         } catch (e) {
             setEventModalErr(e instanceof Error ? e.message : 'Не удалось сохранить партию')
             throw e
@@ -678,6 +684,7 @@ export default function AdminPageClient() {
             }
             setEventModalEditingGameId(null)
             await refetchEventGames(eventModalId)
+            void refetchAdminGamesByEvent()
         } catch (e) {
             setEventModalErr(e instanceof Error ? e.message : 'Не удалось удалить партию')
         } finally {
@@ -1596,38 +1603,72 @@ export default function AdminPageClient() {
 
             {navTab === 'games' && (
             <section style={pageSection}>
-                <h2 style={{ margin: '0 0 8px', fontSize: '17px' }}>Сыгранные партии</h2>
-                <div
-                    style={{
-                        marginBottom: '12px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        backgroundColor: '#FFF9E6',
-                        border: '1px solid #FFE082',
-                        fontSize: '12px',
-                        color: '#5D4037',
-                        lineHeight: 1.45,
-                    }}
-                >
-                    Сейчас только <strong>просмотр</strong> последних строк из <code>games_summary</code>. Добавление и удаление
-                    партий подключим к <code>clubtac_games</code> и <code>clubtac_players</code> (через отдельную логику), чтобы не
-                    ломать вашу схему и view.
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {games.map((g) => (
-                        <div
-                            key={g.game_id}
-                            style={{
-                                fontSize: '12px',
-                                borderBottom: '1px solid #eee',
-                                paddingBottom: '6px',
-                            }}
-                        >
-                            #{g.game_id} {g.player_1_1}+{g.player_1_2} vs {g.player_2_1}+{g.player_2_2} — {g.score_1}:{g.score_2}{' '}
-                            <span style={{ color: '#6B6B69' }}>({new Date(g.created_at).toLocaleString('ru-RU')})</span>
-                        </div>
-                    ))}
-                </div>
+                <h2 style={{ margin: '0 0 6px', fontSize: '17px' }}>Партии</h2>
+                <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#6B6B69', lineHeight: 1.45 }}>
+                    Добавление и редактирование партий — на странице события, вкладка «Партии».
+                </p>
+                {gamesByEvent.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Партий пока нет.</p>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {gamesByEvent.map((group) => (
+                            <div key={group.event_id}>
+                                <button
+                                    type="button"
+                                    onClick={() => openEventModal(group.event_id, { tab: 'games' })}
+                                    style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        margin: '0 0 8px',
+                                        padding: 0,
+                                        border: 'none',
+                                        background: 'transparent',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: '15px',
+                                            fontWeight: 700,
+                                            color: '#1D1D1B',
+                                            lineHeight: 1.35,
+                                        }}
+                                    >
+                                        {group.event_title?.trim() || `Событие ${group.event_id}`}
+                                    </div>
+                                    {group.starts_at ? (
+                                        <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '2px' }}>
+                                            {formatEventCardDayMonthAndTime(group.starts_at)}
+                                        </div>
+                                    ) : null}
+                                </button>
+                                <div
+                                    style={{
+                                        border: '1px solid #EBE8E0',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        backgroundColor: '#FFFFFF',
+                                    }}
+                                >
+                                    {group.games.map((game, index) => (
+                                        <AdminEventGameRow
+                                            key={game.game_id}
+                                            game={game}
+                                            showDividerTop={index > 0}
+                                            onClick={() =>
+                                                openEventModal(group.event_id, {
+                                                    tab: 'games',
+                                                    editGameId: game.game_id,
+                                                })
+                                            }
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </section>
             )}
             </main>
