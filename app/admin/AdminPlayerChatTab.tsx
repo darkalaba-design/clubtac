@@ -18,9 +18,13 @@ import {
 } from '@/lib/admin/adminPlayerMessages'
 
 const CHAT_BG = '#FAFAF8'
+const CHAT_BG_RGB = '250, 250, 248'
 const COMPOSER_FIELD_BG = '#FFFFFF'
 /** Запас под оверлей капсулы, пока не измерили ResizeObserver */
 const COMPOSER_OVERLAY_PAD_FALLBACK_PX = 72
+/** Растворение ленты над капсулой */
+const COMPOSER_LIST_FADE_PX = 44
+const COMPOSER_SHELL_SHADOW = '0 2px 10px rgba(29, 29, 27, 0.07), 0 1px 2px rgba(29, 29, 27, 0.05)'
 const COMPOSER_LINE_HEIGHT_PX = 20
 const COMPOSER_PAD_X = 10
 const COMPOSER_MAX_ROWS = 6
@@ -454,11 +458,25 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                 }}
             >
                 <div
+                    aria-hidden
                     style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: `-${COMPOSER_LIST_FADE_PX}px`,
+                        height: `${COMPOSER_LIST_FADE_PX}px`,
+                        background: `linear-gradient(180deg, rgba(${CHAT_BG_RGB}, 0) 0%, rgba(${CHAT_BG_RGB}, 1) 100%)`,
+                        pointerEvents: 'none',
+                    }}
+                />
+                <div
+                    style={{
+                        position: 'relative',
                         pointerEvents: 'auto',
                         border: '1px solid #EBE8E0',
                         borderRadius: `${COMPOSER_SHELL_RADIUS}px`,
                         backgroundColor: COMPOSER_FIELD_BG,
+                        boxShadow: COMPOSER_SHELL_SHADOW,
                         overflow: 'hidden',
                     }}
                 >
