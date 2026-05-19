@@ -121,7 +121,12 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     const loadOlderInFlightRef = useRef(false)
     const keyboardInsetRef = useRef(0)
     /** scrollTop и inset в момент фокуса в поле — для сдвига ленты при открытии клавиатуры */
-    const keyboardScrollPreserveRef = useRef<{ scrollTop: number; inset: number } | null>(null)
+    const keyboardScrollPreserveRef = useRef<{
+        scrollTop: number
+        inset: number
+        atBottom: boolean
+    } | null>(null)
+    const keyboardInsetPrevRef = useRef(0)
 
     const isListAtBottom = useCallback((el: HTMLDivElement, threshold = 8) => {
         return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold
@@ -135,7 +140,11 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         const snap = keyboardScrollPreserveRef.current
 
         if (snap) {
-            listEl.scrollTop = Math.max(0, snap.scrollTop + (inset - snap.inset))
+            if (snap.atBottom) {
+                listEl.scrollTop = listEl.scrollHeight - listEl.clientHeight
+            } else {
+                listEl.scrollTop = Math.max(0, snap.scrollTop + (inset - snap.inset))
+            }
             return
         }
 
@@ -200,20 +209,30 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
 
     useLayoutEffect(() => {
         if (!active) return
-        applyKeyboardScroll()
-        if (keyboardInsetRef.current === 0) {
+
+        const inset = keyboardInsetRef.current
+        const prevInset = keyboardInsetPrevRef.current
+
+        if (inset > 0 || prevInset > 0) {
+            applyKeyboardScroll()
+        }
+
+        if (prevInset > 0 && inset === 0) {
             keyboardScrollPreserveRef.current = null
         }
+        keyboardInsetPrevRef.current = inset
     }, [keyboardInset, listBottomPad, active, applyKeyboardScroll])
 
     const handleComposerFocus = useCallback(() => {
         const listEl = listRef.current
         if (listEl) {
+            const atBottom = isListAtBottom(listEl)
             keyboardScrollPreserveRef.current = {
                 scrollTop: listEl.scrollTop,
                 inset: keyboardInsetRef.current,
+                atBottom,
             }
-            stickToBottomRef.current = isListAtBottom(listEl, 80)
+            stickToBottomRef.current = atBottom
         }
         syncKeyboardLayout()
         requestAnimationFrame(syncKeyboardLayout)
@@ -224,6 +243,8 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     useEffect(() => {
         if (!active) {
             keyboardInsetRef.current = 0
+            keyboardInsetPrevRef.current = 0
+            keyboardScrollPreserveRef.current = null
             setKeyboardInset(0)
             return
         }
@@ -248,6 +269,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
             vv?.removeEventListener('scroll', onViewportChange)
             tg?.offEvent?.('viewportChanged', onViewportChange)
             keyboardInsetRef.current = 0
+            keyboardInsetPrevRef.current = 0
             keyboardScrollPreserveRef.current = null
             setKeyboardInset(0)
         }
