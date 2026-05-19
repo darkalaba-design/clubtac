@@ -24,6 +24,8 @@ import EventsTabIcon from '../components/EventsTabIcon'
 import AccessTabIcon from '../components/AccessTabIcon'
 import PlayersTabIcon from '../components/PlayersTabIcon'
 import { displayPublicNickname } from '@/lib/takoff'
+import { adminFetch } from '@/lib/admin/adminFetch'
+import { AdminPlayerModal } from './AdminPlayerModal'
 
 function AdminAddressLine({ address, style }: { address: string; style?: CSSProperties }) {
     return (
@@ -214,13 +216,6 @@ function eventToModalDraft(ev: EventRow): EventModalDraft {
     }
 }
 
-function adminFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-    const h = new Headers(init.headers)
-    const id = getInitDataHeader()
-    if (id) h.set(TELEGRAM_INIT_DATA_HEADER, id)
-    return fetch(input, { ...init, headers: h })
-}
-
 type AdminNavTab = 'events' | 'games' | 'players' | 'admins'
 type EventModalTab = 'participants' | 'games' | 'details'
 
@@ -254,6 +249,8 @@ export default function AdminPageClient() {
     const [games, setGames] = useState<GameRow[]>([])
     const [adminPlayers, setAdminPlayers] = useState<AdminPlayerRow[]>([])
     const [adminPlayersSearch, setAdminPlayersSearch] = useState('')
+    const [playerModalUserId, setPlayerModalUserId] = useState<number | null>(null)
+    const [playerModalPreviewName, setPlayerModalPreviewName] = useState<string>('')
 
     const [newEvent, setNewEvent] = useState({
         clubId: '',
@@ -1510,21 +1507,33 @@ export default function AdminPageClient() {
                                 const avatarUrl =
                                     !p.takoff && p.userpic?.trim() ? p.userpic.trim() : null
                                 return (
-                                    <div
+                                    <button
                                         key={p.user_id}
+                                        type="button"
+                                        onClick={() => {
+                                            setPlayerModalPreviewName(displayName)
+                                            setPlayerModalUserId(p.user_id)
+                                        }}
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '12px',
+                                            width: '100%',
+                                            border: 'none',
                                             borderBottom: '1px solid #EBE8E0',
-                                            paddingBottom: '8px',
+                                            padding: '8px 4px',
+                                            background: 'transparent',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            borderRadius: '8px',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#FFFEF7'
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = 'transparent'
                                         }}
                                     >
-                                        <Link
-                                            href={`/player/${p.user_id}`}
-                                            style={{ flexShrink: 0, textDecoration: 'none' }}
-                                            title={displayName}
-                                        >
                                             <div
                                                 style={{
                                                     width: '36px',
@@ -1556,23 +1565,18 @@ export default function AdminPageClient() {
                                                     displayName.charAt(0).toUpperCase()
                                                 )}
                                             </div>
-                                        </Link>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <Link
-                                                href={`/player/${p.user_id}`}
-                                                title={displayName}
+                                            <div
                                                 style={{
                                                     fontWeight: 600,
                                                     color: '#1D1D1B',
-                                                    textDecoration: 'none',
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
                                                     whiteSpace: 'nowrap',
-                                                    display: 'block',
                                                 }}
                                             >
                                                 {displayName}
-                                            </Link>
+                                            </div>
                                             <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                                 id {p.user_id}
                                                 {p.username && !p.takoff ? ` · @${p.username}` : ''}
@@ -1582,7 +1586,7 @@ export default function AdminPageClient() {
                                                     : ''}
                                             </div>
                                         </div>
-                                    </div>
+                                    </button>
                                 )
                             })
                         )}
@@ -2383,6 +2387,15 @@ export default function AdminPageClient() {
                     </div>
                 </div>
             )}
+
+            <AdminPlayerModal
+                userId={playerModalUserId}
+                previewName={playerModalPreviewName}
+                onClose={() => {
+                    setPlayerModalUserId(null)
+                    setPlayerModalPreviewName('')
+                }}
+            />
         </div>
     )
 }
