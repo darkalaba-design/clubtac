@@ -17,7 +17,10 @@ import {
     type AdminPlayerMessagesResponse,
 } from '@/lib/admin/adminPlayerMessages'
 
+const CHAT_BG = '#FAFAF8'
 const COMPOSER_FIELD_BG = '#FFFFFF'
+/** Запас под оверлей капсулы, пока не измерили ResizeObserver */
+const COMPOSER_OVERLAY_PAD_FALLBACK_PX = 72
 const COMPOSER_LINE_HEIGHT_PX = 20
 const COMPOSER_PAD_X = 10
 const COMPOSER_MAX_ROWS = 6
@@ -85,7 +88,9 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     const [composerExpanded, setComposerExpanded] = useState(false)
 
     const listRef = useRef<HTMLDivElement>(null)
+    const composerOverlayRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+    const [listBottomPad, setListBottomPad] = useState(COMPOSER_OVERLAY_PAD_FALLBACK_PX)
     const stickToBottomRef = useRef(true)
     const prependScrollHeightRef = useRef<number | null>(null)
     const loadOlderInFlightRef = useRef(false)
@@ -116,6 +121,20 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     useEffect(() => {
         adjustComposerHeight()
     }, [draft, adjustComposerHeight])
+
+    useLayoutEffect(() => {
+        const el = composerOverlayRef.current
+        if (!el) return
+
+        const syncPad = () => {
+            setListBottomPad(el.offsetHeight)
+        }
+
+        syncPad()
+        const ro = new ResizeObserver(syncPad)
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [active, composerExpanded, draft])
 
     const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
         const el = listRef.current
@@ -356,10 +375,11 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     return (
         <div
             style={{
-                display: 'flex',
-                flexDirection: 'column',
+                position: 'relative',
                 flex: 1,
                 minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
             }}
         >
             <div
@@ -371,7 +391,8 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                     overflowY: 'auto',
                     WebkitOverflowScrolling: 'touch',
                     padding: '12px 12px 8px',
-                    backgroundColor: '#FAFAF8',
+                    paddingBottom: `${listBottomPad + 8}px`,
+                    backgroundColor: CHAT_BG,
                 }}
             >
                 {loading && messages.length === 0 ? (
@@ -422,14 +443,19 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
             </div>
 
             <div
+                ref={composerOverlayRef}
                 style={{
-                    flexShrink: 0,
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
                     padding: '10px 10px calc(10px + env(safe-area-inset-bottom, 0px))',
-                    backgroundColor: 'transparent',
+                    pointerEvents: 'none',
                 }}
             >
                 <div
                     style={{
+                        pointerEvents: 'auto',
                         border: '1px solid #EBE8E0',
                         borderRadius: `${COMPOSER_SHELL_RADIUS}px`,
                         backgroundColor: COMPOSER_FIELD_BG,
