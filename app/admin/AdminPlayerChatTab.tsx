@@ -35,6 +35,26 @@ const COMPOSER_SHELL_RADIUS = SEND_BTN_SIZE / 2 + SEND_BTN_INSET
 /** Порог скролла от верха для подгрузки старых сообщений */
 const LOAD_OLDER_SCROLL_TOP_PX = 120
 
+type TelegramWebAppViewport = {
+    viewportHeight?: number
+    onEvent?: (event: string, handler: () => void) => void
+    offEvent?: (event: string, handler: () => void) => void
+}
+
+/** Высота перекрытия снизу (клавиатура) — Telegram Mini App или Visual Viewport API */
+function measureMobileKeyboardInset(): number {
+    if (typeof window === 'undefined') return 0
+
+    const tg = (window as unknown as { Telegram?: { WebApp?: TelegramWebAppViewport } }).Telegram?.WebApp
+    if (tg && typeof tg.viewportHeight === 'number' && tg.viewportHeight > 0) {
+        return Math.max(0, Math.round(window.innerHeight - tg.viewportHeight))
+    }
+
+    const vv = window.visualViewport
+    if (!vv) return 0
+    return Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
+}
+
 type Props = {
     userId: number
     active: boolean
@@ -95,9 +115,11 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     const composerOverlayRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const [listBottomPad, setListBottomPad] = useState(COMPOSER_OVERLAY_PAD_FALLBACK_PX)
+    const [keyboardInset, setKeyboardInset] = useState(0)
     const stickToBottomRef = useRef(true)
     const prependScrollHeightRef = useRef<number | null>(null)
     const loadOlderInFlightRef = useRef(false)
+    const keyboardInsetRef = useRef(0)
 
     const syncComposerScrollFade = useCallback(() => {
         const el = textareaRef.current
@@ -145,6 +167,65 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         if (!el) return
         el.scrollTo({ top: el.scrollHeight, behavior })
     }, [])
+
+    const syncKeyboardLayout = useCallback(() => {
+        const inset = measureMobileKeyboardInset()
+        const listEl = listRef.current
+        const prev = keyboardInsetRef.current
+        const delta = inset - prev
+        keyboardInsetRef.current = inset
+        setKeyboardInset(inset)
+
+        if (!listEl || delta === 0) return
+
+        requestAnimationFrame(() => {
+            if (stickToBottomRef.current) {
+                scrollToBottom('auto')
+            } else {
+                listEl.scrollTop = Math.max(0, listEl.scrollTop + delta)
+            }
+        })
+    }, [scrollToBottom])
+
+    const handleComposerFocus = useCallback(() => {
+        const listEl = listRef.current
+        if (listEl) {
+            const distanceFromBottom = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight
+            stickToBottomRef.current = distanceFromBottom < 120
+        }
+        syncKeyboardLayout()
+        requestAnimationFrame(() => {
+            if (stickToBottomRef.current) scrollToBottom('smooth')
+        })
+    }, [syncKeyboardLayout, scrollToBottom])
+
+    useEffect(() => {
+        if (!active) {
+            keyboardInsetRef.current = 0
+            setKeyboardInset(0)
+            return
+        }
+
+        const onViewportChange = () => syncKeyboardLayout()
+
+        const vv = window.visualViewport
+        vv?.addEventListener('resize', onViewportChange)
+        vv?.addEventListener('scroll', onViewportChange)
+
+        const tg = (window as unknown as { Telegram?: { WebApp?: TelegramWebAppViewport } }).Telegram
+            ?.WebApp
+        tg?.onEvent?.('viewportChanged', onViewportChange)
+
+        onViewportChange()
+
+        return () => {
+            vv?.removeEventListener('resize', onViewportChange)
+            vv?.removeEventListener('scroll', onViewportChange)
+            tg?.offEvent?.('viewportChanged', onViewportChange)
+            keyboardInsetRef.current = 0
+            setKeyboardInset(0)
+        }
+    }, [active, syncKeyboardLayout])
 
     const fetchMessagesPage = useCallback(
         async (params: URLSearchParams) => {
@@ -395,7 +476,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                     overflowY: 'auto',
                     WebkitOverflowScrolling: 'touch',
                     padding: '12px 12px 8px',
-                    paddingBottom: `${listBottomPad + 8}px`,
+                    paddingBottom: `${listBottomPad + 8 + keyboardInset}px`,
                     backgroundColor: CHAT_BG,
                 }}
             >
@@ -452,8 +533,11 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                     position: 'absolute',
                     left: 0,
                     right: 0,
-                    bottom: 0,
-                    padding: '10px 10px calc(10px + env(safe-area-inset-bottom, 0px))',
+                    bottom: keyboardInset,
+                    padding:
+                        keyboardInset > 0
+                            ? '10px'
+                            : '10px 10px calc(10px + env(safe-area-inset-bottom, 0px))',
                     pointerEvents: 'none',
                 }}
             >
@@ -511,6 +595,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                                 value={draft}
                                 rows={1}
                                 onChange={(e) => setDraft(e.target.value)}
+                                onFocus={handleComposerFocus}
                                 onScroll={syncComposerScrollFade}
                                 placeholder="Сообщение…"
                                 style={{
