@@ -55,6 +55,16 @@ function measureMobileKeyboardInset(): number {
     return Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
 }
 
+/** Сколько нижней части ленты уходит под клавиатуру (в пикселях экрана) */
+function measureListHiddenBelowViewport(listEl: HTMLDivElement): number {
+    const vv = window.visualViewport
+    if (!vv) return measureMobileKeyboardInset()
+
+    const listBottom = listEl.getBoundingClientRect().bottom
+    const visibleBottom = vv.offsetTop + vv.height
+    return Math.max(0, Math.round(listBottom - visibleBottom))
+}
+
 type Props = {
     userId: number
     active: boolean
@@ -127,6 +137,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         atBottom: boolean
     } | null>(null)
     const keyboardInsetPrevRef = useRef(0)
+    const composerFocusedRef = useRef(false)
 
     const isListAtBottom = useCallback((el: HTMLDivElement, threshold = 8) => {
         return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold
@@ -135,15 +146,16 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     const applyKeyboardScroll = useCallback(() => {
         const listEl = listRef.current
         if (!listEl) return
+        if (!composerFocusedRef.current && keyboardInsetRef.current === 0) return
 
-        const inset = keyboardInsetRef.current
         const snap = keyboardScrollPreserveRef.current
 
         if (snap) {
             if (snap.atBottom) {
                 listEl.scrollTop = listEl.scrollHeight - listEl.clientHeight
             } else {
-                listEl.scrollTop = Math.max(0, snap.scrollTop + (inset - snap.inset))
+                const hiddenBelow = measureListHiddenBelowViewport(listEl)
+                listEl.scrollTop = Math.max(0, snap.scrollTop + hiddenBelow)
             }
             return
         }
@@ -224,6 +236,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     }, [keyboardInset, listBottomPad, active, applyKeyboardScroll])
 
     const handleComposerFocus = useCallback(() => {
+        composerFocusedRef.current = true
         const listEl = listRef.current
         if (listEl) {
             const atBottom = isListAtBottom(listEl)
@@ -235,10 +248,27 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
             stickToBottomRef.current = atBottom
         }
         syncKeyboardLayout()
-        requestAnimationFrame(syncKeyboardLayout)
-        window.setTimeout(syncKeyboardLayout, 60)
-        window.setTimeout(syncKeyboardLayout, 180)
-    }, [syncKeyboardLayout, isListAtBottom])
+        requestAnimationFrame(() => {
+            syncKeyboardLayout()
+            applyKeyboardScroll()
+        })
+        window.setTimeout(() => {
+            syncKeyboardLayout()
+            applyKeyboardScroll()
+        }, 60)
+        window.setTimeout(() => {
+            syncKeyboardLayout()
+            applyKeyboardScroll()
+        }, 180)
+        window.setTimeout(() => {
+            syncKeyboardLayout()
+            applyKeyboardScroll()
+        }, 320)
+    }, [syncKeyboardLayout, isListAtBottom, applyKeyboardScroll])
+
+    const handleComposerBlur = useCallback(() => {
+        composerFocusedRef.current = false
+    }, [])
 
     useEffect(() => {
         if (!active) {
@@ -251,7 +281,10 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
 
         const onViewportChange = () => {
             syncKeyboardLayout()
-            requestAnimationFrame(syncKeyboardLayout)
+            requestAnimationFrame(() => {
+                syncKeyboardLayout()
+                applyKeyboardScroll()
+            })
         }
 
         const vv = window.visualViewport
@@ -273,7 +306,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
             keyboardScrollPreserveRef.current = null
             setKeyboardInset(0)
         }
-    }, [active, syncKeyboardLayout])
+    }, [active, syncKeyboardLayout, applyKeyboardScroll])
 
     const fetchMessagesPage = useCallback(
         async (params: URLSearchParams) => {
@@ -644,6 +677,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                                 rows={1}
                                 onChange={(e) => setDraft(e.target.value)}
                                 onFocus={handleComposerFocus}
+                                onBlur={handleComposerBlur}
                                 onScroll={syncComposerScrollFade}
                                 placeholder="Сообщение…"
                                 style={{
