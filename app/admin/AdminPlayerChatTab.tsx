@@ -1,9 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { adminFetch } from '@/lib/admin/adminFetch'
 import {
+    ADMIN_CHAT_MESSAGES_INITIAL,
+    ADMIN_CHAT_MESSAGES_OLDER_PAGE,
     adminMessageSenderLabel,
     dayKeyFromIso,
     formatAdminMessageDayLabel,
@@ -16,6 +18,9 @@ import {
 } from '@/lib/admin/adminPlayerMessages'
 
 const CHAT_BG = '#FAFAF8'
+const CHAT_BG_RGB = '250, 250, 248'
+/** Высота зоны растворения над полем ввода (в ленту сообщений) */
+const COMPOSER_FOOTER_FADE_PX = 48
 const COMPOSER_FIELD_BG = '#FFFFFF'
 const COMPOSER_LINE_HEIGHT_PX = 20
 const COMPOSER_PAD_X = 10
@@ -24,6 +29,8 @@ const SEND_BTN_SIZE = 40
 const SEND_BTN_INSET = 6
 /** Половина кнопки + отступ до края — скругление «капсулы» вокруг круглой кнопки */
 const COMPOSER_SHELL_RADIUS = SEND_BTN_SIZE / 2 + SEND_BTN_INSET
+/** Порог скролла от верха для подгрузки старых сообщений */
+const LOAD_OLDER_SCROLL_TOP_PX = 120
 
 type Props = {
     userId: number
@@ -74,6 +81,8 @@ function isOutgoingSender(sender: AdminMessageSender): boolean {
 export function AdminPlayerChatTab({ userId, active }: Props) {
     const [messages, setMessages] = useState<AdminPlayerMessage[]>([])
     const [loading, setLoading] = useState(false)
+    const [loadingOlder, setLoadingOlder] = useState(false)
+    const [hasMore, setHasMore] = useState(false)
     const [loadErr, setLoadErr] = useState<string | null>(null)
     const [draft, setDraft] = useState('')
     const [composerTopFade, setComposerTopFade] = useState(false)
@@ -82,6 +91,8 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     const listRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const stickToBottomRef = useRef(true)
+    const prependScrollHeightRef = useRef<number | null>(null)
+    const loadOlderInFlightRef = useRef(false)
 
     const syncComposerScrollFade = useCallback(() => {
         const el = textareaRef.current
@@ -116,34 +127,97 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         el.scrollTo({ top: el.scrollHeight, behavior })
     }, [])
 
-    const loadMessages = useCallback(async () => {
-        setLoading(true)
-        setLoadErr(null)
-        try {
-            const res = await adminFetch(`/api/admin/players/${userId}/messages`)
+    const fetchMessagesPage = useCallback(
+        async (params: URLSearchParams) => {
+            const res = await adminFetch(`/api/admin/players/${userId}/messages?${params}`)
             const j = (await res.json().catch(() => ({}))) as AdminPlayerMessagesResponse & {
                 error?: string
             }
             if (!res.ok) {
                 throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
             }
+            return j
+        },
+        [userId]
+    )
+
+    const loadMessages = useCallback(async () => {
+        setLoading(true)
+        setLoadErr(null)
+        setHasMore(false)
+        prependScrollHeightRef.current = null
+        try {
+            const params = new URLSearchParams({
+                limit: String(ADMIN_CHAT_MESSAGES_INITIAL),
+            })
+            const j = await fetchMessagesPage(params)
             setMessages(j.messages ?? [])
+            setHasMore(Boolean(j.has_more))
             stickToBottomRef.current = true
         } catch (e) {
             setLoadErr(e instanceof Error ? e.message : 'Не удалось загрузить сообщения')
         } finally {
             setLoading(false)
         }
-    }, [userId])
+    }, [fetchMessagesPage])
+
+    const loadOlderMessages = useCallback(async () => {
+        if (loadOlderInFlightRef.current || !hasMore || loading || loadingOlder) return
+
+        const oldest = messages[0]
+        if (!oldest) return
+
+        const listEl = listRef.current
+        if (listEl) {
+            prependScrollHeightRef.current = listEl.scrollHeight
+        }
+
+        loadOlderInFlightRef.current = true
+        setLoadingOlder(true)
+        try {
+            const params = new URLSearchParams({
+                limit: String(ADMIN_CHAT_MESSAGES_OLDER_PAGE),
+                before_created_at: oldest.created_at,
+                before_id: oldest.id,
+            })
+            const j = await fetchMessagesPage(params)
+            const incoming = j.messages ?? []
+            if (incoming.length > 0) {
+                setMessages((prev) => mergeAdminPlayerMessages(prev, incoming))
+            }
+            setHasMore(Boolean(j.has_more))
+        } catch {
+            // Тихо: пользователь может прокрутить снова
+        } finally {
+            setLoadingOlder(false)
+            loadOlderInFlightRef.current = false
+        }
+    }, [fetchMessagesPage, hasMore, loading, loadingOlder, messages])
 
     useEffect(() => {
         if (!active) return
         setMessages([])
+        setHasMore(false)
         void loadMessages()
     }, [active, userId, loadMessages])
 
+    useLayoutEffect(() => {
+        if (prependScrollHeightRef.current == null) return
+        const el = listRef.current
+        if (!el) {
+            prependScrollHeightRef.current = null
+            return
+        }
+        const delta = el.scrollHeight - prependScrollHeightRef.current
+        if (delta > 0) {
+            el.scrollTop += delta
+        }
+        prependScrollHeightRef.current = null
+    }, [messages])
+
     useEffect(() => {
         if (!active || !stickToBottomRef.current) return
+        if (prependScrollHeightRef.current != null) return
         scrollToBottom(messages.length <= 3 ? 'auto' : 'smooth')
     }, [messages, active, scrollToBottom])
 
@@ -196,6 +270,16 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         if (!el) return
         const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
         stickToBottomRef.current = distanceFromBottom < 80
+
+        if (
+            el.scrollTop < LOAD_OLDER_SCROLL_TOP_PX &&
+            hasMore &&
+            !loading &&
+            !loadingOlder &&
+            messages.length > 0
+        ) {
+            void loadOlderMessages()
+        }
     }
 
     const handleSend = () => {
@@ -325,16 +409,50 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                     </p>
                 ) : null}
 
+                {loadingOlder ? (
+                    <p
+                        style={{
+                            margin: '0 0 10px',
+                            textAlign: 'center',
+                            fontSize: '12px',
+                            color: '#9E9E9C',
+                        }}
+                    >
+                        Загрузка ранних сообщений…
+                    </p>
+                ) : null}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>{messageItems}</div>
             </div>
 
             <div
                 style={{
                     flexShrink: 0,
-                    padding: '10px 10px calc(10px + env(safe-area-inset-bottom, 0px))',
-                    background: `linear-gradient(180deg, rgba(250, 250, 248, 0) 0%, rgba(250, 250, 248, 0.9) 55%, rgba(250, 250, 248, 0.9) 100%)`,
+                    position: 'relative',
+                    padding: `0 10px calc(10px + env(safe-area-inset-bottom, 0px))`,
+                    paddingTop: `${COMPOSER_FOOTER_FADE_PX}px`,
+                    background: 'transparent',
                 }}
             >
+                <div
+                    aria-hidden
+                    style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        height: `${COMPOSER_FOOTER_FADE_PX}px`,
+                        background: `linear-gradient(180deg, rgba(${CHAT_BG_RGB}, 0) 0%, rgba(${CHAT_BG_RGB}, 0.92) 100%)`,
+                        pointerEvents: 'none',
+                    }}
+                />
+                <div
+                    style={{
+                        position: 'relative',
+                        paddingTop: '6px',
+                        background: `linear-gradient(180deg, rgba(${CHAT_BG_RGB}, 0.88) 0%, rgba(${CHAT_BG_RGB}, 0.95) 100%)`,
+                    }}
+                >
                 <div
                     style={{
                         border: '1px solid #EBE8E0',
@@ -413,6 +531,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                             <ChatSendIcon fill={draft.trim() ? '#1D1D1B' : '#9E9E9C'} />
                         </button>
                     </div>
+                </div>
                 </div>
             </div>
         </div>

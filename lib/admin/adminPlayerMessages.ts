@@ -8,8 +8,14 @@ export type AdminPlayerMessage = {
     sender: AdminMessageSender
 }
 
+/** Первый экран чата — последние N сообщений */
+export const ADMIN_CHAT_MESSAGES_INITIAL = 20
+/** Подгрузка старых при скролле вверх */
+export const ADMIN_CHAT_MESSAGES_OLDER_PAGE = 30
+
 export type AdminPlayerMessagesResponse = {
     messages: AdminPlayerMessage[]
+    has_more: boolean
 }
 
 const SENDER_VALUES = new Set<AdminMessageSender>(['customer', 'agent', 'admin'])
