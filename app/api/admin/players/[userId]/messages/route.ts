@@ -7,8 +7,10 @@ import {
     ADMIN_CHAT_MESSAGES_OLDER_PAGE,
     parseAdminPlayerMessageRow,
     sortAdminPlayerMessagesAsc,
+    type AdminPlayerMessageSendResponse,
     type AdminPlayerMessagesResponse,
 } from '@/lib/admin/adminPlayerMessages'
+import { sendAdminPlayerMessageViaMake } from '@/lib/admin/sendAdminPlayerMessageViaMake'
 
 type RouteParams = { params: Promise<{ userId: string }> }
 
@@ -98,7 +100,7 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
     const fetchLimit = limit + 1
     let query = supabase
         .from('clubtac_messages')
-        .select('id, user_id, message, created_at, sender')
+        .select('id, user_id, message, created_at, sender, status')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
@@ -130,4 +132,112 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
 
     const body: AdminPlayerMessagesResponse = { messages, has_more }
     return NextResponse.json(body)
+}
+
+const MESSAGE_SELECT = 'id, user_id, message, created_at, sender, status'
+
+/** Отправка сообщения админом: draft в БД → Make (Telegram) → status sent/error. */
+export async function POST(request: NextRequest, ctx: RouteParams) {
+    const gate = await requireActor(request)
+    if (!gate.ok) return gate.response
+
+    const blocked = denyIfOutsideAppAdminAllowlist(gate.actor.telegram_id)
+    if (blocked) return blocked
+
+    if (!canManageEvents(gate.actor.app_role)) {
+        return NextResponse.json({ error: 'Нужны права admin или root' }, { status: 403 })
+    }
+
+    const { userId: userIdRaw } = await ctx.params
+    const userId = parseUserId(userIdRaw)
+    if (userId == null) {
+        return NextResponse.json({ error: 'Некорректный id игрока' }, { status: 400 })
+    }
+
+    let body: unknown
+    try {
+        body = await request.json()
+    } catch {
+        return NextResponse.json({ error: 'Нужен JSON в теле запроса' }, { status: 400 })
+    }
+
+    const messageText =
+        typeof (body as { message?: unknown })?.message === 'string'
+            ? (body as { message: string }).message.trim()
+            : ''
+    if (!messageText) {
+        return NextResponse.json({ error: 'Пустое сообщение' }, { status: 400 })
+    }
+
+    const { supabase } = gate
+
+    const { data: userRow, error: userErr } = await supabase
+        .from('clubtac_users')
+        .select('id, telegram_id')
+        .eq('id', userId)
+        .maybeSingle()
+
+    if (userErr) {
+        console.error('POST messages user:', userErr)
+        return NextResponse.json({ error: userErr.message }, { status: 500 })
+    }
+    if (!userRow) {
+        return NextResponse.json({ error: 'Игрок не найден' }, { status: 404 })
+    }
+
+    const telegramId = Number((userRow as { telegram_id?: unknown }).telegram_id)
+    if (!Number.isFinite(telegramId) || telegramId < 1) {
+        return NextResponse.json({ error: 'У игрока нет telegram_id' }, { status: 400 })
+    }
+
+    const { data: inserted, error: insertErr } = await supabase
+        .from('clubtac_messages')
+        .insert({
+            user_id: userId,
+            message: messageText,
+            sender: 'admin',
+            status: 'draft',
+        })
+        .select(MESSAGE_SELECT)
+        .single()
+
+    if (insertErr || !inserted) {
+        console.error('POST messages insert:', insertErr)
+        return NextResponse.json({ error: insertErr?.message ?? 'Не удалось сохранить сообщение' }, { status: 500 })
+    }
+
+    const messageId = String((inserted as { id: unknown }).id)
+    const makeResult = await sendAdminPlayerMessageViaMake({
+        telegram_id: telegramId,
+        message_id: messageId,
+    })
+
+    if (!makeResult.ok) {
+        await supabase.from('clubtac_messages').update({ status: 'error' }).eq('id', messageId)
+
+        const status = makeResult.httpStatus && makeResult.httpStatus >= 500 ? 502 : 400
+        return NextResponse.json({ error: makeResult.error }, { status })
+    }
+
+    const { data: finalRow, error: finalErr } = await supabase
+        .from('clubtac_messages')
+        .select(MESSAGE_SELECT)
+        .eq('id', messageId)
+        .maybeSingle()
+
+    if (finalErr) {
+        console.error('POST messages refetch:', finalErr)
+        return NextResponse.json({ error: finalErr.message }, { status: 500 })
+    }
+
+    const parsed = finalRow
+        ? parseAdminPlayerMessageRow(finalRow as Record<string, unknown>)
+        : parseAdminPlayerMessageRow(inserted as Record<string, unknown>)
+
+    if (!parsed) {
+        return NextResponse.json({ error: 'Не удалось прочитать отправленное сообщение' }, { status: 500 })
+    }
+
+    const responseBody: AdminPlayerMessageSendResponse = { message: parsed }
+    return NextResponse.json(responseBody)
 }

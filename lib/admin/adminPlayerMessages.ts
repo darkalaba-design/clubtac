@@ -1,11 +1,18 @@
 export type AdminMessageSender = 'customer' | 'agent' | 'admin'
 
+export type AdminMessageStatus = 'draft' | 'sent' | 'error'
+
 export type AdminPlayerMessage = {
     id: string
     user_id: number
     message: string
     created_at: string
     sender: AdminMessageSender
+    status?: AdminMessageStatus | null
+}
+
+export type AdminPlayerMessageSendResponse = {
+    message: AdminPlayerMessage
 }
 
 /** Первый экран чата — последние N сообщений */
@@ -19,6 +26,13 @@ export type AdminPlayerMessagesResponse = {
 }
 
 const SENDER_VALUES = new Set<AdminMessageSender>(['customer', 'agent', 'admin'])
+const STATUS_VALUES = new Set<AdminMessageStatus>(['draft', 'sent', 'error'])
+
+export function parseAdminMessageStatus(raw: unknown): AdminMessageStatus | null {
+    if (typeof raw !== 'string') return null
+    const s = raw.trim().toLowerCase()
+    return STATUS_VALUES.has(s as AdminMessageStatus) ? (s as AdminMessageStatus) : null
+}
 
 export function parseAdminMessageSender(raw: unknown): AdminMessageSender | null {
     if (typeof raw !== 'string') return null
@@ -40,12 +54,15 @@ export function parseAdminPlayerMessageRow(row: Record<string, unknown>): AdminP
     const created_at = typeof row.created_at === 'string' ? row.created_at : String(row.created_at ?? '')
     if (!created_at) return null
 
+    const status = parseAdminMessageStatus(row.status)
+
     return {
         id: String(id),
         user_id,
         message,
         created_at,
         sender,
+        ...(status ? { status } : {}),
     }
 }
 

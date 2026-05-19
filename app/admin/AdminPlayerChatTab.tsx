@@ -14,6 +14,7 @@ import {
     parseAdminPlayerMessageRow,
     type AdminMessageSender,
     type AdminPlayerMessage,
+    type AdminPlayerMessageSendResponse,
     type AdminPlayerMessagesResponse,
 } from '@/lib/admin/adminPlayerMessages'
 
@@ -120,6 +121,8 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
     const [draft, setDraft] = useState('')
     const [composerTopFade, setComposerTopFade] = useState(false)
     const [composerExpanded, setComposerExpanded] = useState(false)
+    const [sending, setSending] = useState(false)
+    const [sendErr, setSendErr] = useState<string | null>(null)
 
     const listRef = useRef<HTMLDivElement>(null)
     const composerOverlayRef = useRef<HTMLDivElement>(null)
@@ -439,7 +442,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                 },
                 (payload) => {
                     const parsed = parseAdminPlayerMessageRow(payload.new as Record<string, unknown>)
-                    if (!parsed) return
+                    if (!parsed || parsed.status === 'draft') return
                     setMessages((prev) => mergeAdminPlayerMessages(prev, [parsed]))
                     stickToBottomRef.current = true
                 }
@@ -484,8 +487,34 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
 
     const handleSend = () => {
         const text = draft.trim()
-        if (!text) return
-        // Отправка в Make / БД — отдельно
+        if (!text || sending) return
+
+        void (async () => {
+            setSending(true)
+            setSendErr(null)
+            try {
+                const res = await adminFetch(`/api/admin/players/${userId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text }),
+                })
+                const j = (await res.json().catch(() => ({}))) as AdminPlayerMessageSendResponse & {
+                    error?: string
+                }
+                if (!res.ok) {
+                    throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+                }
+                if (j.message) {
+                    setMessages((prev) => mergeAdminPlayerMessages(prev, [j.message]))
+                }
+                setDraft('')
+                stickToBottomRef.current = true
+            } catch (e) {
+                setSendErr(e instanceof Error ? e.message : 'Не удалось отправить сообщение')
+            } finally {
+                setSending(false)
+            }
+        })()
     }
 
     const messageItems = useMemo(() => {
@@ -654,6 +683,22 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                         pointerEvents: 'none',
                     }}
                 />
+                {sendErr ? (
+                    <p
+                        style={{
+                            margin: '0 0 8px',
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            backgroundColor: '#FFEBEE',
+                            color: '#B71C1C',
+                            fontSize: '12px',
+                            lineHeight: 1.4,
+                            pointerEvents: 'auto',
+                        }}
+                    >
+                        {sendErr}
+                    </p>
+                ) : null}
                 <div
                     ref={composerShellRef}
                     style={{
@@ -720,7 +765,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                         <button
                             type="button"
                             onClick={handleSend}
-                            disabled={!draft.trim()}
+                            disabled={!draft.trim() || sending}
                             title="Отправить"
                             aria-label="Отправить"
                             style={{
@@ -732,11 +777,14 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                backgroundColor: draft.trim() ? '#FFDF00' : '#EBE8E0',
-                                cursor: draft.trim() ? 'pointer' : 'not-allowed',
+                                backgroundColor:
+                                    draft.trim() && !sending ? '#FFDF00' : '#EBE8E0',
+                                cursor: draft.trim() && !sending ? 'pointer' : 'not-allowed',
                             }}
                         >
-                            <ChatSendIcon fill={draft.trim() ? '#1D1D1B' : '#9E9E9C'} />
+                            <ChatSendIcon
+                                fill={draft.trim() && !sending ? '#1D1D1B' : '#9E9E9C'}
+                            />
                         </button>
                     </div>
                 </div>
