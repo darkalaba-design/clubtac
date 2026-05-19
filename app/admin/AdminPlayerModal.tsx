@@ -284,11 +284,7 @@ export function AdminPlayerModal({ userId, previewName, onClose }: Props) {
                                     {err}
                                 </p>
                             ) : null}
-                            <AdminPlayerChatTab
-                                userId={userId}
-                                usernameUrl={detail.telegram_links.username_url}
-                                active
-                            />
+                            <AdminPlayerChatTab userId={userId} active />
                         </>
                     ) : (
                         <div

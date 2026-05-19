@@ -15,16 +15,30 @@ import {
     type AdminPlayerMessagesResponse,
 } from '@/lib/admin/adminPlayerMessages'
 
-const CHAT_EMOJIS = [
-    '😀', '😁', '😂', '🤣', '😊', '🙂', '😉', '😍', '🥰', '😘',
-    '😎', '🤔', '😅', '😭', '😡', '👍', '👎', '🙏', '👋', '❤️',
-    '🔥', '⭐', '✅', '❌', '💪', '🎉', '🤝', '💬', '📎', '⏳',
-]
+const COMPOSER_LINE_HEIGHT_PX = 20
+const COMPOSER_PAD_Y = 10
+const COMPOSER_PAD_X = 12
+const COMPOSER_MAX_ROWS = 6
+const SEND_BTN_SIZE = 40
 
 type Props = {
     userId: number
-    usernameUrl: string | null
     active: boolean
+}
+
+function ChatSendIcon({ fill }: { fill: string }) {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+                d="M18.5565 1.37114C19.8913 1.13368 21.0794 1.1909 21.9442 2.05571L22.0965 2.22172C22.8147 3.06969 22.8514 4.19194 22.6288 5.4434C22.3903 6.7836 21.805 8.53309 21.0633 10.7579L19.3475 15.9073C18.7468 17.7094 18.2815 19.1056 17.8534 20.1123C17.4681 21.0183 17.0464 21.7832 16.4344 22.2012L16.3094 22.2803C15.2998 22.8672 14.0676 22.9042 13.0301 22.3907L12.8251 22.2803C12.1446 21.8847 11.6921 21.0786 11.2811 20.1123C10.853 19.1056 10.3886 17.7093 9.78795 15.9073C9.58061 15.2852 9.5152 15.1095 9.42174 14.9698C9.31826 14.8152 9.18552 14.6815 9.03112 14.5782H9.03014C8.8904 14.4847 8.7146 14.4193 8.09264 14.212C6.29065 13.6113 4.89426 13.1469 3.88756 12.7188C2.92131 12.3078 2.1152 11.8553 1.7196 11.1748C1.09341 10.0978 1.09353 8.7676 1.7196 7.69047C2.11518 7.01002 2.92127 6.55751 3.88756 6.14653C4.89427 5.71838 6.29056 5.25308 8.09264 4.65239L13.2421 2.93657C15.4668 2.19498 17.2163 1.60959 18.5565 1.37114ZM20.8837 3.11625C20.5612 2.7938 20.0304 2.63224 18.8192 2.8477C17.6136 3.06221 15.9897 3.60175 13.7167 4.35942L8.56725 6.07621C6.73887 6.68567 5.41203 7.12863 4.47448 7.52739C3.49652 7.94334 3.13674 8.2375 3.01647 8.44438C2.66134 9.05544 2.66126 9.80996 3.01647 10.4209C3.13679 10.6278 3.49662 10.922 4.47448 11.3379C5.41202 11.7367 6.73893 12.1797 8.56725 12.7891C9.11042 12.9701 9.51772 13.0995 9.8651 13.3321C10.1827 13.5446 10.4554 13.8174 10.6678 14.1348C10.9004 14.4822 11.0298 14.8896 11.2108 15.4327C11.8202 17.261 12.2632 18.5879 12.662 19.5254C13.0779 20.5034 13.3721 20.8632 13.579 20.9834L13.6952 21.0459C14.2838 21.3374 14.9827 21.3164 15.5555 20.9834C15.7624 20.8632 16.0566 20.5034 16.4725 19.5254C16.8713 18.5879 17.3142 17.2611 17.9237 15.4327L19.6405 10.2832C20.3982 8.01022 20.9377 6.38636 21.1522 5.18071C21.3677 3.96955 21.2061 3.43873 20.8837 3.11625Z"
+                fill={fill}
+            />
+            <path
+                d="M17.2636 5.67782C17.5581 5.38677 18.033 5.38924 18.3242 5.68368C18.6151 5.97813 18.6125 6.45301 18.3183 6.74423L14.1074 10.9083C13.8129 11.1996 13.3381 11.1969 13.0468 10.9024C12.7556 10.6079 12.7582 10.1331 13.0527 9.84189L17.2636 5.67782Z"
+                fill={fill}
+            />
+        </svg>
+    )
 }
 
 function bubbleStyle(sender: AdminMessageSender): {
@@ -57,16 +71,38 @@ function isOutgoingSender(sender: AdminMessageSender): boolean {
     return sender === 'agent' || sender === 'admin'
 }
 
-export function AdminPlayerChatTab({ userId, usernameUrl, active }: Props) {
+export function AdminPlayerChatTab({ userId, active }: Props) {
     const [messages, setMessages] = useState<AdminPlayerMessage[]>([])
     const [loading, setLoading] = useState(false)
     const [loadErr, setLoadErr] = useState<string | null>(null)
     const [draft, setDraft] = useState('')
-    const [emojiOpen, setEmojiOpen] = useState(false)
+    const [composerTopFade, setComposerTopFade] = useState(false)
 
     const listRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const stickToBottomRef = useRef(true)
+
+    const syncComposerScrollFade = useCallback(() => {
+        const el = textareaRef.current
+        if (!el) return
+        setComposerTopFade(el.scrollTop > 2)
+    }, [])
+
+    const adjustComposerHeight = useCallback(() => {
+        const el = textareaRef.current
+        if (!el) return
+        el.style.height = '0px'
+        const minH = COMPOSER_LINE_HEIGHT_PX + COMPOSER_PAD_Y * 2
+        const maxH = COMPOSER_LINE_HEIGHT_PX * COMPOSER_MAX_ROWS + COMPOSER_PAD_Y * 2
+        const next = Math.min(maxH, Math.max(minH, el.scrollHeight))
+        el.style.height = `${next}px`
+        el.style.overflowY = el.scrollHeight > maxH ? 'auto' : 'hidden'
+        syncComposerScrollFade()
+    }, [syncComposerScrollFade])
+
+    useEffect(() => {
+        adjustComposerHeight()
+    }, [draft, adjustComposerHeight])
 
     const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
         const el = listRef.current
@@ -156,23 +192,6 @@ export function AdminPlayerChatTab({ userId, usernameUrl, active }: Props) {
         stickToBottomRef.current = distanceFromBottom < 80
     }
 
-    const insertEmoji = (emoji: string) => {
-        const ta = textareaRef.current
-        if (!ta) {
-            setDraft((prev) => prev + emoji)
-            return
-        }
-        const start = ta.selectionStart ?? draft.length
-        const end = ta.selectionEnd ?? draft.length
-        const next = draft.slice(0, start) + emoji + draft.slice(end)
-        setDraft(next)
-        requestAnimationFrame(() => {
-            ta.focus()
-            const pos = start + emoji.length
-            ta.setSelectionRange(pos, pos)
-        })
-    }
-
     const handleSend = () => {
         const text = draft.trim()
         if (!text) return
@@ -258,31 +277,6 @@ export function AdminPlayerChatTab({ userId, usernameUrl, active }: Props) {
                 backgroundColor: '#FAFAF8',
             }}
         >
-            {usernameUrl ? (
-                <div
-                    style={{
-                        flexShrink: 0,
-                        padding: '8px 12px',
-                        borderBottom: '1px solid #EBE8E0',
-                        backgroundColor: '#FFFFFF',
-                    }}
-                >
-                    <a
-                        href={usernameUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: '#229ED9',
-                            textDecoration: 'none',
-                        }}
-                    >
-                        Открыть чат в Telegram
-                    </a>
-                </div>
-            ) : null}
-
             <div
                 ref={listRef}
                 onScroll={handleListScroll}
@@ -333,71 +327,40 @@ export function AdminPlayerChatTab({ userId, usernameUrl, active }: Props) {
                     flexShrink: 0,
                     borderTop: '1px solid #EBE8E0',
                     backgroundColor: '#FFFFFF',
-                    padding: '10px 12px calc(10px + env(safe-area-inset-bottom, 0px))',
+                    padding: '8px 10px calc(8px + env(safe-area-inset-bottom, 0px))',
                 }}
             >
-                {emojiOpen ? (
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '4px',
-                            marginBottom: '8px',
-                            padding: '8px',
-                            borderRadius: '10px',
-                            border: '1px solid #EBE8E0',
-                            backgroundColor: '#FAFAF8',
-                            maxHeight: '120px',
-                            overflowY: 'auto',
-                        }}
-                    >
-                        {CHAT_EMOJIS.map((emoji) => (
-                            <button
-                                key={emoji}
-                                type="button"
-                                onClick={() => insertEmoji(emoji)}
-                                style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    background: 'transparent',
-                                    cursor: 'pointer',
-                                    fontSize: '20px',
-                                    lineHeight: 1,
-                                }}
-                                aria-label={`Вставить ${emoji}`}
-                            >
-                                {emoji}
-                            </button>
-                        ))}
-                    </div>
-                ) : null}
-
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                    <button
-                        type="button"
-                        onClick={() => setEmojiOpen((v) => !v)}
-                        aria-expanded={emojiOpen}
-                        aria-label="Эмодзи"
-                        style={{
-                            flexShrink: 0,
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '10px',
-                            border: '1px solid #EBE8E0',
-                            background: emojiOpen ? '#FFF9E6' : '#FAFAF8',
-                            cursor: 'pointer',
-                            fontSize: '20px',
-                            lineHeight: 1,
-                        }}
-                    >
-                        😊
-                    </button>
+                <div
+                    style={{
+                        position: 'relative',
+                        border: '1px solid #EBE8E0',
+                        borderRadius: '12px',
+                        backgroundColor: '#FFFFFF',
+                        overflow: 'hidden',
+                    }}
+                >
+                    {composerTopFade ? (
+                        <div
+                            aria-hidden
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: '28px',
+                                background:
+                                    'linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%)',
+                                pointerEvents: 'none',
+                                zIndex: 1,
+                            }}
+                        ></div>
+                    ) : null}
                     <textarea
                         ref={textareaRef}
                         value={draft}
+                        rows={1}
                         onChange={(e) => setDraft(e.target.value)}
+                        onScroll={syncComposerScrollFade}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault()
@@ -405,43 +368,49 @@ export function AdminPlayerChatTab({ userId, usernameUrl, active }: Props) {
                             }
                         }}
                         placeholder="Сообщение…"
-                        rows={2}
                         style={{
-                            flex: 1,
-                            minWidth: 0,
+                            display: 'block',
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            border: 'none',
                             resize: 'none',
-                            borderRadius: '10px',
-                            border: '1px solid #EBE8E0',
-                            padding: '10px 12px',
-                            fontSize: '14px',
-                            lineHeight: 1.4,
-                            fontFamily: 'inherit',
                             outline: 'none',
+                            margin: 0,
+                            padding: `${COMPOSER_PAD_Y}px ${COMPOSER_PAD_X}px`,
+                            paddingRight: `${SEND_BTN_SIZE + 14}px`,
+                            paddingBottom: `${SEND_BTN_SIZE + 6}px`,
+                            fontSize: '14px',
+                            lineHeight: `${COMPOSER_LINE_HEIGHT_PX}px`,
+                            fontFamily: 'inherit',
+                            backgroundColor: 'transparent',
+                            overflowY: 'hidden',
                         }}
                     />
                     <button
                         type="button"
                         onClick={handleSend}
                         disabled={!draft.trim()}
-                        title="Отправка будет подключена позже"
+                        title="Отправить"
+                        aria-label="Отправить"
                         style={{
-                            flexShrink: 0,
-                            padding: '10px 14px',
-                            borderRadius: '10px',
+                            position: 'absolute',
+                            right: '6px',
+                            bottom: '6px',
+                            width: `${SEND_BTN_SIZE}px`,
+                            height: `${SEND_BTN_SIZE}px`,
+                            borderRadius: '50%',
                             border: 'none',
-                            backgroundColor: draft.trim() ? '#1B5E20' : '#E0E0DE',
-                            color: draft.trim() ? '#FFFFFF' : '#9E9E9C',
-                            fontWeight: 700,
-                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: draft.trim() ? '#FFDF00' : '#EBE8E0',
                             cursor: draft.trim() ? 'pointer' : 'not-allowed',
+                            zIndex: 2,
                         }}
                     >
-                        Отправить
+                        <ChatSendIcon fill={draft.trim() ? '#1D1D1B' : '#9E9E9C'} />
                     </button>
                 </div>
-                <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#9E9E9C' }}>
-                    Enter — отправить, Shift+Enter — новая строка. Запись в чат подключим отдельно.
-                </p>
             </div>
         </div>
     )
