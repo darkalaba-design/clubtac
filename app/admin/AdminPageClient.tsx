@@ -622,12 +622,70 @@ export default function AdminPageClient() {
         }
     }
 
-    const submitEditEventGame = async (_draft: EventGameDraft) => {
-        // Сохранение изменений в БД — позже
+    const submitEditEventGame = async (draft: EventGameDraft) => {
+        if (!eventModalId || participantBusy || eventModalEditingGameId == null) return
+        if (
+            !draft.team1Player1 ||
+            !draft.team1Player2 ||
+            !draft.team2Player1 ||
+            !draft.team2Player2 ||
+            draft.team1Score == null ||
+            draft.team2Score == null
+        ) {
+            return
+        }
+        setParticipantBusy(true)
+        setEventModalErr(null)
+        try {
+            const res = await adminFetch(
+                `/api/admin/events/${encodeURIComponent(eventModalId)}/games/${eventModalEditingGameId}`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        team1_player1_id: draft.team1Player1.user_id,
+                        team1_player2_id: draft.team1Player2.user_id,
+                        team1_score: draft.team1Score,
+                        team2_player1_id: draft.team2Player1.user_id,
+                        team2_player2_id: draft.team2Player2.user_id,
+                        team2_score: draft.team2Score,
+                    }),
+                }
+            )
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+            }
+            setEventModalEditingGameId(null)
+            await refetchEventGames(eventModalId)
+        } catch (e) {
+            setEventModalErr(e instanceof Error ? e.message : 'Не удалось сохранить партию')
+            throw e
+        } finally {
+            setParticipantBusy(false)
+        }
     }
 
-    const requestDeleteEventGame = () => {
-        // Удаление из БД — позже
+    const requestDeleteEventGame = async () => {
+        if (!eventModalId || participantBusy || eventModalEditingGameId == null) return
+        setParticipantBusy(true)
+        setEventModalErr(null)
+        try {
+            const res = await adminFetch(
+                `/api/admin/events/${encodeURIComponent(eventModalId)}/games/${eventModalEditingGameId}`,
+                { method: 'DELETE' }
+            )
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+            }
+            setEventModalEditingGameId(null)
+            await refetchEventGames(eventModalId)
+        } catch (e) {
+            setEventModalErr(e instanceof Error ? e.message : 'Не удалось удалить партию')
+        } finally {
+            setParticipantBusy(false)
+        }
     }
 
     const admitParticipant = async (participantId: string | number, method: 'cash' | 'free') => {

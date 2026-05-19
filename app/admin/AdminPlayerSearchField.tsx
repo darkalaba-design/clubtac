@@ -105,7 +105,7 @@ export function AdminPlayerSearchField({
         setDropdownOpen(false)
     }
 
-    const showClear = Boolean(value) && !disabled
+    const showClear = Boolean(value)
 
     return (
         <div ref={rootRef} style={{ marginBottom: '10px' }}>
@@ -135,9 +135,7 @@ export function AdminPlayerSearchField({
                             }
                             setDropdownOpen(true)
                         }}
-                        onFocus={() => {
-                            if (!disabled) setDropdownOpen(true)
-                        }}
+                        onFocus={() => setDropdownOpen(true)}
                         placeholder="Поиск…"
                         autoComplete="off"
                         style={{
@@ -148,8 +146,6 @@ export function AdminPlayerSearchField({
                             boxSizing: 'border-box',
                             fontSize: '14px',
                             backgroundColor: disabled ? '#F5F5F5' : '#FFFFFF',
-                            color: disabled ? '#6B6B69' : '#1D1D1B',
-                            cursor: disabled ? 'not-allowed' : 'text',
                         }}
                     />
                     {showClear ? (
@@ -183,7 +179,7 @@ export function AdminPlayerSearchField({
                     ) : null}
                 </div>
             </div>
-            {!disabled && dropdownOpen && filteredPlayers.length > 0 ? (
+            {dropdownOpen && filteredPlayers.length > 0 ? (
                 <ul
                     style={{
                         margin: '4px 0 0',
@@ -225,7 +221,7 @@ export function AdminPlayerSearchField({
                     ))}
                 </ul>
             ) : null}
-            {!disabled && dropdownOpen && query.trim() && filteredPlayers.length === 0 ? (
+            {dropdownOpen && query.trim() && filteredPlayers.length === 0 ? (
                 <p
                     style={{
                         margin: '6px 0 0',
