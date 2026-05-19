@@ -88,6 +88,10 @@ export function AdminPlayerProfileTab({ detail, userId }: Props) {
     const regDate = formatAdminPlayerRegistrationDate(u.created_at)
     const userIdLabel = u.id != null ? String(u.id) : String(userId)
 
+    const telegramUsername =
+        !takoff && typeof u.username === 'string' ? u.username.replace(/^@/, '').trim() : ''
+    const telegramProfileUrl = detail.telegram_links.username_url
+
     return (
         <div>
             <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', marginBottom: '14px' }}>
@@ -171,25 +175,21 @@ export function AdminPlayerProfileTab({ detail, userId }: Props) {
             <div
                 style={{
                     display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '8px',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px',
                     marginBottom: '14px',
                 }}
             >
-                <span
+                <div
                     style={{
-                        display: 'inline-block',
-                        padding: '5px 12px',
-                        borderRadius: '999px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        ...statusChip,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '8px',
+                        alignItems: 'center',
+                        minWidth: 0,
                     }}
                 >
-                    {playerClubStatusLabel(clubStatus)}
-                </span>
-                {showAppRole ? (
                     <span
                         style={{
                             display: 'inline-block',
@@ -197,12 +197,48 @@ export function AdminPlayerProfileTab({ detail, userId }: Props) {
                             borderRadius: '999px',
                             fontSize: '12px',
                             fontWeight: 700,
-                            backgroundColor: '#FFDF00',
-                            color: '#1D1D1B',
+                            ...statusChip,
                         }}
                     >
-                        {appRole === 'root' ? 'Root' : 'Admin'}
+                        {playerClubStatusLabel(clubStatus)}
                     </span>
+                    {showAppRole ? (
+                        <span
+                            style={{
+                                display: 'inline-block',
+                                padding: '5px 12px',
+                                borderRadius: '999px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                backgroundColor: '#FFDF00',
+                                color: '#1D1D1B',
+                            }}
+                        >
+                            {appRole === 'root' ? 'Root' : 'Admin'}
+                        </span>
+                    ) : null}
+                </div>
+                {telegramProfileUrl && telegramUsername ? (
+                    <a
+                        href={telegramProfileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            flexShrink: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: '#229ED9',
+                            color: '#FFFFFF',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            lineHeight: 1.2,
+                        }}
+                    >
+                        @{telegramUsername}
+                    </a>
                 ) : null}
             </div>
 

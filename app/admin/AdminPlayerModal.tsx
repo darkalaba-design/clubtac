@@ -319,23 +319,6 @@ export function AdminPlayerModal({ userId, previewName, onClose }: Props) {
                                                     Открыть в Telegram
                                                 </a>
                                             ) : null}
-                                            {detail.telegram_links.tg_user_url ? (
-                                                <a
-                                                    href={detail.telegram_links.tg_user_url}
-                                                    style={{
-                                                        display: 'block',
-                                                        textAlign: 'center',
-                                                        padding: '11px',
-                                                        borderRadius: '8px',
-                                                        border: '1px solid #EBE8E0',
-                                                        color: '#1D1D1B',
-                                                        fontWeight: 600,
-                                                        textDecoration: 'none',
-                                                    }}
-                                                >
-                                                    Ссылка tg://user
-                                                </a>
-                                            ) : null}
                                             {!detail.telegram_links.username_url &&
                                             !detail.telegram_links.tg_user_url ? (
                                                 <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
