@@ -224,9 +224,6 @@ type AdminPlayerRow = {
     userpic?: string | null
     app_role?: string
     status?: string | null
-    club_status?: string | null
-    player_status?: string | null
-    membership_status?: string | null
 }
 
 const ADMIN_SCROLL_PT = 'calc(52px + env(safe-area-inset-top, 0px))'
@@ -1522,9 +1519,6 @@ export default function AdminPageClient() {
                                 const statusUser: Record<string, unknown> = {
                                     app_role: p.app_role,
                                     status: p.status,
-                                    club_status: p.club_status,
-                                    player_status: p.player_status,
-                                    membership_status: p.membership_status,
                                 }
                                 return (
                                     <button

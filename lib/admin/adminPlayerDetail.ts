@@ -15,9 +15,6 @@ export const ADMIN_PLAYER_PROFILE_FIELD_KEYS = [
     'created_at',
     'updated_at',
     'status',
-    'club_status',
-    'player_status',
-    'membership_status',
 ] as const
 
 /** Поля, уже показанные в шапке анкеты — не дублировать внизу. */
@@ -45,8 +42,7 @@ function numOrNull(v: unknown): number | null {
 }
 
 export function resolvePlayerClubStatus(user: Record<string, unknown>): PlayerClubStatus {
-    const raw =
-        user.status ?? user.club_status ?? user.player_status ?? user.membership_status ?? 'standard'
+    const raw = user.status ?? 'standard'
     const s = String(raw).toLowerCase().trim()
     if (s === 'vip') return 'vip'
     if (s === 'partner') return 'partner'
@@ -168,9 +164,6 @@ export const ADMIN_PLAYER_FIELD_LABELS: Record<string, string> = {
     created_at: 'Регистрация',
     updated_at: 'Обновлён',
     status: 'Статус в клубе',
-    club_status: 'Статус в клубе',
-    player_status: 'Статус в клубе',
-    membership_status: 'Статус в клубе',
 }
 
 export type AdminPlayerInviterSummary = {
