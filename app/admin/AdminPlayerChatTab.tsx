@@ -360,7 +360,6 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                 flexDirection: 'column',
                 flex: 1,
                 minHeight: 0,
-                backgroundColor: '#FAFAF8',
             }}
         >
             <div
@@ -372,6 +371,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                     overflowY: 'auto',
                     WebkitOverflowScrolling: 'touch',
                     padding: '12px 12px 8px',
+                    backgroundColor: '#FAFAF8',
                 }}
             >
                 {loading && messages.length === 0 ? (
@@ -425,6 +425,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                 style={{
                     flexShrink: 0,
                     padding: '10px 10px calc(10px + env(safe-area-inset-bottom, 0px))',
+                    backgroundColor: 'transparent',
                 }}
             >
                 <div
