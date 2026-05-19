@@ -150,23 +150,53 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         if (!listEl || !shellEl) return
 
         const snap = keyboardScrollPreserveRef.current
-        if (!snap && !composerFocusedRef.current && keyboardInsetRef.current === 0) return
+        const inset = keyboardInsetRef.current
 
-        if (snap) {
-            if (snap.atBottom) {
+        if (!snap) {
+            if (!composerFocusedRef.current && inset === 0) return
+            if (isListAtBottom(listEl)) {
                 listEl.scrollTop = listEl.scrollHeight - listEl.clientHeight
-            } else {
-                const gap = measureGapListTopToComposerTop(listEl, shellEl)
-                const gapShrink = snap.gapToComposer - gap
-                listEl.scrollTop = Math.max(0, snap.scrollTop + gapShrink)
             }
             return
         }
 
-        if (isListAtBottom(listEl)) {
+        if (snap.atBottom) {
             listEl.scrollTop = listEl.scrollHeight - listEl.clientHeight
+            return
         }
+
+        if (inset === 0) {
+            listEl.scrollTop = snap.scrollTop
+            return
+        }
+
+        const gap = measureGapListTopToComposerTop(listEl, shellEl)
+        listEl.scrollTop = Math.max(0, snap.scrollTop + (snap.gapToComposer - gap))
     }, [isListAtBottom])
+
+    const scheduleKeyboardScrollRestore = useCallback(() => {
+        const snap = keyboardScrollPreserveRef.current
+        if (!snap) return
+
+        const tick = () => {
+            const measured = measureMobileKeyboardInset()
+            keyboardInsetRef.current = measured
+            setKeyboardInset(measured)
+            applyKeyboardScroll()
+        }
+
+        tick()
+        requestAnimationFrame(tick)
+        for (const ms of [50, 120, 200, 320, 450]) {
+            window.setTimeout(tick, ms)
+        }
+        window.setTimeout(() => {
+            keyboardInsetRef.current = 0
+            setKeyboardInset(0)
+            applyKeyboardScroll()
+            keyboardScrollPreserveRef.current = null
+        }, 520)
+    }, [applyKeyboardScroll])
 
     const syncComposerScrollFade = useCallback(() => {
         const el = textareaRef.current
@@ -217,9 +247,12 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
 
     const syncKeyboardLayout = useCallback(() => {
         const inset = measureMobileKeyboardInset()
-        if (inset === keyboardInsetRef.current) return
+        const prev = keyboardInsetRef.current
         keyboardInsetRef.current = inset
-        setKeyboardInset(inset)
+        if (inset !== prev) {
+            setKeyboardInset(inset)
+        }
+        return { inset, prev }
     }, [])
 
     useLayoutEffect(() => {
@@ -232,17 +265,23 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
             applyKeyboardScroll()
         }
 
-        if (prevInset > 0 && inset === 0) {
-            const restoreAfterKeyboardClose = () => applyKeyboardScroll()
-            requestAnimationFrame(restoreAfterKeyboardClose)
-            window.setTimeout(restoreAfterKeyboardClose, 80)
-            window.setTimeout(restoreAfterKeyboardClose, 200)
-            window.setTimeout(() => {
-                keyboardScrollPreserveRef.current = null
-            }, 280)
+        if (prevInset > 0 && inset === 0 && keyboardScrollPreserveRef.current) {
+            scheduleKeyboardScrollRestore()
         }
         keyboardInsetPrevRef.current = inset
-    }, [keyboardInset, listBottomPad, active, applyKeyboardScroll])
+    }, [keyboardInset, listBottomPad, active, applyKeyboardScroll, scheduleKeyboardScrollRestore])
+
+    useLayoutEffect(() => {
+        const overlay = composerOverlayRef.current
+        if (!active || !overlay) return
+
+        const ro = new ResizeObserver(() => {
+            if (!keyboardScrollPreserveRef.current) return
+            applyKeyboardScroll()
+        })
+        ro.observe(overlay)
+        return () => ro.disconnect()
+    }, [active, applyKeyboardScroll])
 
     const handleComposerFocus = useCallback(() => {
         composerFocusedRef.current = true
@@ -278,16 +317,10 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
 
     const handleComposerBlur = useCallback(() => {
         composerFocusedRef.current = false
-        if (!keyboardScrollPreserveRef.current) return
-
-        const restoreAfterBlur = () => {
-            syncKeyboardLayout()
-            applyKeyboardScroll()
+        if (keyboardScrollPreserveRef.current) {
+            scheduleKeyboardScrollRestore()
         }
-        requestAnimationFrame(restoreAfterBlur)
-        window.setTimeout(restoreAfterBlur, 80)
-        window.setTimeout(restoreAfterBlur, 200)
-    }, [syncKeyboardLayout, applyKeyboardScroll])
+    }, [scheduleKeyboardScrollRestore])
 
     useEffect(() => {
         if (!active) {
@@ -299,10 +332,22 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         }
 
         const onViewportChange = () => {
-            syncKeyboardLayout()
+            const { inset, prev } = syncKeyboardLayout() ?? { inset: 0, prev: 0 }
+            applyKeyboardScroll()
+            if (keyboardScrollPreserveRef.current && prev > 0 && inset === 0) {
+                scheduleKeyboardScrollRestore()
+            }
             requestAnimationFrame(() => {
-                syncKeyboardLayout()
+                const next = syncKeyboardLayout()
                 applyKeyboardScroll()
+                if (
+                    keyboardScrollPreserveRef.current &&
+                    next &&
+                    next.prev > 0 &&
+                    next.inset === 0
+                ) {
+                    scheduleKeyboardScrollRestore()
+                }
             })
         }
 
@@ -325,7 +370,7 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
             keyboardScrollPreserveRef.current = null
             setKeyboardInset(0)
         }
-    }, [active, syncKeyboardLayout, applyKeyboardScroll])
+    }, [active, syncKeyboardLayout, applyKeyboardScroll, scheduleKeyboardScrollRestore])
 
     const fetchMessagesPage = useCallback(
         async (params: URLSearchParams) => {
