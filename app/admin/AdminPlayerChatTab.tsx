@@ -148,9 +148,9 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         const listEl = listRef.current
         const shellEl = composerShellRef.current
         if (!listEl || !shellEl) return
-        if (!composerFocusedRef.current && keyboardInsetRef.current === 0) return
 
         const snap = keyboardScrollPreserveRef.current
+        if (!snap && !composerFocusedRef.current && keyboardInsetRef.current === 0) return
 
         if (snap) {
             if (snap.atBottom) {
@@ -233,7 +233,13 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
         }
 
         if (prevInset > 0 && inset === 0) {
-            keyboardScrollPreserveRef.current = null
+            const restoreAfterKeyboardClose = () => applyKeyboardScroll()
+            requestAnimationFrame(restoreAfterKeyboardClose)
+            window.setTimeout(restoreAfterKeyboardClose, 80)
+            window.setTimeout(restoreAfterKeyboardClose, 200)
+            window.setTimeout(() => {
+                keyboardScrollPreserveRef.current = null
+            }, 280)
         }
         keyboardInsetPrevRef.current = inset
     }, [keyboardInset, listBottomPad, active, applyKeyboardScroll])
@@ -272,7 +278,16 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
 
     const handleComposerBlur = useCallback(() => {
         composerFocusedRef.current = false
-    }, [])
+        if (!keyboardScrollPreserveRef.current) return
+
+        const restoreAfterBlur = () => {
+            syncKeyboardLayout()
+            applyKeyboardScroll()
+        }
+        requestAnimationFrame(restoreAfterBlur)
+        window.setTimeout(restoreAfterBlur, 80)
+        window.setTimeout(restoreAfterBlur, 200)
+    }, [syncKeyboardLayout, applyKeyboardScroll])
 
     useEffect(() => {
         if (!active) {
