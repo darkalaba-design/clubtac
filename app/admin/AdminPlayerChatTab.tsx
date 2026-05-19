@@ -17,10 +17,6 @@ import {
     type AdminPlayerMessagesResponse,
 } from '@/lib/admin/adminPlayerMessages'
 
-const CHAT_BG = '#FAFAF8'
-const CHAT_BG_RGB = '250, 250, 248'
-/** Высота зоны растворения над полем ввода (в ленту сообщений) */
-const COMPOSER_FOOTER_FADE_PX = 48
 const COMPOSER_FIELD_BG = '#FFFFFF'
 const COMPOSER_LINE_HEIGHT_PX = 20
 const COMPOSER_PAD_X = 10
@@ -428,31 +424,9 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
             <div
                 style={{
                     flexShrink: 0,
-                    position: 'relative',
-                    padding: `0 10px calc(10px + env(safe-area-inset-bottom, 0px))`,
-                    paddingTop: `${COMPOSER_FOOTER_FADE_PX}px`,
-                    background: 'transparent',
+                    padding: '10px 10px calc(10px + env(safe-area-inset-bottom, 0px))',
                 }}
             >
-                <div
-                    aria-hidden
-                    style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        height: `${COMPOSER_FOOTER_FADE_PX}px`,
-                        background: `linear-gradient(180deg, rgba(${CHAT_BG_RGB}, 0) 0%, rgba(${CHAT_BG_RGB}, 0.92) 100%)`,
-                        pointerEvents: 'none',
-                    }}
-                />
-                <div
-                    style={{
-                        position: 'relative',
-                        paddingTop: '6px',
-                        background: `linear-gradient(180deg, rgba(${CHAT_BG_RGB}, 0.88) 0%, rgba(${CHAT_BG_RGB}, 0.95) 100%)`,
-                    }}
-                >
                 <div
                     style={{
                         border: '1px solid #EBE8E0',
@@ -531,7 +505,6 @@ export function AdminPlayerChatTab({ userId, active }: Props) {
                             <ChatSendIcon fill={draft.trim() ? '#1D1D1B' : '#9E9E9C'} />
                         </button>
                     </div>
-                </div>
                 </div>
             </div>
         </div>
