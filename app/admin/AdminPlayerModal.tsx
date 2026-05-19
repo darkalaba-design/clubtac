@@ -1,11 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import type { CSSProperties } from 'react'
 import { adminFetch } from '@/lib/admin/adminFetch'
 import {
-    ADMIN_PLAYER_FIELD_LABELS,
     formatAdminPlayerFieldValue,
     walletTransactionTypeLabel,
     type AdminPlayerDetailResponse,
@@ -13,6 +11,7 @@ import {
 import { formatEventCardDayMonthAndTime, paymentStatusLabelRu } from '@/lib/admin/eventDisplay'
 import { displayPublicNickname } from '@/lib/takoff'
 import { AdminPlayerProfileTab } from './AdminPlayerProfileTab'
+import { AdminPlayerChatTab } from './AdminPlayerChatTab'
 
 type PlayerModalTab = 'chat' | 'profile' | 'finance'
 
@@ -240,240 +239,191 @@ export function AdminPlayerModal({ userId, previewName, onClose }: Props) {
                     style={{
                         flex: 1,
                         minHeight: 0,
-                        overflowY: 'auto',
-                        WebkitOverflowScrolling: 'touch',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: tab === 'chat' && detail ? 'hidden' : undefined,
                     }}
                 >
-                    <div style={{ padding: '14px 16px 24px' }}>
-                        {loading && !detail ? (
-                            <p style={{ margin: 0 }}>Загрузка…</p>
-                        ) : err && !detail ? (
-                            <div>
-                                <p style={{ margin: '0 0 12px', color: '#B71C1C' }}>{err}</p>
-                                <button
-                                    type="button"
-                                    onClick={() => void load(userId)}
+                    {!detail ? (
+                        <div style={{ padding: '14px 16px 24px' }}>
+                            {loading ? (
+                                <p style={{ margin: 0 }}>Загрузка…</p>
+                            ) : err ? (
+                                <div>
+                                    <p style={{ margin: '0 0 12px', color: '#B71C1C' }}>{err}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => void load(userId)}
+                                        style={{
+                                            padding: '10px 14px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #1D1D1B',
+                                            background: '#fff',
+                                            cursor: 'pointer',
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Повторить
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
+                    ) : tab === 'chat' ? (
+                        <>
+                            {err ? (
+                                <p
                                     style={{
-                                        padding: '10px 14px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #1D1D1B',
-                                        background: '#fff',
-                                        cursor: 'pointer',
-                                        fontWeight: 600,
+                                        margin: 0,
+                                        padding: '8px 12px',
+                                        color: '#B71C1C',
+                                        fontSize: '13px',
+                                        backgroundColor: '#FFEBEE',
+                                        flexShrink: 0,
                                     }}
                                 >
-                                    Повторить
-                                </button>
-                            </div>
-                        ) : detail ? (
-                            <>
-                                {err ? (
-                                    <p style={{ margin: '0 0 12px', color: '#B71C1C', fontSize: '13px' }}>{err}</p>
-                                ) : null}
+                                    {err}
+                                </p>
+                            ) : null}
+                            <AdminPlayerChatTab
+                                userId={userId}
+                                usernameUrl={detail.telegram_links.username_url}
+                                active
+                            />
+                        </>
+                    ) : (
+                        <div
+                            style={{
+                                flex: 1,
+                                minHeight: 0,
+                                overflowY: 'auto',
+                                WebkitOverflowScrolling: 'touch',
+                                padding: '14px 16px 24px',
+                            }}
+                        >
+                            {err ? (
+                                <p style={{ margin: '0 0 12px', color: '#B71C1C', fontSize: '13px' }}>{err}</p>
+                            ) : null}
 
-                                {tab === 'chat' ? (
-                                    <div>
-                                        <SectionTitle>Telegram</SectionTitle>
-                                        <DataRow
-                                            label="Telegram ID"
-                                            value={formatAdminPlayerFieldValue(
-                                                'telegram_id',
-                                                detail.user.telegram_id
-                                            )}
-                                        />
-                                        <DataRow
-                                            label="Username"
-                                            value={
-                                                detail.telegram_links.username_url ? (
-                                                    <a
-                                                        href={detail.telegram_links.username_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        style={{ color: '#1B5E20', fontWeight: 600 }}
-                                                    >
-                                                        @
-                                                        {String(detail.user.username ?? '').replace(/^@/, '')}
-                                                    </a>
-                                                ) : (
-                                                    '—'
-                                                )
-                                            }
-                                        />
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                                            {detail.telegram_links.username_url ? (
-                                                <a
-                                                    href={detail.telegram_links.username_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    style={{
-                                                        display: 'block',
-                                                        textAlign: 'center',
-                                                        padding: '11px',
-                                                        borderRadius: '8px',
-                                                        backgroundColor: '#1B5E20',
-                                                        color: '#fff',
-                                                        fontWeight: 600,
-                                                        textDecoration: 'none',
-                                                    }}
-                                                >
-                                                    Открыть в Telegram
-                                                </a>
-                                            ) : null}
-                                            {!detail.telegram_links.username_url &&
-                                            !detail.telegram_links.tg_user_url ? (
-                                                <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
-                                                    Нет username и Telegram ID для ссылки.
-                                                </p>
-                                            ) : null}
-                                        </div>
+                            {tab === 'profile' ? (
+                                <AdminPlayerProfileTab detail={detail} userId={userId} />
+                            ) : null}
 
-                                        {Object.keys(detail.chat_fields).length > 0 ? (
-                                            <>
-                                                <SectionTitle>Данные чата в БД</SectionTitle>
-                                                {Object.entries(detail.chat_fields).map(([key, value]) => (
-                                                    <DataRow
-                                                        key={key}
-                                                        label={ADMIN_PLAYER_FIELD_LABELS[key] ?? key}
-                                                        value={formatAdminPlayerFieldValue(key, value)}
-                                                    />
-                                                ))}
-                                            </>
-                                        ) : (
-                                            <p
+                            {tab === 'finance' ? (
+                                <div>
+                                    <SectionTitle>Кошелёк</SectionTitle>
+                                    <DataRow
+                                        label="Баланс (сумма транзакций)"
+                                        value={
+                                            <span
                                                 style={{
-                                                    margin: '16px 0 0',
-                                                    fontSize: '13px',
-                                                    color: '#6B6B69',
-                                                    lineHeight: 1.45,
+                                                    fontWeight: 700,
+                                                    fontSize: '18px',
+                                                    color:
+                                                        detail.wallet_balance >= 0 ? '#1B5E20' : '#B71C1C',
                                                 }}
                                             >
-                                                Отдельных полей чата в профиле нет — связь через Telegram выше.
-                                            </p>
-                                        )}
-                                    </div>
-                                ) : null}
+                                                {formatMoney(detail.wallet_balance)}
+                                            </span>
+                                        }
+                                    />
 
-                                {tab === 'profile' ? (
-                                    <AdminPlayerProfileTab detail={detail} userId={userId} />
-                                ) : null}
-
-                                {tab === 'finance' ? (
-                                    <div>
-                                        <SectionTitle>Кошелёк</SectionTitle>
-                                        <DataRow
-                                            label="Баланс (сумма транзакций)"
-                                            value={
-                                                <span
+                                    <SectionTitle>Транзакции</SectionTitle>
+                                    {detail.wallet_transactions.length === 0 ? (
+                                        <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
+                                            Транзакций нет.
+                                        </p>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {detail.wallet_transactions.map((tx, i) => (
+                                                <div
+                                                    key={tx.id ?? `${tx.created_at}-${i}`}
                                                     style={{
-                                                        fontWeight: 700,
-                                                        fontSize: '18px',
-                                                        color:
-                                                            detail.wallet_balance >= 0 ? '#1B5E20' : '#B71C1C',
+                                                        padding: '10px 12px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                        backgroundColor: '#FAFAF8',
                                                     }}
                                                 >
-                                                    {formatMoney(detail.wallet_balance)}
-                                                </span>
-                                            }
-                                        />
-
-                                        <SectionTitle>Транзакции</SectionTitle>
-                                        {detail.wallet_transactions.length === 0 ? (
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
-                                                Транзакций нет.
-                                            </p>
-                                        ) : (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                {detail.wallet_transactions.map((tx, i) => (
                                                     <div
-                                                        key={tx.id ?? `${tx.created_at}-${i}`}
                                                         style={{
-                                                            padding: '10px 12px',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid #EBE8E0',
-                                                            backgroundColor: '#FAFAF8',
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            gap: '8px',
+                                                            fontWeight: 600,
                                                         }}
                                                     >
-                                                        <div
+                                                        <span>{walletTransactionTypeLabel(tx.type)}</span>
+                                                        <span
                                                             style={{
-                                                                display: 'flex',
-                                                                justifyContent: 'space-between',
-                                                                gap: '8px',
-                                                                fontWeight: 600,
+                                                                color:
+                                                                    Number(tx.amount) >= 0
+                                                                        ? '#1B5E20'
+                                                                        : '#B71C1C',
                                                             }}
                                                         >
-                                                            <span>{walletTransactionTypeLabel(tx.type)}</span>
-                                                            <span
-                                                                style={{
-                                                                    color:
-                                                                        Number(tx.amount) >= 0
-                                                                            ? '#1B5E20'
-                                                                            : '#B71C1C',
-                                                                }}
-                                                            >
-                                                                {formatMoney(Number(tx.amount))}
-                                                            </span>
-                                                        </div>
-                                                        {tx.event_title ? (
-                                                            <div
-                                                                style={{ fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}
-                                                            >
-                                                                {tx.event_title}
-                                                            </div>
-                                                        ) : null}
+                                                            {formatMoney(Number(tx.amount))}
+                                                        </span>
+                                                    </div>
+                                                    {tx.event_title ? (
                                                         <div
-                                                            style={{ fontSize: '11px', color: '#9E9E9C', marginTop: '4px' }}
+                                                            style={{ fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}
                                                         >
-                                                            {tx.created_at
-                                                                ? formatAdminPlayerFieldValue('created_at', tx.created_at)
-                                                                : ''}
-                                                            {tx.order_id ? ` · order ${String(tx.order_id).slice(0, 8)}…` : ''}
+                                                            {tx.event_title}
                                                         </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <SectionTitle>Участие в событиях</SectionTitle>
-                                        {detail.event_participations.length === 0 ? (
-                                            <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
-                                                Записей на события нет.
-                                            </p>
-                                        ) : (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                {detail.event_participations.map((p) => (
+                                                    ) : null}
                                                     <div
-                                                        key={String(p.id)}
-                                                        style={{
-                                                            padding: '10px 12px',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid #EBE8E0',
-                                                        }}
+                                                        style={{ fontSize: '11px', color: '#9E9E9C', marginTop: '4px' }}
                                                     >
-                                                        <div style={{ fontWeight: 600, fontSize: '14px' }}>
-                                                            {p.event_title?.trim() || `Событие ${p.event_id}`}
-                                                        </div>
-                                                        <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                                                            {paymentStatusLabelRu(p.payment_status, p.price_paid)}
-                                                            {p.price_paid != null && Number(p.price_paid) > 0
-                                                                ? ` · ${Number(p.price_paid)} ₽`
-                                                                : ''}
-                                                        </div>
-                                                        {p.starts_at ? (
-                                                            <div
-                                                                style={{ fontSize: '12px', color: '#6B6B69', marginTop: '2px' }}
-                                                            >
-                                                                {formatEventCardDayMonthAndTime(p.starts_at)}
-                                                            </div>
-                                                        ) : null}
+                                                        {tx.created_at
+                                                            ? formatAdminPlayerFieldValue('created_at', tx.created_at)
+                                                            : ''}
+                                                        {tx.order_id ? ` · order ${String(tx.order_id).slice(0, 8)}…` : ''}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : null}
-                            </>
-                        ) : null}
-                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <SectionTitle>Участие в событиях</SectionTitle>
+                                    {detail.event_participations.length === 0 ? (
+                                        <p style={{ margin: 0, fontSize: '13px', color: '#6B6B69' }}>
+                                            Записей на события нет.
+                                        </p>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {detail.event_participations.map((p) => (
+                                                <div
+                                                    key={String(p.id)}
+                                                    style={{
+                                                        padding: '10px 12px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #EBE8E0',
+                                                    }}
+                                                >
+                                                    <div style={{ fontWeight: 600, fontSize: '14px' }}>
+                                                        {p.event_title?.trim() || `Событие ${p.event_id}`}
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
+                                                        {paymentStatusLabelRu(p.payment_status, p.price_paid)}
+                                                        {p.price_paid != null && Number(p.price_paid) > 0
+                                                            ? ` · ${Number(p.price_paid)} ₽`
+                                                            : ''}
+                                                    </div>
+                                                    {p.starts_at ? (
+                                                        <div
+                                                            style={{ fontSize: '12px', color: '#6B6B69', marginTop: '2px' }}
+                                                        >
+                                                            {formatEventCardDayMonthAndTime(p.starts_at)}
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

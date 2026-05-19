@@ -25,6 +25,9 @@ export const ADMIN_PLAYER_HERO_FIELD_KEYS = new Set<string>([
     ...ADMIN_PLAYER_PROFILE_FIELD_KEYS,
 ])
 
+/** Не показывать в «Прочие данные» — уже есть в шапке (кнопка Telegram и т.д.). */
+const ADMIN_PLAYER_FOOTER_OMIT_KEYS = new Set<string>(['username'])
+
 export type PlayerClubStatus = 'standard' | 'vip' | 'partner'
 
 export type AdminPlayerStatsSummary = {
@@ -119,9 +122,11 @@ export function getAdminPlayerFooterEntries(detail: AdminPlayerDetailResponse): 
     const skip = ADMIN_PLAYER_HERO_FIELD_KEYS
 
     for (const [key, value] of Object.entries(detail.profile_fields)) {
-        if (!skip.has(key)) entries.push({ key, value })
+        if (skip.has(key) || ADMIN_PLAYER_FOOTER_OMIT_KEYS.has(key)) continue
+        entries.push({ key, value })
     }
     for (const [key, value] of Object.entries(detail.extra_fields)) {
+        if (ADMIN_PLAYER_FOOTER_OMIT_KEYS.has(key)) continue
         entries.push({ key, value })
     }
 
