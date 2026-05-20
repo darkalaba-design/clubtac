@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import type { CSSProperties } from 'react'
+import { useCallback, useState, type CSSProperties } from 'react'
 import BrandStarIcon from '../components/BrandStarIcon'
+import { adminFetch } from '@/lib/admin/adminFetch'
 import {
     ADMIN_PLAYER_FIELD_LABELS,
     formatAdminPlayerFieldValue,
@@ -10,7 +11,10 @@ import {
     formatAdminPlayerTelegramName,
     getAdminPlayerFooterEntries,
     extractPlayerStatsSummary,
+    nextPlayerClubStatus,
+    resolvePlayerClubStatus,
     type AdminPlayerDetailResponse,
+    type PlayerClubStatus,
 } from '@/lib/admin/adminPlayerDetail'
 import { AdminPlayerStatusChips } from './AdminPlayerStatusChips'
 import { formatPointsRu } from '@/lib/ruCountPhrases'
@@ -19,6 +23,8 @@ import { displayPublicNickname } from '@/lib/takoff'
 type Props = {
     detail: AdminPlayerDetailResponse
     userId: number
+    onUserUpdated?: (patch: { status: PlayerClubStatus }) => void
+    onStatusError?: (message: string) => void
 }
 
 const statCell: CSSProperties = {
@@ -62,8 +68,33 @@ function FooterDataRow({ label, value }: { label: string; value: string }) {
     )
 }
 
-export function AdminPlayerProfileTab({ detail, userId }: Props) {
+export function AdminPlayerProfileTab({ detail, userId, onUserUpdated, onStatusError }: Props) {
     const u = detail.user
+    const [statusSaving, setStatusSaving] = useState(false)
+
+    const cycleClubStatus = useCallback(async () => {
+        if (statusSaving) return
+        const current = resolvePlayerClubStatus(u)
+        const next = nextPlayerClubStatus(current)
+        setStatusSaving(true)
+        onStatusError?.('')
+        try {
+            const res = await adminFetch(`/api/admin/players/${userId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: next }),
+            })
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+            }
+            onUserUpdated?.({ status: next })
+        } catch (e) {
+            onStatusError?.(e instanceof Error ? e.message : 'Не удалось сменить статус')
+        } finally {
+            setStatusSaving(false)
+        }
+    }, [statusSaving, u, userId, onUserUpdated, onStatusError])
     const isActive = u.is_active !== false
     const takoff = u.takoff === true
     const inactiveMuted = !isActive
@@ -173,7 +204,12 @@ export function AdminPlayerProfileTab({ detail, userId }: Props) {
                     marginBottom: '14px',
                 }}
             >
-                <AdminPlayerStatusChips user={u} />
+                <AdminPlayerStatusChips
+                    user={u}
+                    clubStatusEditable
+                    clubStatusSaving={statusSaving}
+                    onClubStatusClick={() => void cycleClubStatus()}
+                />
                 {telegramProfileUrl && telegramUsername ? (
                     <a
                         href={telegramProfileUrl}

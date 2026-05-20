@@ -19,6 +19,7 @@ type Props = {
     userId: number | null
     previewName?: string
     onClose: () => void
+    onPlayerStatusChange?: (userId: number, status: string) => void
 }
 
 const fieldLabel: CSSProperties = {
@@ -73,10 +74,11 @@ function playerHeaderName(detail: AdminPlayerDetailResponse | null, previewName?
     return name || previewName?.trim() || `Игрок #${String(u.id ?? '')}`
 }
 
-export function AdminPlayerModal({ userId, previewName, onClose }: Props) {
+export function AdminPlayerModal({ userId, previewName, onClose, onPlayerStatusChange }: Props) {
     const [tab, setTab] = useState<PlayerModalTab>('profile')
     const [loading, setLoading] = useState(false)
     const [err, setErr] = useState<string | null>(null)
+    const [profileErr, setProfileErr] = useState<string | null>(null)
     const [detail, setDetail] = useState<AdminPlayerDetailResponse | null>(null)
 
     const load = useCallback(async (id: number) => {
@@ -105,8 +107,26 @@ export function AdminPlayerModal({ userId, previewName, onClose }: Props) {
             return
         }
         setTab('profile')
+        setProfileErr(null)
         void load(userId)
     }, [userId, load])
+
+    const handleUserStatusUpdated = useCallback(
+        (patch: { status: string }) => {
+            if (userId == null) return
+            setDetail((prev) => {
+                if (!prev) return prev
+                const user = { ...prev.user, status: patch.status }
+                return {
+                    ...prev,
+                    user,
+                    profile_fields: { ...prev.profile_fields, status: patch.status },
+                }
+            })
+            onPlayerStatusChange?.(userId, patch.status)
+        },
+        [userId, onPlayerStatusChange]
+    )
 
     if (userId == null) return null
 
@@ -300,8 +320,18 @@ export function AdminPlayerModal({ userId, previewName, onClose }: Props) {
                                 <p style={{ margin: '0 0 12px', color: '#B71C1C', fontSize: '13px' }}>{err}</p>
                             ) : null}
 
-                            {tab === 'profile' ? (
-                                <AdminPlayerProfileTab detail={detail} userId={userId} />
+                            {tab === 'profile' && profileErr ? (
+                                <p style={{ margin: '0 0 12px', color: '#B71C1C', fontSize: '13px' }}>
+                                    {profileErr}
+                                </p>
+                            ) : null}
+                            {tab === 'profile' && detail ? (
+                                <AdminPlayerProfileTab
+                                    detail={detail}
+                                    userId={userId}
+                                    onUserUpdated={handleUserStatusUpdated}
+                                    onStatusError={setProfileErr}
+                                />
                             ) : null}
 
                             {tab === 'finance' ? (

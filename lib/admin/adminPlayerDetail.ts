@@ -27,6 +27,23 @@ const ADMIN_PLAYER_FOOTER_OMIT_KEYS = new Set<string>(['username'])
 
 export type PlayerClubStatus = 'standard' | 'vip' | 'partner'
 
+export const PLAYER_CLUB_STATUSES: readonly PlayerClubStatus[] = ['standard', 'vip', 'partner']
+
+export function parsePlayerClubStatus(raw: unknown): PlayerClubStatus | null {
+    if (raw == null || raw === '') return 'standard'
+    const s = String(raw).toLowerCase().trim()
+    if (s === 'vip') return 'vip'
+    if (s === 'partner') return 'partner'
+    if (s === 'standard') return 'standard'
+    return null
+}
+
+/** Следующий статус при клике по бейджу в анкете: standard → vip → partner → … */
+export function nextPlayerClubStatus(current: PlayerClubStatus): PlayerClubStatus {
+    const i = PLAYER_CLUB_STATUSES.indexOf(current)
+    return PLAYER_CLUB_STATUSES[(i + 1) % PLAYER_CLUB_STATUSES.length]
+}
+
 export type AdminPlayerStatsSummary = {
     place: number | null
     games: number | null
@@ -42,11 +59,7 @@ function numOrNull(v: unknown): number | null {
 }
 
 export function resolvePlayerClubStatus(user: Record<string, unknown>): PlayerClubStatus {
-    const raw = user.status ?? 'standard'
-    const s = String(raw).toLowerCase().trim()
-    if (s === 'vip') return 'vip'
-    if (s === 'partner') return 'partner'
-    return 'standard'
+    return parsePlayerClubStatus(user.status ?? 'standard') ?? 'standard'
 }
 
 export function playerClubStatusLabel(status: PlayerClubStatus): string {

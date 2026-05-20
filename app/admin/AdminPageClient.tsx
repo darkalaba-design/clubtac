@@ -2456,6 +2456,11 @@ export default function AdminPageClient() {
             <AdminPlayerModal
                 userId={playerModalUserId}
                 previewName={playerModalPreviewName}
+                onPlayerStatusChange={(id, status) => {
+                    setAdminPlayers((prev) =>
+                        prev.map((p) => (p.user_id === id ? { ...p, status } : p))
+                    )
+                }}
                 onClose={() => {
                     setPlayerModalUserId(null)
                     setPlayerModalPreviewName('')

@@ -14,6 +14,10 @@ type Props = {
     hideStandardClubStatus?: boolean
     /** Чуть компактнее для строк списка. */
     compact?: boolean
+    /** Во вкладке «Анкета» — клик по бейджу статуса меняет его. */
+    clubStatusEditable?: boolean
+    clubStatusSaving?: boolean
+    onClubStatusClick?: () => void
 }
 
 const adminRoleChip: CSSProperties = {
@@ -41,6 +45,9 @@ export function AdminPlayerStatusChips({
     user,
     hideStandardClubStatus = false,
     compact = false,
+    clubStatusEditable = false,
+    clubStatusSaving = false,
+    onClubStatusClick,
 }: Props) {
     const clubStatus = resolvePlayerClubStatus(user)
     const statusChip = playerClubStatusChipStyle(clubStatus)
@@ -63,18 +70,40 @@ export function AdminPlayerStatusChips({
             }}
         >
             {showClubStatus ? (
-                <span
-                    style={{
-                        display: 'inline-block',
-                        padding: chipPad,
-                        borderRadius: '999px',
-                        fontSize: chipFont,
-                        fontWeight: 700,
-                        ...statusChip,
-                    }}
-                >
-                    {playerClubStatusLabel(clubStatus)}
-                </span>
+                clubStatusEditable && onClubStatusClick ? (
+                    <button
+                        type="button"
+                        disabled={clubStatusSaving}
+                        title="Нажмите, чтобы сменить статус в клубе"
+                        onClick={onClubStatusClick}
+                        style={{
+                            display: 'inline-block',
+                            padding: chipPad,
+                            borderRadius: '999px',
+                            fontSize: chipFont,
+                            fontWeight: 700,
+                            border: 'none',
+                            cursor: clubStatusSaving ? 'wait' : 'pointer',
+                            opacity: clubStatusSaving ? 0.65 : 1,
+                            ...statusChip,
+                        }}
+                    >
+                        {playerClubStatusLabel(clubStatus)}
+                    </button>
+                ) : (
+                    <span
+                        style={{
+                            display: 'inline-block',
+                            padding: chipPad,
+                            borderRadius: '999px',
+                            fontSize: chipFont,
+                            fontWeight: 700,
+                            ...statusChip,
+                        }}
+                    >
+                        {playerClubStatusLabel(clubStatus)}
+                    </span>
+                )
             ) : null}
             {showAppRole ? (
                 <span style={compact ? adminRoleChip : adminRoleChipDefault}>
