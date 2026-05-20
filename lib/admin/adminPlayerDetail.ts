@@ -50,7 +50,7 @@ function numOrNull(v: unknown): number | null {
     return Number.isFinite(n) ? n : null
 }
 
-/** Алиас для админки (VIP / Partner / Стандарт). */
+/** Алиас для админки (Гость / Участник / Партнер). */
 export function playerClubStatusLabel(status: PlayerClubStatus): string {
     return playerClubStatusLabelAdmin(status)
 }

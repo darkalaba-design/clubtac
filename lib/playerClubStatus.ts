@@ -35,18 +35,6 @@ export function playerClubStatusChipStyle(status: PlayerClubStatus): {
     }
 }
 
-/** Подписи в админке. */
-export function playerClubStatusLabelAdmin(status: PlayerClubStatus): string {
-    switch (status) {
-        case 'vip':
-            return 'VIP'
-        case 'partner':
-            return 'Partner'
-        default:
-            return 'Стандарт'
-    }
-}
-
 /** Подписи на публичном и личном профиле. */
 export function playerClubStatusLabelPublic(status: PlayerClubStatus): string {
     switch (status) {
@@ -57,4 +45,9 @@ export function playerClubStatusLabelPublic(status: PlayerClubStatus): string {
         default:
             return 'Гость'
     }
+}
+
+/** Подписи в админке (те же, что в профиле). */
+export function playerClubStatusLabelAdmin(status: PlayerClubStatus): string {
+    return playerClubStatusLabelPublic(status)
 }

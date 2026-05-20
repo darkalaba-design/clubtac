@@ -12,7 +12,7 @@ import {
 
 type Props = {
     user: Record<string, unknown>
-    /** На списке «Игроки» не показываем «Стандарт», только VIP / Partner. */
+    /** На списке «Игроки» не показываем «Гость», только Участник / Партнер. */
     hideStandardClubStatus?: boolean
     /** Чуть компактнее для строк списка. */
     compact?: boolean
@@ -52,7 +52,7 @@ function inactiveClubStatusButtonStyle(status: PlayerClubStatus): CSSProperties 
     }
 }
 
-/** VIP / Partner и Admin / Root — как во вкладке «Анкета» модалки игрока. */
+/** Гость / Участник / Партнер и Admin / Root — в шапке модалки и в списке игроков. */
 export function AdminPlayerStatusChips({
     user,
     hideStandardClubStatus = false,

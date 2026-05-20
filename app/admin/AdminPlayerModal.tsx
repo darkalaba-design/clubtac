@@ -9,9 +9,11 @@ import {
     type AdminPlayerDetailResponse,
 } from '@/lib/admin/adminPlayerDetail'
 import { formatEventCardDayMonthAndTime, paymentStatusLabelRu } from '@/lib/admin/eventDisplay'
+import { resolvePlayerClubStatus, type PlayerClubStatus } from '@/lib/playerClubStatus'
 import { displayPublicNickname } from '@/lib/takoff'
 import { AdminPlayerProfileTab } from './AdminPlayerProfileTab'
 import { AdminPlayerChatTab } from './AdminPlayerChatTab'
+import { AdminPlayerStatusChips } from './AdminPlayerStatusChips'
 
 type PlayerModalTab = 'chat' | 'profile' | 'finance'
 
@@ -78,7 +80,8 @@ export function AdminPlayerModal({ userId, previewName, onClose, onPlayerStatusC
     const [tab, setTab] = useState<PlayerModalTab>('profile')
     const [loading, setLoading] = useState(false)
     const [err, setErr] = useState<string | null>(null)
-    const [profileErr, setProfileErr] = useState<string | null>(null)
+    const [statusErr, setStatusErr] = useState<string | null>(null)
+    const [statusSaving, setStatusSaving] = useState(false)
     const [detail, setDetail] = useState<AdminPlayerDetailResponse | null>(null)
 
     const load = useCallback(async (id: number) => {
@@ -107,7 +110,7 @@ export function AdminPlayerModal({ userId, previewName, onClose, onPlayerStatusC
             return
         }
         setTab('profile')
-        setProfileErr(null)
+        setStatusErr(null)
         void load(userId)
     }, [userId, load])
 
@@ -126,6 +129,32 @@ export function AdminPlayerModal({ userId, previewName, onClose, onPlayerStatusC
             onPlayerStatusChange?.(userId, patch.status)
         },
         [userId, onPlayerStatusChange]
+    )
+
+    const setClubStatus = useCallback(
+        async (next: PlayerClubStatus) => {
+            if (userId == null || !detail || statusSaving) return
+            if (resolvePlayerClubStatus(detail.user) === next) return
+            setStatusSaving(true)
+            setStatusErr(null)
+            try {
+                const res = await adminFetch(`/api/admin/players/${userId}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: next }),
+                })
+                const j = await res.json().catch(() => ({}))
+                if (!res.ok) {
+                    throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+                }
+                handleUserStatusUpdated({ status: next })
+            } catch (e) {
+                setStatusErr(e instanceof Error ? e.message : 'Не удалось сменить статус')
+            } finally {
+                setStatusSaving(false)
+            }
+        },
+        [userId, detail, statusSaving, handleUserStatusUpdated]
     )
 
     if (userId == null) return null
@@ -243,6 +272,26 @@ export function AdminPlayerModal({ userId, previewName, onClose, onPlayerStatusC
                     </button>
                 </div>
 
+                {detail ? (
+                    <div
+                        style={{
+                            flexShrink: 0,
+                            padding: '0 14px 10px',
+                            borderBottom: '1px solid #EBE8E0',
+                        }}
+                    >
+                        <AdminPlayerStatusChips
+                            user={detail.user}
+                            clubStatusEditable
+                            clubStatusSaving={statusSaving}
+                            onClubStatusSelect={(status) => void setClubStatus(status)}
+                        />
+                        {statusErr ? (
+                            <p style={{ margin: '8px 0 0', color: '#B71C1C', fontSize: '12px' }}>{statusErr}</p>
+                        ) : null}
+                    </div>
+                ) : null}
+
                 <div
                     style={{
                         flexShrink: 0,
@@ -320,18 +369,8 @@ export function AdminPlayerModal({ userId, previewName, onClose, onPlayerStatusC
                                 <p style={{ margin: '0 0 12px', color: '#B71C1C', fontSize: '13px' }}>{err}</p>
                             ) : null}
 
-                            {tab === 'profile' && profileErr ? (
-                                <p style={{ margin: '0 0 12px', color: '#B71C1C', fontSize: '13px' }}>
-                                    {profileErr}
-                                </p>
-                            ) : null}
                             {tab === 'profile' && detail ? (
-                                <AdminPlayerProfileTab
-                                    detail={detail}
-                                    userId={userId}
-                                    onUserUpdated={handleUserStatusUpdated}
-                                    onStatusError={setProfileErr}
-                                />
+                                <AdminPlayerProfileTab detail={detail} userId={userId} />
                             ) : null}
 
                             {tab === 'finance' ? (

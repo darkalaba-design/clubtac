@@ -1,9 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useState, type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 import BrandStarIcon from '../components/BrandStarIcon'
-import { adminFetch } from '@/lib/admin/adminFetch'
 import {
     ADMIN_PLAYER_FIELD_LABELS,
     formatAdminPlayerFieldValue,
@@ -11,19 +10,14 @@ import {
     formatAdminPlayerTelegramName,
     getAdminPlayerFooterEntries,
     extractPlayerStatsSummary,
-    resolvePlayerClubStatus,
     type AdminPlayerDetailResponse,
-    type PlayerClubStatus,
 } from '@/lib/admin/adminPlayerDetail'
-import { AdminPlayerStatusChips } from './AdminPlayerStatusChips'
 import { formatPointsRu } from '@/lib/ruCountPhrases'
 import { displayPublicNickname } from '@/lib/takoff'
 
 type Props = {
     detail: AdminPlayerDetailResponse
     userId: number
-    onUserUpdated?: (patch: { status: PlayerClubStatus }) => void
-    onStatusError?: (message: string) => void
 }
 
 const statCell: CSSProperties = {
@@ -67,35 +61,8 @@ function FooterDataRow({ label, value }: { label: string; value: string }) {
     )
 }
 
-export function AdminPlayerProfileTab({ detail, userId, onUserUpdated, onStatusError }: Props) {
+export function AdminPlayerProfileTab({ detail, userId }: Props) {
     const u = detail.user
-    const [statusSaving, setStatusSaving] = useState(false)
-
-    const setClubStatus = useCallback(
-        async (next: PlayerClubStatus) => {
-            if (statusSaving) return
-            if (resolvePlayerClubStatus(u) === next) return
-            setStatusSaving(true)
-            onStatusError?.('')
-            try {
-                const res = await adminFetch(`/api/admin/players/${userId}/status`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: next }),
-                })
-                const j = await res.json().catch(() => ({}))
-                if (!res.ok) {
-                    throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
-                }
-                onUserUpdated?.({ status: next })
-            } catch (e) {
-                onStatusError?.(e instanceof Error ? e.message : 'Не удалось сменить статус')
-            } finally {
-                setStatusSaving(false)
-            }
-        },
-        [statusSaving, u, userId, onUserUpdated, onStatusError]
-    )
     const isActive = u.is_active !== false
     const takoff = u.takoff === true
     const inactiveMuted = !isActive
@@ -196,22 +163,14 @@ export function AdminPlayerProfileTab({ detail, userId, onUserUpdated, onStatusE
                 </div>
             </div>
 
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    marginBottom: '14px',
-                }}
-            >
-                <AdminPlayerStatusChips
-                    user={u}
-                    clubStatusEditable
-                    clubStatusSaving={statusSaving}
-                    onClubStatusSelect={(status) => void setClubStatus(status)}
-                />
-                {telegramProfileUrl && telegramUsername ? (
+            {telegramProfileUrl && telegramUsername ? (
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        marginBottom: '14px',
+                    }}
+                >
                     <a
                         href={telegramProfileUrl}
                         target="_blank"
@@ -232,8 +191,8 @@ export function AdminPlayerProfileTab({ detail, userId, onUserUpdated, onStatusE
                     >
                         @{telegramUsername}
                     </a>
-                ) : null}
-            </div>
+                </div>
+            ) : null}
 
             <div
                 style={{
