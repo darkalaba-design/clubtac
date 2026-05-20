@@ -13,7 +13,7 @@ import { resolvePlayerClubStatus, type PlayerClubStatus } from '@/lib/playerClub
 import { displayPublicNickname } from '@/lib/takoff'
 import { AdminPlayerProfileTab } from './AdminPlayerProfileTab'
 import { AdminPlayerChatTab } from './AdminPlayerChatTab'
-import { AdminPlayerStatusChips } from './AdminPlayerStatusChips'
+import { AdminPlayerClubStatusPicker } from './AdminPlayerClubStatusPicker'
 
 type PlayerModalTab = 'chat' | 'profile' | 'finance'
 
@@ -280,11 +280,11 @@ export function AdminPlayerModal({ userId, previewName, onClose, onPlayerStatusC
                             borderBottom: '1px solid #EBE8E0',
                         }}
                     >
-                        <AdminPlayerStatusChips
+                        <AdminPlayerClubStatusPicker
+                            key={userId}
                             user={detail.user}
-                            clubStatusEditable
-                            clubStatusSaving={statusSaving}
-                            onClubStatusSelect={(status) => void setClubStatus(status)}
+                            saving={statusSaving}
+                            onSelect={(status) => void setClubStatus(status)}
                         />
                         {statusErr ? (
                             <p style={{ margin: '8px 0 0', color: '#B71C1C', fontSize: '12px' }}>{statusErr}</p>
