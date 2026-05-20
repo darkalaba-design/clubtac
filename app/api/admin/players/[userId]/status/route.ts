@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
-import { parsePlayerClubStatus } from '@/lib/admin/adminPlayerDetail'
+import { parsePlayerClubStatus } from '@/lib/playerClubStatus'
 
 type RouteParams = { params: Promise<{ userId: string }> }
 

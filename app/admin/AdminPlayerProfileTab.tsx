@@ -11,7 +11,6 @@ import {
     formatAdminPlayerTelegramName,
     getAdminPlayerFooterEntries,
     extractPlayerStatsSummary,
-    nextPlayerClubStatus,
     resolvePlayerClubStatus,
     type AdminPlayerDetailResponse,
     type PlayerClubStatus,
@@ -72,29 +71,31 @@ export function AdminPlayerProfileTab({ detail, userId, onUserUpdated, onStatusE
     const u = detail.user
     const [statusSaving, setStatusSaving] = useState(false)
 
-    const cycleClubStatus = useCallback(async () => {
-        if (statusSaving) return
-        const current = resolvePlayerClubStatus(u)
-        const next = nextPlayerClubStatus(current)
-        setStatusSaving(true)
-        onStatusError?.('')
-        try {
-            const res = await adminFetch(`/api/admin/players/${userId}/status`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: next }),
-            })
-            const j = await res.json().catch(() => ({}))
-            if (!res.ok) {
-                throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+    const setClubStatus = useCallback(
+        async (next: PlayerClubStatus) => {
+            if (statusSaving) return
+            if (resolvePlayerClubStatus(u) === next) return
+            setStatusSaving(true)
+            onStatusError?.('')
+            try {
+                const res = await adminFetch(`/api/admin/players/${userId}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: next }),
+                })
+                const j = await res.json().catch(() => ({}))
+                if (!res.ok) {
+                    throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+                }
+                onUserUpdated?.({ status: next })
+            } catch (e) {
+                onStatusError?.(e instanceof Error ? e.message : 'Не удалось сменить статус')
+            } finally {
+                setStatusSaving(false)
             }
-            onUserUpdated?.({ status: next })
-        } catch (e) {
-            onStatusError?.(e instanceof Error ? e.message : 'Не удалось сменить статус')
-        } finally {
-            setStatusSaving(false)
-        }
-    }, [statusSaving, u, userId, onUserUpdated, onStatusError])
+        },
+        [statusSaving, u, userId, onUserUpdated, onStatusError]
+    )
     const isActive = u.is_active !== false
     const takoff = u.takoff === true
     const inactiveMuted = !isActive
@@ -208,7 +209,7 @@ export function AdminPlayerProfileTab({ detail, userId, onUserUpdated, onStatusE
                     user={u}
                     clubStatusEditable
                     clubStatusSaving={statusSaving}
-                    onClubStatusClick={() => void cycleClubStatus()}
+                    onClubStatusSelect={(status) => void setClubStatus(status)}
                 />
                 {telegramProfileUrl && telegramUsername ? (
                     <a

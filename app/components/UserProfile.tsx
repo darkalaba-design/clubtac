@@ -9,6 +9,7 @@ import { TELEGRAM_INIT_DATA_HEADER } from '@/lib/admin/constants'
 import { useUser } from '../contexts/UserContext'
 import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 import BrandStarIcon from './BrandStarIcon'
+import { PlayerClubStatusBadge } from './PlayerClubStatusBadge'
 import GamesTabIcon from './GamesTabIcon'
 import TeamsTabIcon from './TeamsTabIcon'
 import ProfileTabIcon from './ProfileTabIcon'
@@ -747,17 +748,21 @@ export default function UserProfile() {
 
                     {/* Информация */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
+                        <h2 style={{ margin: 0, marginBottom: '6px', fontSize: '18px', fontWeight: 'bold' }}>
                             {getMedalPrefix(user.id)}
                             {displayPublicNickname(userNickname, user.takoff)}
                         </h2>
-                        {user.username && !user.takoff && (
-                            <p style={{ margin: 0, marginBottom: '4px', fontSize: '14px', color: '#6B6B69' }}>
-                                @{user.username}
-                            </p>
-                        )}
-                        <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                            <span>TG: {user.telegram_id}</span>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '12px',
+                                color: '#6B6B69',
+                            }}
+                        >
+                            <PlayerClubStatusBadge status={user.status} />
                             {pointsValue != null ? (
                                 <span style={{ color: '#1D1D1B', fontWeight: 500 }}>
                                     <BrandStarIcon size={14} />{' '}

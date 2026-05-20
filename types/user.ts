@@ -17,6 +17,8 @@ export interface User {
     referral_code?: string | null
     /** id пользователя-пригласителя (clubtac_users.id) */
     referred_by_user_id?: number | null
+    /** Статус в клубе: standard | vip | partner */
+    status?: string | null
     created_at?: string
     updated_at?: string
 }

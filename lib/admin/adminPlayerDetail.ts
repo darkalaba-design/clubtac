@@ -25,24 +25,16 @@ export const ADMIN_PLAYER_HERO_FIELD_KEYS = new Set<string>([
 /** Не показывать в «Прочие данные» — уже есть в шапке (кнопка Telegram и т.д.). */
 const ADMIN_PLAYER_FOOTER_OMIT_KEYS = new Set<string>(['username'])
 
-export type PlayerClubStatus = 'standard' | 'vip' | 'partner'
-
-export const PLAYER_CLUB_STATUSES: readonly PlayerClubStatus[] = ['standard', 'vip', 'partner']
-
-export function parsePlayerClubStatus(raw: unknown): PlayerClubStatus | null {
-    if (raw == null || raw === '') return 'standard'
-    const s = String(raw).toLowerCase().trim()
-    if (s === 'vip') return 'vip'
-    if (s === 'partner') return 'partner'
-    if (s === 'standard') return 'standard'
-    return null
-}
-
-/** Следующий статус при клике по бейджу в анкете: standard → vip → partner → … */
-export function nextPlayerClubStatus(current: PlayerClubStatus): PlayerClubStatus {
-    const i = PLAYER_CLUB_STATUSES.indexOf(current)
-    return PLAYER_CLUB_STATUSES[(i + 1) % PLAYER_CLUB_STATUSES.length]
-}
+export type { PlayerClubStatus } from '@/lib/playerClubStatus'
+export {
+    PLAYER_CLUB_STATUSES,
+    parsePlayerClubStatus,
+    nextPlayerClubStatus,
+    resolvePlayerClubStatus,
+    playerClubStatusChipStyle,
+    playerClubStatusLabelAdmin,
+} from '@/lib/playerClubStatus'
+import { playerClubStatusLabelAdmin, type PlayerClubStatus } from '@/lib/playerClubStatus'
 
 export type AdminPlayerStatsSummary = {
     place: number | null
@@ -58,33 +50,9 @@ function numOrNull(v: unknown): number | null {
     return Number.isFinite(n) ? n : null
 }
 
-export function resolvePlayerClubStatus(user: Record<string, unknown>): PlayerClubStatus {
-    return parsePlayerClubStatus(user.status ?? 'standard') ?? 'standard'
-}
-
+/** Алиас для админки (VIP / Partner / Стандарт). */
 export function playerClubStatusLabel(status: PlayerClubStatus): string {
-    switch (status) {
-        case 'vip':
-            return 'VIP'
-        case 'partner':
-            return 'Partner'
-        default:
-            return 'Стандарт'
-    }
-}
-
-export function playerClubStatusChipStyle(status: PlayerClubStatus): {
-    backgroundColor: string
-    color: string
-} {
-    switch (status) {
-        case 'vip':
-            return { backgroundColor: '#EDE7F6', color: '#5E35B1' }
-        case 'partner':
-            return { backgroundColor: '#FFDF00', color: '#1D1D1B' }
-        default:
-            return { backgroundColor: '#EBE8E0', color: '#6B6B69' }
-    }
+    return playerClubStatusLabelAdmin(status)
 }
 
 export function extractPlayerStatsSummary(detail: AdminPlayerDetailResponse): AdminPlayerStatsSummary {

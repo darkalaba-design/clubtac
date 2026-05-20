@@ -10,6 +10,7 @@ import { displayPublicNickname, TAKOFF_PUBLIC_NAME } from '@/lib/takoff'
 import Tabs from '../../components/Tabs'
 import { useSoloLeaderMedalPrefix } from '../../contexts/SoloLeaderRanksContext'
 import BrandStarIcon from '../../components/BrandStarIcon'
+import { PlayerClubStatusBadge } from '../../components/PlayerClubStatusBadge'
 import GamesTabIcon from '../../components/GamesTabIcon'
 import TeamsTabIcon from '../../components/TeamsTabIcon'
 
@@ -82,15 +83,21 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
 
                 let userpic: string | null = null
                 let takoff = false
+                let status: string | null = null
                 if (Number.isFinite(uid) && uid > 0) {
                     const { data: userRow } = await supabase
                         .from('clubtac_users')
-                        .select('userpic, takoff')
+                        .select('userpic, takoff, status')
                         .eq('id', uid)
                         .maybeSingle()
-                    const row = userRow as { userpic?: string | null; takoff?: boolean | null } | null
+                    const row = userRow as {
+                        userpic?: string | null
+                        takoff?: boolean | null
+                        status?: string | null
+                    } | null
                     userpic = row?.userpic?.trim() || null
                     takoff = row?.takoff === true
+                    status = row?.status ?? null
                 }
 
                 setPlayer({
@@ -106,6 +113,7 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                     win_rate: hallData?.win_rate,
                     userpic,
                     takoff,
+                    status,
                 })
             } catch (err) {
                 console.error('Error loading player:', err)
@@ -416,22 +424,32 @@ export default function PlayerPageClient({ playerId }: { playerId: string }) {
                         )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <h2 style={{ margin: 0, marginBottom: '4px', fontSize: '18px', fontWeight: 'bold' }}>
+                        <h2 style={{ margin: 0, marginBottom: '6px', fontSize: '18px', fontWeight: 'bold' }}>
                             {getMedalPrefix(
                                 (player as { user_id?: number }).user_id ?? Number(playerId)
                             )}
                             {displayPublicNickname(player.nickname, player.takoff)}
                         </h2>
-                        {(player.points != null || player.rating != null) && (
-                            <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '12px',
+                                color: '#6B6B69',
+                            }}
+                        >
+                            <PlayerClubStatusBadge status={player.status} />
+                            {(player.points != null || player.rating != null) && (
                                 <span style={{ color: '#1D1D1B', fontWeight: 500 }}>
                                     <BrandStarIcon size={14} />{' '}
                                     {formatPointsRu(
                                         Math.round(Number(player.points ?? player.rating))
                                     )}
                                 </span>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
 

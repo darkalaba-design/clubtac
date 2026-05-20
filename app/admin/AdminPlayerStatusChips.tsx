@@ -3,10 +3,12 @@
 import type { CSSProperties } from 'react'
 import type { AppRole } from '@/lib/admin/appRole'
 import {
+    PLAYER_CLUB_STATUSES,
     playerClubStatusChipStyle,
-    playerClubStatusLabel,
+    playerClubStatusLabelAdmin,
     resolvePlayerClubStatus,
-} from '@/lib/admin/adminPlayerDetail'
+    type PlayerClubStatus,
+} from '@/lib/playerClubStatus'
 
 type Props = {
     user: Record<string, unknown>
@@ -14,10 +16,10 @@ type Props = {
     hideStandardClubStatus?: boolean
     /** Чуть компактнее для строк списка. */
     compact?: boolean
-    /** Во вкладке «Анкета» — клик по бейджу статуса меняет его. */
+    /** Во вкладке «Анкета» — отдельные кнопки для каждого статуса. */
     clubStatusEditable?: boolean
     clubStatusSaving?: boolean
-    onClubStatusClick?: () => void
+    onClubStatusSelect?: (status: PlayerClubStatus) => void
 }
 
 const adminRoleChip: CSSProperties = {
@@ -40,6 +42,16 @@ const adminRoleChipDefault: CSSProperties = {
     color: '#1D1D1B',
 }
 
+function inactiveClubStatusButtonStyle(status: PlayerClubStatus): CSSProperties {
+    const { color } = playerClubStatusChipStyle(status)
+    return {
+        backgroundColor: '#FFFFFF',
+        color,
+        border: `1.5px solid ${color}`,
+        opacity: 0.85,
+    }
+}
+
 /** VIP / Partner и Admin / Root — как во вкладке «Анкета» модалки игрока. */
 export function AdminPlayerStatusChips({
     user,
@@ -47,18 +59,26 @@ export function AdminPlayerStatusChips({
     compact = false,
     clubStatusEditable = false,
     clubStatusSaving = false,
-    onClubStatusClick,
+    onClubStatusSelect,
 }: Props) {
     const clubStatus = resolvePlayerClubStatus(user)
     const statusChip = playerClubStatusChipStyle(clubStatus)
     const appRole = typeof user.app_role === 'string' ? (user.app_role as AppRole) : 'user'
     const showAppRole = appRole === 'admin' || appRole === 'root'
     const showClubStatus = !hideStandardClubStatus || clubStatus !== 'standard'
+    const showEditableClubStatuses = clubStatusEditable && !!onClubStatusSelect
 
-    if (!showClubStatus && !showAppRole) return null
+    if (!showClubStatus && !showAppRole && !showEditableClubStatuses) return null
 
     const chipPad = compact ? '3px 8px' : '5px 12px'
     const chipFont = compact ? '11px' : '12px'
+    const chipBase: CSSProperties = {
+        display: 'inline-block',
+        padding: chipPad,
+        borderRadius: '999px',
+        fontSize: chipFont,
+        fontWeight: 700,
+    }
 
     return (
         <div
@@ -69,42 +89,40 @@ export function AdminPlayerStatusChips({
                 alignItems: 'center',
             }}
         >
-            {showClubStatus ? (
-                clubStatusEditable && onClubStatusClick ? (
-                    <button
-                        type="button"
-                        disabled={clubStatusSaving}
-                        title="Нажмите, чтобы сменить статус в клубе"
-                        onClick={onClubStatusClick}
-                        style={{
-                            display: 'inline-block',
-                            padding: chipPad,
-                            borderRadius: '999px',
-                            fontSize: chipFont,
-                            fontWeight: 700,
-                            border: 'none',
-                            cursor: clubStatusSaving ? 'wait' : 'pointer',
-                            opacity: clubStatusSaving ? 0.65 : 1,
-                            ...statusChip,
-                        }}
-                    >
-                        {playerClubStatusLabel(clubStatus)}
-                    </button>
-                ) : (
-                    <span
-                        style={{
-                            display: 'inline-block',
-                            padding: chipPad,
-                            borderRadius: '999px',
-                            fontSize: chipFont,
-                            fontWeight: 700,
-                            ...statusChip,
-                        }}
-                    >
-                        {playerClubStatusLabel(clubStatus)}
-                    </span>
-                )
-            ) : null}
+            {showEditableClubStatuses
+                ? PLAYER_CLUB_STATUSES.map((status) => {
+                      const active = clubStatus === status
+                      const filled = playerClubStatusChipStyle(status)
+                      const outline = inactiveClubStatusButtonStyle(status)
+                      return (
+                          <button
+                              key={status}
+                              type="button"
+                              disabled={clubStatusSaving}
+                              title={
+                                  active
+                                      ? 'Текущий статус'
+                                      : `Выставить: ${playerClubStatusLabelAdmin(status)}`
+                              }
+                              onClick={() => {
+                                  if (!active) onClubStatusSelect(status)
+                              }}
+                              style={{
+                                  ...chipBase,
+                                  border: active ? 'none' : outline.border,
+                                  cursor: clubStatusSaving ? 'wait' : active ? 'default' : 'pointer',
+                                  opacity: clubStatusSaving ? 0.65 : active ? 1 : outline.opacity,
+                                  backgroundColor: active ? filled.backgroundColor : outline.backgroundColor,
+                                  color: active ? filled.color : outline.color,
+                              }}
+                          >
+                              {playerClubStatusLabelAdmin(status)}
+                          </button>
+                      )
+                  })
+                : showClubStatus ? (
+                      <span style={{ ...chipBase, ...statusChip }}>{playerClubStatusLabelAdmin(clubStatus)}</span>
+                  ) : null}
             {showAppRole ? (
                 <span style={compact ? adminRoleChip : adminRoleChipDefault}>
                     {appRole === 'root' ? 'Root' : 'Admin'}
