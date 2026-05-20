@@ -459,31 +459,6 @@ export default function UserProfile() {
                                     <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#6B6B69' }}>Сохранение…</p>
                                 )}
                             </div>
-                            {showAppAdminLink && (
-                                <div style={{ marginTop: '16px' }}>
-                                    <Link
-                                        href="/admin"
-                                        style={{
-                                            display: 'block',
-                                            textAlign: 'center',
-                                            padding: '12px',
-                                            borderRadius: '10px',
-                                            backgroundColor: '#1B5E20',
-                                            color: '#fff',
-                                            fontWeight: 700,
-                                            textDecoration: 'none',
-                                            fontSize: '15px',
-                                        }}
-                                    >
-                                        Админка (в приложении)
-                                    </Link>
-                                    {user.app_role === 'root' && (
-                                        <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#6B6B69', textAlign: 'center' }}>
-                                            root: в т.ч. выдача admin для новой админки
-                                        </p>
-                                    )}
-                                </div>
-                            )}
                         </>
                     )}
                 </div>
@@ -774,6 +749,27 @@ export default function UserProfile() {
                         </div>
                     </div>
                 </div>
+
+                {showAppAdminLink && (
+                    <div style={{ ...sectionCard, padding: '12px 14px' }}>
+                        <Link
+                            href="/admin"
+                            style={{
+                                display: 'block',
+                                textAlign: 'center',
+                                padding: '12px 14px',
+                                borderRadius: '10px',
+                                backgroundColor: '#1B5E20',
+                                color: '#fff',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                fontSize: '15px',
+                            }}
+                        >
+                            Админка
+                        </Link>
+                    </div>
+                )}
 
                 {/* Статистика */}
                 {statsLoading ? (
@@ -1101,26 +1097,6 @@ export default function UserProfile() {
                     )}
                 </div>
             </div>
-            {showAppAdminLink && (
-                <div style={{ padding: '0 12px', marginTop: '4px', marginBottom: '12px' }}>
-                    <Link
-                        href="/admin"
-                        style={{
-                            display: 'block',
-                            textAlign: 'center',
-                            padding: '12px 14px',
-                            borderRadius: '10px',
-                            backgroundColor: '#1B5E20',
-                            color: '#fff',
-                            fontWeight: 700,
-                            textDecoration: 'none',
-                            fontSize: '15px',
-                        }}
-                    >
-                        Админка (в приложении)
-                    </Link>
-                </div>
-            )}
             {settingsFooter}
             {settingsModal}
         </>
