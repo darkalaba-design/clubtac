@@ -14,10 +14,15 @@ import {
 } from '@/lib/admin/adminPlayerDetail'
 import { formatPointsRu } from '@/lib/ruCountPhrases'
 import { displayPublicNickname } from '@/lib/takoff'
+import { AdminPlayerClubStatusPicker } from './AdminPlayerClubStatusPicker'
+import type { PlayerClubStatus } from '@/lib/playerClubStatus'
 
 type Props = {
     detail: AdminPlayerDetailResponse
     userId: number
+    statusSaving?: boolean
+    statusErr?: string | null
+    onClubStatusSelect?: (status: PlayerClubStatus) => void
 }
 
 const statCell: CSSProperties = {
@@ -61,7 +66,13 @@ function FooterDataRow({ label, value }: { label: string; value: string }) {
     )
 }
 
-export function AdminPlayerProfileTab({ detail, userId }: Props) {
+export function AdminPlayerProfileTab({
+    detail,
+    userId,
+    statusSaving = false,
+    statusErr = null,
+    onClubStatusSelect,
+}: Props) {
     const u = detail.user
     const isActive = u.is_active !== false
     const takoff = u.takoff === true
@@ -163,14 +174,23 @@ export function AdminPlayerProfileTab({ detail, userId }: Props) {
                 </div>
             </div>
 
-            {telegramProfileUrl && telegramUsername ? (
-                <div
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        marginBottom: '14px',
-                    }}
-                >
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    marginBottom: statusErr ? '6px' : '14px',
+                }}
+            >
+                {onClubStatusSelect ? (
+                    <AdminPlayerClubStatusPicker
+                        user={u}
+                        saving={statusSaving}
+                        onSelect={onClubStatusSelect}
+                    />
+                ) : null}
+                {telegramProfileUrl && telegramUsername ? (
                     <a
                         href={telegramProfileUrl}
                         target="_blank"
@@ -191,7 +211,10 @@ export function AdminPlayerProfileTab({ detail, userId }: Props) {
                     >
                         @{telegramUsername}
                     </a>
-                </div>
+                ) : null}
+            </div>
+            {statusErr ? (
+                <p style={{ margin: '0 0 14px', color: '#B71C1C', fontSize: '12px' }}>{statusErr}</p>
             ) : null}
 
             <div
