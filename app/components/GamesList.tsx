@@ -952,16 +952,10 @@ export default function GamesList() {
                                             fontSize: '14px',
                                             flexShrink: 0,
                                             marginLeft: 'auto',
-                                            ...(isEventTodayAndNotStarted(event.starts_at) && event.price > 0
-                                                ? { color: '#B71C1C', fontWeight: 'bold' }
-                                                : { color: '#6B6B69' }),
+                                            color: '#6B6B69',
                                         }}
                                     >
-                                        {event.price === 0
-                                            ? 'Бесплатно'
-                                            : isEventTodayAndNotStarted(event.starts_at)
-                                              ? `${Math.round(event.price * 1.4)} ₽`
-                                              : `${event.price} ₽`}
+                                        {event.price === 0 ? 'Бесплатно' : `${event.price} ₽`}
                                     </div>
                                 ) : null}
                             </div>
