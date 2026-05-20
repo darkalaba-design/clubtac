@@ -111,7 +111,8 @@ export function AdminPlayerClubStatusPicker({ user, saving = false, onSelect }: 
                         border: '1px solid #EBE8E0',
                         backgroundColor: '#FAFAF8',
                         display: 'flex',
-                        flexWrap: 'wrap',
+                        flexDirection: 'column',
+                        alignItems: 'stretch',
                         gap: '6px',
                     }}
                 >
@@ -126,10 +127,12 @@ export function AdminPlayerClubStatusPicker({ user, saving = false, onSelect }: 
                                 disabled={saving}
                                 onClick={() => pick(status)}
                                 style={{
-                                    padding: '5px 12px',
-                                    borderRadius: '999px',
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
                                     fontSize: '12px',
                                     fontWeight: 700,
+                                    textAlign: 'center',
                                     border: active ? 'none' : outline.border,
                                     cursor: saving ? 'wait' : 'pointer',
                                     backgroundColor: active ? filled.backgroundColor : outline.backgroundColor,
