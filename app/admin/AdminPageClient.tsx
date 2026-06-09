@@ -23,11 +23,13 @@ import GeoIcon from '../components/GeoIcon'
 import GamesTabIcon from '../components/GamesTabIcon'
 import EventsTabIcon from '../components/EventsTabIcon'
 import AccessTabIcon from '../components/AccessTabIcon'
+import BroadcastsTabIcon from '../components/BroadcastsTabIcon'
 import PlayersTabIcon from '../components/PlayersTabIcon'
 import { displayPublicNickname } from '@/lib/takoff'
 import { adminFetch } from '@/lib/admin/adminFetch'
 import { AdminPlayerModal } from './AdminPlayerModal'
 import { AdminPlayerStatusChips } from './AdminPlayerStatusChips'
+import { AdminBroadcastsTab } from './AdminBroadcastsTab'
 
 function AdminAddressLine({ address, style }: { address: string; style?: CSSProperties }) {
     return (
@@ -207,7 +209,7 @@ function eventToModalDraft(ev: EventRow): EventModalDraft {
     }
 }
 
-type AdminNavTab = 'events' | 'games' | 'players' | 'admins'
+type AdminNavTab = 'events' | 'games' | 'players' | 'broadcasts' | 'admins'
 type EventModalTab = 'participants' | 'games' | 'details'
 
 type AdminPlayerRow = {
@@ -357,7 +359,7 @@ export default function AdminPageClient() {
 
     useEffect(() => {
         if (phase !== 'ready' || !session) return
-        if (session.app_role !== 'root' && navTab === 'admins') setNavTab('events')
+        if (session.app_role !== 'root' && (navTab === 'admins' || navTab === 'broadcasts')) setNavTab('events')
     }, [phase, session, navTab])
 
     const setRole = async (targetId: number, app_role: 'admin' | 'user') => {
@@ -1064,6 +1066,12 @@ export default function AdminPageClient() {
             >
             {err && <div style={errorBanner}>{err}</div>}
 
+            {navTab === 'broadcasts' && isRoot && (
+                <section style={pageSection}>
+                    <AdminBroadcastsTab onError={setErr} />
+                </section>
+            )}
+
             {navTab === 'admins' && isRoot && (
                 <section style={pageSection}>
                     <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>Администраторы</h2>
@@ -1724,6 +1732,13 @@ export default function AdminPageClient() {
                     {navBtn('events', <EventsTabIcon active={navTab === 'events'} size={24} />, 'События')}
                     {navBtn('games', <GamesTabIcon active={navTab === 'games'} size={24} />, 'Партии')}
                     {navBtn('players', <PlayersTabIcon active={navTab === 'players'} size={24} />, 'Игроки')}
+                    {isRoot
+                        ? navBtn(
+                              'broadcasts',
+                              <BroadcastsTabIcon active={navTab === 'broadcasts'} size={24} />,
+                              'Рассылки'
+                          )
+                        : null}
                     {isRoot ? navBtn('admins', <AccessTabIcon active={navTab === 'admins'} size={24} />, 'Доступ') : null}
                 </div>
             </nav>
