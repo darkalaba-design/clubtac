@@ -13,6 +13,7 @@ import {
     resolveBroadcastManualAudience,
     type BroadcastRow,
 } from '@/lib/admin/broadcasts'
+import { applyBroadcastDeliveryResult } from '@/lib/admin/applyBroadcastDeliveryResult'
 import { sendBroadcastViaMake } from '@/lib/admin/sendBroadcastViaMake'
 
 function gateBroadcast(request: NextRequest) {
@@ -179,23 +180,46 @@ export async function POST(request: NextRequest) {
 
     const makeTriggeredAt = new Date().toISOString()
 
-    const { data: updated, error: updateErr } = await supabase
+    if (makeResult.mode === 'completed') {
+        try {
+            await applyBroadcastDeliveryResult(supabase, broadcastId, makeResult.sentUserIds)
+        } catch (e) {
+            await supabase
+                .from('clubtac_broadcasts')
+                .update({ status: 'error', completed_at: new Date().toISOString() })
+                .eq('id', broadcastId)
+            const msg = e instanceof Error ? e.message : 'Не удалось сохранить результат рассылки'
+            return NextResponse.json({ error: msg, broadcast_id: broadcastId }, { status: 500 })
+        }
+    } else {
+        const { error: updateErr } = await supabase
+            .from('clubtac_broadcasts')
+            .update({
+                status: 'sending',
+                make_triggered_at: makeTriggeredAt,
+            })
+            .eq('id', broadcastId)
+
+        if (updateErr) {
+            console.error('POST /api/admin/broadcasts update sending:', updateErr)
+            return NextResponse.json({ error: updateErr.message }, { status: 500 })
+        }
+    }
+
+    const { data: updated, error: loadErr } = await supabase
         .from('clubtac_broadcasts')
-        .update({
-            status: 'sending',
-            make_triggered_at: makeTriggeredAt,
-        })
-        .eq('id', broadcastId)
         .select('*')
+        .eq('id', broadcastId)
         .single()
 
-    if (updateErr) {
-        console.error('POST /api/admin/broadcasts update:', updateErr)
-        return NextResponse.json({ error: updateErr.message }, { status: 500 })
+    if (loadErr || !updated) {
+        console.error('POST /api/admin/broadcasts reload:', loadErr)
+        return NextResponse.json({ error: loadErr?.message ?? 'Не удалось загрузить рассылку' }, { status: 500 })
     }
 
     return NextResponse.json({
         broadcast: updated as BroadcastRow,
         delivery_mode: 'make' as const,
+        make_mode: makeResult.mode,
     })
 }

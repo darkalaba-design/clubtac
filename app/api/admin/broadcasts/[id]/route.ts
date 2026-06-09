@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActor } from '@/lib/admin/requireActor'
 import { canManageBroadcasts } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
-import { type BroadcastRow } from '@/lib/admin/broadcasts'
+import { refreshBroadcastStats, type BroadcastRow } from '@/lib/admin/broadcasts'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -45,6 +45,29 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
         return NextResponse.json({ error: 'Рассылка не найдена' }, { status: 404 })
     }
 
+    const rowBefore = broadcast as BroadcastRow
+    if (rowBefore.status === 'sending' || rowBefore.status === 'pending') {
+        try {
+            await refreshBroadcastStats(supabase, id)
+        } catch (e) {
+            console.error('GET /api/admin/broadcasts/[id] refresh:', e)
+        }
+    }
+
+    const { data: refreshed, error: reloadErr } = await supabase
+        .from('clubtac_broadcasts')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+    if (reloadErr) {
+        console.error('GET /api/admin/broadcasts/[id] reload:', reloadErr)
+        return NextResponse.json({ error: reloadErr.message }, { status: 500 })
+    }
+    if (!refreshed) {
+        return NextResponse.json({ error: 'Рассылка не найдена' }, { status: 404 })
+    }
+
     const includeErrors = request.nextUrl.searchParams.get('errors') === '1'
     let recent_errors: { user_id: number; error_text: string | null }[] | undefined
 
@@ -59,7 +82,7 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
         recent_errors = (errRows ?? []) as { user_id: number; error_text: string | null }[]
     }
 
-    const row = broadcast as BroadcastRow
+    const row = refreshed as BroadcastRow
     const total = row.total_recipients || 0
     const done = row.sent_count + row.error_count
     const progress_percent = total > 0 ? Math.round((done / total) * 100) : 0

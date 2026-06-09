@@ -249,6 +249,9 @@ export function AdminBroadcastsTab({ onError }: Props) {
             <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#6B6B69', lineHeight: 1.45 }}>
                 Массовая отправка через Make:{' '}
                 <code style={{ fontSize: '11px' }}>CLUBTAC_MAKE_BROADCAST_WEBHOOK_URL</code>.
+                Для длинных рассылок Make должен вызвать{' '}
+                <code style={{ fontSize: '11px' }}>POST /api/admin/broadcasts/[id]/delivery</code>{' '}
+                со списком <code style={{ fontSize: '11px' }}>sent_user_ids</code>.
                 {!webhookConfigured ? (
                     <>
                         {' '}
