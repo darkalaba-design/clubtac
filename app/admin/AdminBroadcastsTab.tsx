@@ -9,6 +9,11 @@ import {
     type BroadcastAudience,
     type BroadcastRow,
 } from '@/lib/admin/broadcasts'
+import {
+    AdminPlayerSearchField,
+    adminPlayerDisplayName,
+    type AdminPlayerOption,
+} from './AdminPlayerSearchField'
 
 const fieldLabel: CSSProperties = {
     fontSize: '13px',
@@ -51,6 +56,13 @@ function isInProgress(status: BroadcastRow['status']): boolean {
     return status === 'pending' || status === 'sending'
 }
 
+function broadcastHistoryAudienceLabel(b: BroadcastRow): string {
+    if (b.audience === 'manual') {
+        return `Выбрано вручную (${b.total_recipients})`
+    }
+    return broadcastAudienceLabel(b.audience)
+}
+
 type Props = {
     onError?: (message: string | null) => void
 }
@@ -65,6 +77,9 @@ export function AdminBroadcastsTab({ onError }: Props) {
     const [audienceCountLoading, setAudienceCountLoading] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [expandedId, setExpandedId] = useState<string | null>(null)
+    const [players, setPlayers] = useState<AdminPlayerOption[]>([])
+    const [selectedPlayers, setSelectedPlayers] = useState<AdminPlayerOption[]>([])
+    const [pickerKey, setPickerKey] = useState(0)
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     const loadList = useCallback(async () => {
@@ -111,6 +126,42 @@ export function AdminBroadcastsTab({ onError }: Props) {
 
     useEffect(() => {
         let cancelled = false
+        ;(async () => {
+            try {
+                const res = await adminFetch('/api/admin/players?limit=1000')
+                const j = await res.json().catch(() => ({}))
+                if (!cancelled && res.ok) {
+                    const rows = (j.players as Array<Record<string, unknown>>) ?? []
+                    setPlayers(
+                        rows.map((p) => ({
+                            user_id: Number(p.user_id),
+                            telegram_id:
+                                p.telegram_id != null ? Number(p.telegram_id) : undefined,
+                            first_name: (p.first_name as string | null) ?? null,
+                            last_name: (p.last_name as string | null) ?? null,
+                            username: (p.username as string | null) ?? null,
+                            nickname: (p.nickname as string | null) ?? null,
+                            takoff: !!p.takoff,
+                        }))
+                    )
+                }
+            } catch {
+                /* список для ручного выбора — не блокируем вкладку */
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
+    useEffect(() => {
+        if (audience === 'manual') {
+            setAudienceCount(selectedPlayers.length)
+            setAudienceCountLoading(false)
+            return
+        }
+
+        let cancelled = false
         setAudienceCountLoading(true)
         ;(async () => {
             try {
@@ -126,7 +177,7 @@ export function AdminBroadcastsTab({ onError }: Props) {
         return () => {
             cancelled = true
         }
-    }, [audience])
+    }, [audience, selectedPlayers.length])
 
     useEffect(() => {
         const active = broadcasts.find((b) => isInProgress(b.status))
@@ -155,17 +206,29 @@ export function AdminBroadcastsTab({ onError }: Props) {
             return
         }
         if (audienceCount === 0) {
-            onError?.('Нет получателей для выбранной аудитории')
+            onError?.(
+                audience === 'manual'
+                    ? 'Выберите хотя бы одного игрока'
+                    : 'Нет получателей для выбранной аудитории'
+            )
             return
         }
 
         setSubmitting(true)
         onError?.(null)
         try {
+            const payload: { message: string; audience: BroadcastAudience; user_ids?: number[] } = {
+                message: text,
+                audience,
+            }
+            if (audience === 'manual') {
+                payload.user_ids = selectedPlayers.map((p) => p.user_id)
+            }
+
             const res = await adminFetch('/api/admin/broadcasts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, audience }),
+                body: JSON.stringify(payload),
             })
             const j = await res.json().catch(() => ({}))
             if (!res.ok) throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
@@ -175,6 +238,10 @@ export function AdminBroadcastsTab({ onError }: Props) {
             }
             setBroadcasts((prev) => [created, ...prev])
             setMessage('')
+            if (audience === 'manual') {
+                setSelectedPlayers([])
+                setPickerKey((k) => k + 1)
+            }
             setExpandedId(created.id)
         } catch (e) {
             onError?.(e instanceof Error ? e.message : 'Не удалось создать рассылку')
@@ -244,11 +311,92 @@ export function AdminBroadcastsTab({ onError }: Props) {
                               ? audienceCount
                               : '—'}
                     </p>
+
+                    {audience === 'manual' ? (
+                        <div style={{ marginTop: '12px' }}>
+                            <AdminPlayerSearchField
+                                key={pickerKey}
+                                label="Добавить"
+                                players={players}
+                                excludeUserIds={selectedPlayers.map((p) => p.user_id)}
+                                value={null}
+                                onChange={(p) => {
+                                    if (!p) return
+                                    setSelectedPlayers((prev) => {
+                                        if (prev.some((x) => x.user_id === p.user_id)) return prev
+                                        return [...prev, p]
+                                    })
+                                    setPickerKey((k) => k + 1)
+                                }}
+                                disabled={submitting}
+                            />
+                            {selectedPlayers.length > 0 ? (
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: '6px',
+                                        marginTop: '4px',
+                                    }}
+                                >
+                                    {selectedPlayers.map((p) => (
+                                        <span
+                                            key={p.user_id}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                padding: '4px 8px',
+                                                borderRadius: '999px',
+                                                backgroundColor: '#E8F5E9',
+                                                border: '1px solid #C8E6C9',
+                                                fontSize: '12px',
+                                                fontWeight: 600,
+                                                color: '#1D1D1B',
+                                            }}
+                                        >
+                                            {adminPlayerDisplayName(p)}
+                                            <button
+                                                type="button"
+                                                aria-label={`Убрать ${adminPlayerDisplayName(p)}`}
+                                                disabled={submitting}
+                                                onClick={() =>
+                                                    setSelectedPlayers((prev) =>
+                                                        prev.filter((x) => x.user_id !== p.user_id)
+                                                    )
+                                                }
+                                                style={{
+                                                    border: 'none',
+                                                    background: 'transparent',
+                                                    padding: 0,
+                                                    cursor: submitting ? 'not-allowed' : 'pointer',
+                                                    fontSize: '14px',
+                                                    lineHeight: 1,
+                                                    color: '#6B6B69',
+                                                }}
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#6B6B69' }}>
+                                    Найдите игрока по нику, имени или id и добавьте в список.
+                                </p>
+                            )}
+                        </div>
+                    ) : null}
                 </div>
 
                 <button
                     type="button"
-                    disabled={submitting || !message.trim() || audienceCount === 0}
+                    disabled={
+                        submitting ||
+                        !message.trim() ||
+                        audienceCount === 0 ||
+                        (audience === 'manual' && selectedPlayers.length === 0)
+                    }
                     onClick={() => void submit()}
                     style={{
                         width: '100%',
@@ -321,7 +469,7 @@ export function AdminBroadcastsTab({ onError }: Props) {
                                                 {b.message}
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                                                {formatDate(b.created_at)} · {broadcastAudienceLabel(b.audience)}
+                                                {formatDate(b.created_at)} · {broadcastHistoryAudienceLabel(b)}
                                             </div>
                                         </div>
                                         <span

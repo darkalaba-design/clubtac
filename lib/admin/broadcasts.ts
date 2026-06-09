@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type BroadcastAudience = 'all' | 'admins' | 'vip' | 'standard'
+export type BroadcastAudience = 'all' | 'admins' | 'vip' | 'standard' | 'manual'
 
 export type BroadcastStatus =
     | 'pending'
@@ -24,6 +24,7 @@ export type BroadcastRow = {
     error_count: number
     make_triggered_at: string | null
     completed_at: string | null
+    selected_user_ids: number[] | null
 }
 
 export type BroadcastRecipientRow = {
@@ -38,11 +39,50 @@ export type BroadcastRecipientRow = {
     sent_at: string | null
 }
 
-export const BROADCAST_AUDIENCES: readonly BroadcastAudience[] = ['all', 'admins', 'vip', 'standard']
+export const BROADCAST_AUDIENCES: readonly BroadcastAudience[] = [
+    'all',
+    'admins',
+    'vip',
+    'standard',
+    'manual',
+]
 
 export function parseBroadcastAudience(raw: unknown): BroadcastAudience | null {
-    if (raw === 'all' || raw === 'admins' || raw === 'vip' || raw === 'standard') return raw
+    if (
+        raw === 'all' ||
+        raw === 'admins' ||
+        raw === 'vip' ||
+        raw === 'standard' ||
+        raw === 'manual'
+    ) {
+        return raw
+    }
     return null
+}
+
+export function parseBroadcastUserIds(raw: unknown): number[] | null {
+    if (!Array.isArray(raw)) return null
+    const ids = [
+        ...new Set(
+            raw
+                .map((v) => Number.parseInt(String(v), 10))
+                .filter((id) => Number.isFinite(id) && id > 0)
+        ),
+    ]
+    return ids.length > 0 ? ids : null
+}
+
+export function parseBroadcastUserIdsQuery(raw: string | null): number[] | null {
+    if (!raw?.trim()) return null
+    const ids = [
+        ...new Set(
+            raw
+                .split(/[,;\s]+/)
+                .map((s) => Number.parseInt(s.trim(), 10))
+                .filter((id) => Number.isFinite(id) && id > 0)
+        ),
+    ]
+    return ids.length > 0 ? ids : null
 }
 
 export function broadcastAudienceLabel(audience: BroadcastAudience): string {
@@ -53,6 +93,8 @@ export function broadcastAudienceLabel(audience: BroadcastAudience): string {
             return 'Участники (VIP)'
         case 'standard':
             return 'Гости (стандарт)'
+        case 'manual':
+            return 'Выбрано вручную'
         default:
             return 'Все активные игроки'
     }
@@ -112,10 +154,45 @@ export async function resolveBroadcastAudience(
         .filter((row) => Number.isFinite(row.id) && row.id > 0 && Number.isFinite(row.telegram_id) && row.telegram_id > 0)
 }
 
+export async function resolveBroadcastManualAudience(
+    supabase: SupabaseClient,
+    userIds: number[]
+): Promise<AudienceUser[]> {
+    const unique = [...new Set(userIds.filter((id) => Number.isFinite(id) && id > 0))]
+    if (unique.length === 0) return []
+
+    const { data, error } = await supabase
+        .from('clubtac_users')
+        .select('id, telegram_id')
+        .in('id', unique)
+        .eq('is_active', true)
+        .gt('telegram_id', 0)
+
+    if (error) throw new Error(error.message)
+
+    const byId = new Map(
+        (data ?? []).map((row) => {
+            const id = Number((row as { id: unknown }).id)
+            const telegram_id = Number((row as { telegram_id: unknown }).telegram_id)
+            return [id, { id, telegram_id }] as const
+        })
+    )
+
+    return unique
+        .map((id) => byId.get(id))
+        .filter((row): row is AudienceUser => row != null && Number.isFinite(row.telegram_id) && row.telegram_id > 0)
+}
+
 export async function countBroadcastAudience(
     supabase: SupabaseClient,
-    audience: BroadcastAudience
+    audience: BroadcastAudience,
+    userIds?: number[] | null
 ): Promise<number> {
+    if (audience === 'manual') {
+        if (!userIds?.length) return 0
+        const users = await resolveBroadcastManualAudience(supabase, userIds)
+        return users.length
+    }
     const users = await resolveBroadcastAudience(supabase, audience)
     return users.length
 }

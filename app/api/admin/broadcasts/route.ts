@@ -7,7 +7,10 @@ import {
     getBroadcastDeliveryMode,
     insertBroadcastRecipients,
     parseBroadcastAudience,
+    parseBroadcastUserIds,
+    parseBroadcastUserIdsQuery,
     resolveBroadcastAudience,
+    resolveBroadcastManualAudience,
     type BroadcastRow,
 } from '@/lib/admin/broadcasts'
 import { sendBroadcastViaMake } from '@/lib/admin/sendBroadcastViaMake'
@@ -37,10 +40,20 @@ export async function GET(request: NextRequest) {
     if (audienceRaw) {
         const audience = parseBroadcastAudience(audienceRaw)
         if (!audience) {
-            return NextResponse.json({ error: 'audience: all | admins | vip | standard' }, { status: 400 })
+            return NextResponse.json(
+                { error: 'audience: all | admins | vip | standard | manual' },
+                { status: 400 }
+            )
         }
-        const count = await countBroadcastAudience(supabase, audience)
-        return NextResponse.json({ audience, count })
+        const userIds =
+            audience === 'manual'
+                ? parseBroadcastUserIdsQuery(request.nextUrl.searchParams.get('user_ids'))
+                : null
+        if (audience === 'manual' && !userIds) {
+            return NextResponse.json({ error: 'user_ids обязателен для audience=manual' }, { status: 400 })
+        }
+        const count = await countBroadcastAudience(supabase, audience, userIds)
+        return NextResponse.json({ audience, count, user_ids: userIds ?? undefined })
     }
 
     const { data, error } = await supabase
@@ -67,7 +80,7 @@ export async function POST(request: NextRequest) {
     const { gate } = access
     const { supabase, actor } = gate
 
-    let body: { message?: unknown; audience?: unknown }
+    let body: { message?: unknown; audience?: unknown; user_ids?: unknown }
     try {
         body = await request.json()
     } catch {
@@ -82,21 +95,37 @@ export async function POST(request: NextRequest) {
     const audience = parseBroadcastAudience(body.audience)
     if (!audience) {
         return NextResponse.json(
-            { error: 'audience: "all", "admins", "vip" или "standard"' },
+            { error: 'audience: "all", "admins", "vip", "standard" или "manual"' },
             { status: 400 }
         )
     }
 
+    const userIds = audience === 'manual' ? parseBroadcastUserIds(body.user_ids) : null
+    if (audience === 'manual' && !userIds) {
+        return NextResponse.json({ error: 'user_ids: непустой массив id игроков' }, { status: 400 })
+    }
+
     let users
     try {
-        users = await resolveBroadcastAudience(supabase, audience)
+        users =
+            audience === 'manual'
+                ? await resolveBroadcastManualAudience(supabase, userIds!)
+                : await resolveBroadcastAudience(supabase, audience)
     } catch (e) {
         const msg = e instanceof Error ? e.message : 'Не удалось получить список получателей'
         return NextResponse.json({ error: msg }, { status: 500 })
     }
 
     if (users.length === 0) {
-        return NextResponse.json({ error: 'Нет получателей для выбранной аудитории' }, { status: 400 })
+        return NextResponse.json(
+            {
+                error:
+                    audience === 'manual'
+                        ? 'Ни один из выбранных игроков не доступен для отправки (нет telegram_id или неактивен)'
+                        : 'Нет получателей для выбранной аудитории',
+            },
+            { status: 400 }
+        )
     }
 
     const { data: broadcast, error: insertErr } = await supabase
@@ -107,6 +136,7 @@ export async function POST(request: NextRequest) {
             audience,
             status: 'pending',
             total_recipients: users.length,
+            selected_user_ids: audience === 'manual' ? userIds : null,
         })
         .select('*')
         .single()
