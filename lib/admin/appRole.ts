@@ -13,7 +13,9 @@ export function canManageAdmins(role: AppRole): boolean {
     return role === 'root'
 }
 
-/** Массовые рассылки — пока только root. */
-export function canManageBroadcasts(role: AppRole): boolean {
-    return role === 'root'
+/** Массовые рассылки: root всегда; admin — если root включил в настройках. */
+export function canManageBroadcasts(role: AppRole, broadcastsForAdminsEnabled = false): boolean {
+    if (role === 'root') return true
+    if (role === 'admin' && broadcastsForAdminsEnabled) return true
+    return false
 }

@@ -53,6 +53,8 @@ function AdminAddressLine({ address, style }: { address: string; style?: CSSProp
 type SessionRes = {
     app_role: AppRole
     app_admin_ui: boolean
+    broadcasts_for_admins_enabled?: boolean
+    can_manage_broadcasts?: boolean
     user: { id: number; telegram_id: number; first_name: string | null; username: string | null }
 }
 
@@ -359,8 +361,30 @@ export default function AdminPageClient() {
 
     useEffect(() => {
         if (phase !== 'ready' || !session) return
-        if (session.app_role !== 'root' && (navTab === 'admins' || navTab === 'broadcasts')) setNavTab('events')
+        const canBroadcasts = session.can_manage_broadcasts === true
+        if (session.app_role !== 'root' && navTab === 'admins') setNavTab('events')
+        if (!canBroadcasts && navTab === 'broadcasts') setNavTab('events')
     }, [phase, session, navTab])
+
+    const setBroadcastsForAdminsEnabled = async (enabled: boolean) => {
+        setErr(null)
+        const res = await adminFetch('/api/admin/settings/broadcasts-for-admins', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled }),
+        })
+        const j = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
+        setSession((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      broadcasts_for_admins_enabled: enabled,
+                      can_manage_broadcasts: prev.app_role === 'root' || (prev.app_role === 'admin' && enabled),
+                  }
+                : prev
+        )
+    }
 
     const setRole = async (targetId: number, app_role: 'admin' | 'user') => {
         setErr(null)
@@ -906,6 +930,7 @@ export default function AdminPageClient() {
 
     const role = session?.app_role
     const isRoot = role === 'root'
+    const canManageBroadcasts = session?.can_manage_broadcasts === true
 
     const fieldLabel: CSSProperties = { fontSize: '13px', fontWeight: 600, color: '#1D1D1B', marginBottom: '4px' }
     const chipStyle = (active: boolean): CSSProperties => ({
@@ -1066,9 +1091,14 @@ export default function AdminPageClient() {
             >
             {err && <div style={errorBanner}>{err}</div>}
 
-            {navTab === 'broadcasts' && isRoot && (
+            {navTab === 'broadcasts' && canManageBroadcasts && (
                 <section style={pageSection}>
-                    <AdminBroadcastsTab onError={setErr} />
+                    <AdminBroadcastsTab
+                        onError={setErr}
+                        isRoot={isRoot}
+                        broadcastsForAdminsEnabled={session?.broadcasts_for_admins_enabled === true}
+                        onBroadcastsForAdminsChange={isRoot ? setBroadcastsForAdminsEnabled : undefined}
+                    />
                 </section>
             )}
 
@@ -1732,7 +1762,7 @@ export default function AdminPageClient() {
                     {navBtn('events', <EventsTabIcon active={navTab === 'events'} size={24} />, 'События')}
                     {navBtn('games', <GamesTabIcon active={navTab === 'games'} size={24} />, 'Партии')}
                     {navBtn('players', <PlayersTabIcon active={navTab === 'players'} size={24} />, 'Игроки')}
-                    {isRoot
+                    {canManageBroadcasts
                         ? navBtn(
                               'broadcasts',
                               <BroadcastsTabIcon active={navTab === 'broadcasts'} size={24} />,

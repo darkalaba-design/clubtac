@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireActor } from '@/lib/admin/requireActor'
-import { canManageBroadcasts } from '@/lib/admin/appRole'
-import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
+import { requireBroadcastAdmin } from '@/lib/admin/gateBroadcastAdmin'
 import {
     countBroadcastAudience,
     getBroadcastDeliveryMode,
@@ -16,24 +14,9 @@ import {
 import { applyBroadcastDeliveryResult } from '@/lib/admin/applyBroadcastDeliveryResult'
 import { sendBroadcastViaMake } from '@/lib/admin/sendBroadcastViaMake'
 
-function gateBroadcast(request: NextRequest) {
-    return requireActor(request).then(async (gate) => {
-        if (!gate.ok) return { ok: false as const, response: gate.response }
-        const blocked = denyIfOutsideAppAdminAllowlist(gate.actor.telegram_id)
-        if (blocked) return { ok: false as const, response: blocked }
-        if (!canManageBroadcasts(gate.actor.app_role)) {
-            return {
-                ok: false as const,
-                response: NextResponse.json({ error: 'Только root может управлять рассылками' }, { status: 403 }),
-            }
-        }
-        return { ok: true as const, gate }
-    })
-}
-
 /** Список рассылок и режим доставки. */
 export async function GET(request: NextRequest) {
-    const access = await gateBroadcast(request)
+    const access = await requireBroadcastAdmin(request)
     if (!access.ok) return access.response
     const { supabase } = access.gate
 
@@ -76,7 +59,7 @@ export async function GET(request: NextRequest) {
 
 /** Создать рассылку и запустить отправку (Make или пакетами из приложения). */
 export async function POST(request: NextRequest) {
-    const access = await gateBroadcast(request)
+    const access = await requireBroadcastAdmin(request)
     if (!access.ok) return access.response
     const { gate } = access
     const { supabase, actor } = gate

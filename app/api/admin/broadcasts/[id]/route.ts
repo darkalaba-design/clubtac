@@ -1,28 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireActor } from '@/lib/admin/requireActor'
-import { canManageBroadcasts } from '@/lib/admin/appRole'
-import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
+import { requireBroadcastAdmin } from '@/lib/admin/gateBroadcastAdmin'
 import { refreshBroadcastStats, type BroadcastRow } from '@/lib/admin/broadcasts'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
-async function gateBroadcast(request: NextRequest) {
-    const gate = await requireActor(request)
-    if (!gate.ok) return { ok: false as const, response: gate.response }
-    const blocked = denyIfOutsideAppAdminAllowlist(gate.actor.telegram_id)
-    if (blocked) return { ok: false as const, response: blocked }
-    if (!canManageBroadcasts(gate.actor.app_role)) {
-        return {
-            ok: false as const,
-            response: NextResponse.json({ error: 'Только root может управлять рассылками' }, { status: 403 }),
-        }
-    }
-    return { ok: true as const, gate }
-}
-
 /** Детали рассылки и прогресс. */
 export async function GET(request: NextRequest, ctx: RouteParams) {
-    const access = await gateBroadcast(request)
+    const access = await requireBroadcastAdmin(request)
     if (!access.ok) return access.response
     const { supabase } = access.gate
 

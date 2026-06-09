@@ -65,9 +65,17 @@ function broadcastHistoryAudienceLabel(b: BroadcastRow): string {
 
 type Props = {
     onError?: (message: string | null) => void
+    isRoot?: boolean
+    broadcastsForAdminsEnabled?: boolean
+    onBroadcastsForAdminsChange?: (enabled: boolean) => Promise<void>
 }
 
-export function AdminBroadcastsTab({ onError }: Props) {
+export function AdminBroadcastsTab({
+    onError,
+    isRoot = false,
+    broadcastsForAdminsEnabled = false,
+    onBroadcastsForAdminsChange,
+}: Props) {
     const [webhookConfigured, setWebhookConfigured] = useState(true)
     const [broadcasts, setBroadcasts] = useState<BroadcastRow[]>([])
     const [loading, setLoading] = useState(true)
@@ -80,6 +88,7 @@ export function AdminBroadcastsTab({ onError }: Props) {
     const [players, setPlayers] = useState<AdminPlayerOption[]>([])
     const [selectedPlayers, setSelectedPlayers] = useState<AdminPlayerOption[]>([])
     const [pickerKey, setPickerKey] = useState(0)
+    const [settingsSaving, setSettingsSaving] = useState(false)
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     const loadList = useCallback(async () => {
@@ -245,22 +254,57 @@ export function AdminBroadcastsTab({ onError }: Props) {
 
     return (
         <div>
-            <h2 style={{ margin: '0 0 6px', fontSize: '17px' }}>Рассылки</h2>
-            <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#6B6B69', lineHeight: 1.45 }}>
-                Массовая отправка через Make:{' '}
-                <code style={{ fontSize: '11px' }}>CLUBTAC_MAKE_BROADCAST_WEBHOOK_URL</code>.
-                Для длинных рассылок Make должен вызвать{' '}
-                <code style={{ fontSize: '11px' }}>POST /api/admin/broadcasts/[id]/delivery</code>{' '}
-                со списком <code style={{ fontSize: '11px' }}>sent_user_ids</code>.
-                {!webhookConfigured ? (
-                    <>
-                        {' '}
-                        <span style={{ color: '#B71C1C', fontWeight: 600 }}>
-                            Webhook не задан — рассылка недоступна.
-                        </span>
-                    </>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    marginBottom: '16px',
+                }}
+            >
+                <h2 style={{ margin: 0, fontSize: '17px' }}>Рассылки</h2>
+                {isRoot && onBroadcastsForAdminsChange ? (
+                    <label
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '12px',
+                            color: '#1D1D1B',
+                            cursor: settingsSaving ? 'wait' : 'pointer',
+                            flexShrink: 0,
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={broadcastsForAdminsEnabled}
+                            disabled={settingsSaving}
+                            onChange={(e) => {
+                                const next = e.target.checked
+                                setSettingsSaving(true)
+                                onError?.(null)
+                                void onBroadcastsForAdminsChange(next)
+                                    .catch((err) =>
+                                        onError?.(
+                                            err instanceof Error
+                                                ? err.message
+                                                : 'Не удалось сохранить настройку'
+                                        )
+                                    )
+                                    .finally(() => setSettingsSaving(false))
+                            }}
+                        />
+                        Доступ admin
+                    </label>
                 ) : null}
-            </p>
+            </div>
+
+            {!webhookConfigured ? (
+                <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#B71C1C', fontWeight: 600 }}>
+                    Рассылка недоступна: webhook не настроен на сервере.
+                </p>
+            ) : null}
 
             <div
                 style={{
