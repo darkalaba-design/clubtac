@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getMakeBroadcastWebhookUrl } from '@/lib/makeWebhooks'
 
 export type BroadcastAudience = 'all' | 'admins' | 'vip' | 'standard' | 'manual'
 
@@ -119,8 +120,8 @@ export function broadcastStatusLabel(status: BroadcastStatus): string {
     }
 }
 
-export function getBroadcastDeliveryMode(): 'make' | 'app' {
-    return process.env.CLUBTAC_MAKE_BROADCAST_WEBHOOK_URL?.trim() ? 'make' : 'app'
+export function getBroadcastDeliveryMode(): 'make' | 'unset' {
+    return getMakeBroadcastWebhookUrl() ? 'make' : 'unset'
 }
 
 type AudienceUser = { id: number; telegram_id: number }

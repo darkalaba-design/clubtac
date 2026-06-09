@@ -157,28 +157,32 @@ export async function POST(request: NextRequest) {
     }
 
     const deliveryMode = getBroadcastDeliveryMode()
-    let status: BroadcastRow['status'] = 'sending'
-    let makeTriggeredAt: string | null = null
-
-    if (deliveryMode === 'make') {
-        const makeResult = await sendBroadcastViaMake({ broadcast_id: broadcastId })
-        if (!makeResult.ok) {
-            await supabase
-                .from('clubtac_broadcasts')
-                .update({ status: 'error', completed_at: new Date().toISOString() })
-                .eq('id', broadcastId)
-            return NextResponse.json(
-                { error: makeResult.error, broadcast_id: broadcastId },
-                { status: makeResult.httpStatus && makeResult.httpStatus >= 500 ? 502 : 400 }
-            )
-        }
-        makeTriggeredAt = new Date().toISOString()
+    if (deliveryMode === 'unset') {
+        await supabase.from('clubtac_broadcasts').delete().eq('id', broadcastId)
+        return NextResponse.json(
+            { error: 'Задайте CLUBTAC_MAKE_BROADCAST_WEBHOOK_URL в окружении сервера' },
+            { status: 503 }
+        )
     }
+
+    const makeResult = await sendBroadcastViaMake({ broadcast_id: broadcastId })
+    if (!makeResult.ok) {
+        await supabase
+            .from('clubtac_broadcasts')
+            .update({ status: 'error', completed_at: new Date().toISOString() })
+            .eq('id', broadcastId)
+        return NextResponse.json(
+            { error: makeResult.error, broadcast_id: broadcastId },
+            { status: makeResult.httpStatus && makeResult.httpStatus >= 500 ? 502 : 400 }
+        )
+    }
+
+    const makeTriggeredAt = new Date().toISOString()
 
     const { data: updated, error: updateErr } = await supabase
         .from('clubtac_broadcasts')
         .update({
-            status,
+            status: 'sending',
             make_triggered_at: makeTriggeredAt,
         })
         .eq('id', broadcastId)
@@ -192,6 +196,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
         broadcast: updated as BroadcastRow,
-        delivery_mode: deliveryMode,
+        delivery_mode: 'make' as const,
     })
 }

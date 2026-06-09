@@ -1,10 +1,9 @@
-/**
- * Отправка админ-сообщения игроку через сценарий Make.com (как в старой админке).
- * URL можно переопределить через CLUBTAC_MAKE_ADMIN_MESSAGE_WEBHOOK_URL.
- */
-const DEFAULT_WEBHOOK_URL =
-    'https://hook.eu2.make.com/fasyd06i4to90w2dlfhxn8g4kfwtfv28'
+import { getMakeAdminMessageWebhookUrl } from '@/lib/makeWebhooks'
 
+/**
+ * Отправка админ-сообщения игроку через сценарий Make.com (чат 1:1).
+ * URL: CLUBTAC_MAKE_ADMIN_MESSAGE_WEBHOOK_URL.
+ */
 export type MakeAdminMessagePayload = {
     telegram_id: number
     message_id: string
@@ -14,14 +13,18 @@ export type MakeAdminMessageResult =
     | { ok: true }
     | { ok: false; error: string; httpStatus?: number }
 
-export function getMakeAdminMessageWebhookUrl(): string {
-    return process.env.CLUBTAC_MAKE_ADMIN_MESSAGE_WEBHOOK_URL?.trim() || DEFAULT_WEBHOOK_URL
-}
+export { getMakeAdminMessageWebhookUrl }
 
 export async function sendAdminPlayerMessageViaMake(
     payload: MakeAdminMessagePayload
 ): Promise<MakeAdminMessageResult> {
     const url = getMakeAdminMessageWebhookUrl()
+    if (!url) {
+        return {
+            ok: false,
+            error: 'CLUBTAC_MAKE_ADMIN_MESSAGE_WEBHOOK_URL не задан',
+        }
+    }
 
     try {
         const res = await fetch(url, {

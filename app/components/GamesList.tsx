@@ -645,8 +645,6 @@ export default function GamesList() {
         return acc
     }, {} as Record<string, { games: Game[], event: Event | null }>)
 
-    const webhookUrl = 'https://hook.eu2.make.com/gt8ewzdg7dmpqr1qst4mnotgwpcqfc0m'
-
     // Функция для записи на событие
     const handleRegisterForEvent = async (eventId: string) => {
         if (!user) {
@@ -674,13 +672,12 @@ export default function GamesList() {
             const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 секунд таймаут
 
             try {
-                const response = await fetch(webhookUrl, {
+                const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/register`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        event_id: eventId,
                         user_id: user.id || null,
                         telegram_id: user.telegram_id || null,
                     }),
@@ -690,28 +687,22 @@ export default function GamesList() {
                 clearTimeout(timeoutId)
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`)
+                    let errText = `HTTP error! status: ${response.status}`
+                    try {
+                        const errJson = await response.json()
+                        if (typeof errJson.error === 'string') errText = errJson.error
+                    } catch {
+                        /* ignore */
+                    }
+                    throw new Error(errText)
                 }
 
                 // Пытаемся распарсить ответ как JSON
                 let responseData
                 try {
-                    const text = await response.text()
-                    if (text) {
-                        try {
-                            responseData = JSON.parse(text)
-                        } catch (jsonError) {
-                            // Если не удалось распарсить JSON, считаем текстовый ответ успехом
-                            console.warn('Failed to parse JSON, got text:', text)
-                            responseData = { message: text || 'Запрос принят' }
-                        }
-                    } else {
-                        // Пустой ответ считаем успехом
-                        responseData = { message: 'Запрос принят' }
-                    }
-                } catch (textError) {
-                    // Если не удалось прочитать ответ, считаем это успехом
-                    console.warn('Failed to read response:', textError)
+                    responseData = await response.json()
+                } catch (jsonError) {
+                    console.warn('Failed to parse registration response:', jsonError)
                     responseData = { message: 'Запрос принят' }
                 }
 

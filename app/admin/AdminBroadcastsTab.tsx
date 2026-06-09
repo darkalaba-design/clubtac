@@ -68,7 +68,7 @@ type Props = {
 }
 
 export function AdminBroadcastsTab({ onError }: Props) {
-    const [deliveryMode, setDeliveryMode] = useState<'make' | 'app'>('app')
+    const [webhookConfigured, setWebhookConfigured] = useState(true)
     const [broadcasts, setBroadcasts] = useState<BroadcastRow[]>([])
     const [loading, setLoading] = useState(true)
     const [message, setMessage] = useState('')
@@ -90,9 +90,7 @@ export function AdminBroadcastsTab({ onError }: Props) {
             const j = await res.json().catch(() => ({}))
             if (!res.ok) throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
             setBroadcasts((j.broadcasts as BroadcastRow[]) ?? [])
-            if (j.delivery_mode === 'make' || j.delivery_mode === 'app') {
-                setDeliveryMode(j.delivery_mode)
-            }
+            setWebhookConfigured(j.delivery_mode !== 'unset')
         } catch (e) {
             onError?.(e instanceof Error ? e.message : 'Не удалось загрузить рассылки')
         } finally {
@@ -100,10 +98,7 @@ export function AdminBroadcastsTab({ onError }: Props) {
         }
     }, [onError])
 
-    const refreshBroadcast = useCallback(async (id: string, processBatch = false) => {
-        if (processBatch && deliveryMode === 'app') {
-            await adminFetch(`/api/admin/broadcasts/${id}/process`, { method: 'POST' })
-        }
+    const refreshBroadcast = useCallback(async (id: string) => {
         const res = await adminFetch(`/api/admin/broadcasts/${id}`)
         const j = await res.json().catch(() => ({}))
         if (!res.ok) return null
@@ -118,7 +113,7 @@ export function AdminBroadcastsTab({ onError }: Props) {
             })
         }
         return row as BroadcastRow | null
-    }, [deliveryMode])
+    }, [])
 
     useEffect(() => {
         void loadList()
@@ -190,14 +185,14 @@ export function AdminBroadcastsTab({ onError }: Props) {
         }
 
         const tick = () => {
-            void refreshBroadcast(active.id, deliveryMode === 'app')
+            void refreshBroadcast(active.id)
         }
         void tick()
         pollRef.current = setInterval(tick, 2500)
         return () => {
             if (pollRef.current) clearInterval(pollRef.current)
         }
-    }, [broadcasts, deliveryMode, refreshBroadcast])
+    }, [broadcasts, refreshBroadcast])
 
     const submit = async () => {
         const text = message.trim()
@@ -233,9 +228,7 @@ export function AdminBroadcastsTab({ onError }: Props) {
             const j = await res.json().catch(() => ({}))
             if (!res.ok) throw new Error(typeof j.error === 'string' ? j.error : res.statusText)
             const created = j.broadcast as BroadcastRow
-            if (j.delivery_mode === 'make' || j.delivery_mode === 'app') {
-                setDeliveryMode(j.delivery_mode)
-            }
+            setWebhookConfigured(true)
             setBroadcasts((prev) => [created, ...prev])
             setMessage('')
             if (audience === 'manual') {
@@ -254,10 +247,16 @@ export function AdminBroadcastsTab({ onError }: Props) {
         <div>
             <h2 style={{ margin: '0 0 6px', fontSize: '17px' }}>Рассылки</h2>
             <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#6B6B69', lineHeight: 1.45 }}>
-                Массовая отправка сообщений в Telegram.{' '}
-                {deliveryMode === 'make'
-                    ? 'Отправка через сценарий Make (CLUBTAC_MAKE_BROADCAST_WEBHOOK_URL).'
-                    : 'Отправка через тот же webhook, что и чат с игроком (пакетами из приложения).'}
+                Массовая отправка через Make:{' '}
+                <code style={{ fontSize: '11px' }}>CLUBTAC_MAKE_BROADCAST_WEBHOOK_URL</code>.
+                {!webhookConfigured ? (
+                    <>
+                        {' '}
+                        <span style={{ color: '#B71C1C', fontWeight: 600 }}>
+                            Webhook не задан — рассылка недоступна.
+                        </span>
+                    </>
+                ) : null}
             </p>
 
             <div
@@ -393,6 +392,7 @@ export function AdminBroadcastsTab({ onError }: Props) {
                     type="button"
                     disabled={
                         submitting ||
+                        !webhookConfigured ||
                         !message.trim() ||
                         audienceCount === 0 ||
                         (audience === 'manual' && selectedPlayers.length === 0)

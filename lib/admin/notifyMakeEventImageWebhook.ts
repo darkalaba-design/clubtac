@@ -1,10 +1,9 @@
+import { getMakeEventCoverWebhookUrl } from '@/lib/makeWebhooks'
+
 /**
  * Вебхук Make.com для генерации обложки события.
- * URL можно переопределить через CLUBTAC_MAKE_EVENT_WEBHOOK_URL (например другой сценарий).
- * image_version позже будет задаваться из кода под тип сценария; сейчас по умолчанию board.
+ * URL: CLUBTAC_MAKE_EVENT_COVER_WEBHOOK_URL (или устаревший CLUBTAC_MAKE_EVENT_WEBHOOK_URL).
  */
-const DEFAULT_WEBHOOK_URL = 'https://hook.eu2.make.com/azplmhe6sotr7gnj6zylkcljwofcr0xx'
-
 export type EventImageWebhookPayload = {
     id: string
     title: string
@@ -15,8 +14,13 @@ export type EventImageWebhookPayload = {
 }
 
 export function notifyMakeEventImageWebhook(event: EventImageWebhookPayload): void {
-    const url = process.env.CLUBTAC_MAKE_EVENT_WEBHOOK_URL?.trim() || DEFAULT_WEBHOOK_URL
-    if (!url) return
+    const url = getMakeEventCoverWebhookUrl()
+    if (!url) {
+        console.error(
+            'notifyMakeEventImageWebhook: не задан CLUBTAC_MAKE_EVENT_COVER_WEBHOOK_URL'
+        )
+        return
+    }
 
     const body = {
         event_id: event.id,

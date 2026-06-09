@@ -1,13 +1,12 @@
+import { getMakeBroadcastWebhookUrl } from '@/lib/makeWebhooks'
+
 export type MakeBroadcastPayload = {
     broadcast_id: string
 }
 
 export type MakeBroadcastResult = { ok: true } | { ok: false; error: string; httpStatus?: number }
 
-export function getMakeBroadcastWebhookUrl(): string | null {
-    const url = process.env.CLUBTAC_MAKE_BROADCAST_WEBHOOK_URL?.trim()
-    return url || null
-}
+export { getMakeBroadcastWebhookUrl }
 
 /** Запуск сценария Make для массовой рассылки по broadcast_id. */
 export async function sendBroadcastViaMake(payload: MakeBroadcastPayload): Promise<MakeBroadcastResult> {
