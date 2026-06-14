@@ -14,6 +14,7 @@ import {
     adminPlayerDisplayName,
     type AdminPlayerOption,
 } from './AdminPlayerSearchField'
+import { AdminToggle } from './AdminToggle'
 
 const fieldLabel: CSSProperties = {
     fontSize: '13px',
@@ -89,7 +90,48 @@ export function AdminBroadcastsTab({
     const [selectedPlayers, setSelectedPlayers] = useState<AdminPlayerOption[]>([])
     const [pickerKey, setPickerKey] = useState(0)
     const [settingsSaving, setSettingsSaving] = useState(false)
+    const [settingsError, setSettingsError] = useState<string | null>(null)
+    const [adminsAccessEnabled, setAdminsAccessEnabled] = useState(broadcastsForAdminsEnabled)
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    useEffect(() => {
+        setAdminsAccessEnabled(broadcastsForAdminsEnabled)
+    }, [broadcastsForAdminsEnabled])
+
+    const loadAdminAccessSetting = useCallback(async () => {
+        if (!isRoot) return
+        try {
+            const res = await adminFetch('/api/admin/settings/broadcasts-for-admins')
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) return
+            if (typeof j.enabled === 'boolean') setAdminsAccessEnabled(j.enabled)
+        } catch {
+            /* не блокируем вкладку */
+        }
+    }, [isRoot])
+
+    useEffect(() => {
+        void loadAdminAccessSetting()
+    }, [loadAdminAccessSetting])
+
+    const handleAdminsAccessChange = async (next: boolean) => {
+        if (!onBroadcastsForAdminsChange) return
+        const prev = adminsAccessEnabled
+        setAdminsAccessEnabled(next)
+        setSettingsSaving(true)
+        setSettingsError(null)
+        onError?.(null)
+        try {
+            await onBroadcastsForAdminsChange(next)
+        } catch (err) {
+            setAdminsAccessEnabled(prev)
+            const message = err instanceof Error ? err.message : 'Не удалось сохранить настройку'
+            setSettingsError(message)
+            onError?.(message)
+        } finally {
+            setSettingsSaving(false)
+        }
+    }
 
     const loadList = useCallback(async () => {
         setLoading(true)
@@ -254,51 +296,33 @@ export function AdminBroadcastsTab({
 
     return (
         <div>
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    marginBottom: '16px',
-                }}
-            >
-                <h2 style={{ margin: 0, fontSize: '17px' }}>Рассылки</h2>
-                {isRoot && onBroadcastsForAdminsChange ? (
-                    <label
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '12px',
-                            color: '#1D1D1B',
-                            cursor: settingsSaving ? 'wait' : 'pointer',
-                            flexShrink: 0,
-                        }}
-                    >
-                        <input
-                            type="checkbox"
-                            checked={broadcastsForAdminsEnabled}
-                            disabled={settingsSaving}
-                            onChange={(e) => {
-                                const next = e.target.checked
-                                setSettingsSaving(true)
-                                onError?.(null)
-                                void onBroadcastsForAdminsChange(next)
-                                    .catch((err) =>
-                                        onError?.(
-                                            err instanceof Error
-                                                ? err.message
-                                                : 'Не удалось сохранить настройку'
-                                        )
-                                    )
-                                    .finally(() => setSettingsSaving(false))
-                            }}
-                        />
-                        Доступ admin
-                    </label>
-                ) : null}
-            </div>
+            <h2 style={{ margin: '0 0 16px', fontSize: '17px' }}>Рассылки</h2>
+
+            {isRoot && onBroadcastsForAdminsChange ? (
+                <div
+                    style={{
+                        marginBottom: '16px',
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        border: '1px solid #EBE8E0',
+                        backgroundColor: '#FFFFFF',
+                    }}
+                >
+                    <AdminToggle
+                        id="broadcasts-admin-access"
+                        checked={adminsAccessEnabled}
+                        disabled={settingsSaving}
+                        onChange={(next) => void handleAdminsAccessChange(next)}
+                        label="Рассылки для admin"
+                        description="Другие администраторы смогут создавать и отправлять рассылки."
+                    />
+                    {settingsError ? (
+                        <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#B71C1C', lineHeight: 1.45 }}>
+                            {settingsError}
+                        </p>
+                    ) : null}
+                </div>
+            ) : null}
 
             {!webhookConfigured ? (
                 <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#B71C1C', fontWeight: 600 }}>
