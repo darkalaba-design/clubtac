@@ -9,7 +9,8 @@ function parseBooleanSetting(value: unknown): boolean {
     return false
 }
 
-function isMissingSettingsTableError(message: string): boolean {
+function isMissingSettingsTableError(message: string | undefined | null): boolean {
+    if (!message) return false
     const m = message.toLowerCase()
     return (
         m.includes('clubtac_app_settings') &&
@@ -17,13 +18,22 @@ function isMissingSettingsTableError(message: string): boolean {
     )
 }
 
-function wrapSettingsError(error: { message: string }): Error {
-    if (isMissingSettingsTableError(error.message)) {
+function errorMessage(error: unknown): string {
+    if (error && typeof error === 'object' && 'message' in error) {
+        const msg = (error as { message?: unknown }).message
+        if (typeof msg === 'string' && msg.trim()) return msg.trim()
+    }
+    return 'Не удалось сохранить настройку'
+}
+
+function wrapSettingsError(error: unknown): Error {
+    const message = errorMessage(error)
+    if (isMissingSettingsTableError(message)) {
         return new Error(
             'Таблица clubtac_app_settings не найдена. Примените миграцию 20260609160000_clubtac_app_settings.sql в Supabase.'
         )
     }
-    return new Error(error.message)
+    return new Error(message)
 }
 
 export async function getBroadcastsForAdminsEnabled(supabase: SupabaseClient): Promise<boolean> {
