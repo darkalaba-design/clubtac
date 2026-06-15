@@ -2,6 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const APP_SETTING_BROADCASTS_FOR_ADMINS = 'broadcasts_for_admins'
 
+const MISSING_TABLE_MESSAGE =
+    'Таблица clubtac_app_settings не создана. Откройте Supabase → SQL Editor и выполните файл supabase/migrations/20260609160000_clubtac_app_settings.sql'
+
 function parseBooleanSetting(value: unknown): boolean {
     if (value === true) return true
     if (value === false) return false
@@ -9,8 +12,11 @@ function parseBooleanSetting(value: unknown): boolean {
     return false
 }
 
-function isMissingSettingsTableError(message: string | undefined | null): boolean {
-    if (!message) return false
+function isMissingTableError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false
+    const e = error as Record<string, unknown>
+    if (e.code === '42P01') return true
+    const message = typeof e.message === 'string' ? e.message : ''
     const m = message.toLowerCase()
     return (
         m.includes('clubtac_app_settings') &&
@@ -19,21 +25,23 @@ function isMissingSettingsTableError(message: string | undefined | null): boolea
 }
 
 function errorMessage(error: unknown): string {
-    if (error && typeof error === 'object' && 'message' in error) {
-        const msg = (error as { message?: unknown }).message
-        if (typeof msg === 'string' && msg.trim()) return msg.trim()
+    if (typeof error === 'string' && error.trim()) return error.trim()
+    if (isMissingTableError(error)) return MISSING_TABLE_MESSAGE
+    if (error && typeof error === 'object') {
+        const e = error as Record<string, unknown>
+        const parts = ['message', 'details', 'hint', 'code']
+            .map((key) => {
+                const val = e[key]
+                return typeof val === 'string' && val.trim() ? val.trim() : ''
+            })
+            .filter(Boolean)
+        if (parts.length > 0) return parts.join(' · ')
     }
     return 'Не удалось сохранить настройку'
 }
 
 function wrapSettingsError(error: unknown): Error {
-    const message = errorMessage(error)
-    if (isMissingSettingsTableError(message)) {
-        return new Error(
-            'Таблица clubtac_app_settings не найдена. Примените миграцию 20260609160000_clubtac_app_settings.sql в Supabase.'
-        )
-    }
-    return new Error(message)
+    return new Error(errorMessage(error))
 }
 
 export async function getBroadcastsForAdminsEnabled(supabase: SupabaseClient): Promise<boolean> {
@@ -56,15 +64,33 @@ export async function setBroadcastsForAdminsEnabled(
     enabled: boolean
 ): Promise<void> {
     const now = new Date().toISOString()
-    const row = {
-        key: APP_SETTING_BROADCASTS_FOR_ADMINS,
-        value: enabled,
-        updated_at: now,
+    const settingKey = APP_SETTING_BROADCASTS_FOR_ADMINS
+
+    const { data: existing, error: readErr } = await supabase
+        .from('clubtac_app_settings')
+        .select('key')
+        .eq('key', settingKey)
+        .maybeSingle()
+
+    if (readErr) {
+        throw wrapSettingsError(readErr)
     }
 
-    const { error: upsertErr } = await supabase
-        .from('clubtac_app_settings')
-        .upsert(row, { onConflict: 'key' })
+    if (existing) {
+        const { error: updateErr } = await supabase
+            .from('clubtac_app_settings')
+            .update({ value: enabled, updated_at: now })
+            .eq('key', settingKey)
 
-    if (upsertErr) throw wrapSettingsError(upsertErr)
+        if (updateErr) throw wrapSettingsError(updateErr)
+        return
+    }
+
+    const { error: insertErr } = await supabase.from('clubtac_app_settings').insert({
+        key: settingKey,
+        value: enabled,
+        updated_at: now,
+    })
+
+    if (insertErr) throw wrapSettingsError(insertErr)
 }
