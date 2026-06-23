@@ -128,13 +128,18 @@ type AudienceUser = { id: number; telegram_id: number }
 
 export async function resolveBroadcastAudience(
     supabase: SupabaseClient,
-    audience: BroadcastAudience
+    audience: BroadcastAudience,
+    managedClubId?: string | null
 ): Promise<AudienceUser[]> {
     let query = supabase
         .from('clubtac_users')
         .select('id, telegram_id')
         .eq('is_active', true)
         .gt('telegram_id', 0)
+
+    if (managedClubId) {
+        query = query.eq('club_id', managedClubId)
+    }
 
     if (audience === 'admins') {
         query = query.in('app_role', ['admin', 'root'])
@@ -157,17 +162,24 @@ export async function resolveBroadcastAudience(
 
 export async function resolveBroadcastManualAudience(
     supabase: SupabaseClient,
-    userIds: number[]
+    userIds: number[],
+    managedClubId?: string | null
 ): Promise<AudienceUser[]> {
     const unique = [...new Set(userIds.filter((id) => Number.isFinite(id) && id > 0))]
     if (unique.length === 0) return []
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('clubtac_users')
         .select('id, telegram_id')
         .in('id', unique)
         .eq('is_active', true)
         .gt('telegram_id', 0)
+
+    if (managedClubId) {
+        query = query.eq('club_id', managedClubId)
+    }
+
+    const { data, error } = await query
 
     if (error) throw new Error(error.message)
 
@@ -187,14 +199,15 @@ export async function resolveBroadcastManualAudience(
 export async function countBroadcastAudience(
     supabase: SupabaseClient,
     audience: BroadcastAudience,
-    userIds?: number[] | null
+    userIds?: number[] | null,
+    managedClubId?: string | null
 ): Promise<number> {
     if (audience === 'manual') {
         if (!userIds?.length) return 0
-        const users = await resolveBroadcastManualAudience(supabase, userIds)
+        const users = await resolveBroadcastManualAudience(supabase, userIds, managedClubId)
         return users.length
     }
-    const users = await resolveBroadcastAudience(supabase, audience)
+    const users = await resolveBroadcastAudience(supabase, audience, managedClubId)
     return users.length
 }
 

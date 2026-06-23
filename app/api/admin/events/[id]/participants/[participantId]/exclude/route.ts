@@ -3,6 +3,7 @@ import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { isUuid } from '@/lib/uuid'
+import { requireEventInManagedClub } from '@/lib/admin/clubScope'
 import {
     type EventParticipantRow,
     participantRefundAmount,
@@ -36,6 +37,9 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
     if (!participantKey) {
         return NextResponse.json({ error: 'Некорректный id участника' }, { status: 400 })
     }
+
+    const eventAccess = await requireEventInManagedClub(gate.actor, gate.supabase, eventId)
+    if (!eventAccess.ok) return eventAccess.response
 
     const { supabase } = gate
 

@@ -125,7 +125,8 @@ export async function GET(request: NextRequest) {
             user = userData
         }
 
-        const [{ data: hallStats }, { data: eloStats }] = await Promise.all([
+        const [{ data: hallStats }, { data: eloStats }, { data: eloClubStats }, { data: clubRow }] =
+            await Promise.all([
             supabase
                 .from('clubtac_players_hall_of_fame_v3')
                 .select('*')
@@ -136,12 +137,37 @@ export async function GET(request: NextRequest) {
                 .select('*')
                 .eq('user_id', user.id)
                 .maybeSingle(),
+            user.club_id
+                ? supabase
+                      .from('clubtac_elo_leaderboard_by_club')
+                      .select('*')
+                      .eq('user_id', user.id)
+                      .eq('club_id', user.club_id)
+                      .maybeSingle()
+                : Promise.resolve({ data: null, error: null }),
+            user.club_id
+                ? supabase
+                      .from('clubtac_clubs_public')
+                      .select('id, name, city, slug')
+                      .eq('id', user.club_id)
+                      .maybeSingle()
+                : Promise.resolve({ data: null, error: null }),
         ])
 
         const stats = mergePlayerRankingStats(
             (hallStats as Record<string, unknown> | null) ?? null,
             (eloStats as Record<string, unknown> | null) ?? null
         )
+
+        const globalPlace =
+            eloStats && (eloStats as { place?: unknown }).place != null
+                ? Number((eloStats as { place: unknown }).place)
+                : null
+        const clubPlace =
+            eloClubStats && (eloClubStats as { club_place?: unknown }).club_place != null
+                ? Number((eloClubStats as { club_place: unknown }).club_place)
+                : null
+        const clubInfo = clubRow as { id?: string; name?: string; city?: string | null } | null
 
         if (!userNickname) {
             const fromElo = (eloStats as { nickname?: string | null } | null)?.nickname?.trim()
@@ -293,7 +319,20 @@ export async function GET(request: NextRequest) {
 
         const body = {
             user,
-            stats: stats || null,
+            stats: stats
+                ? {
+                      ...stats,
+                      global_place: globalPlace,
+                      club_place: clubPlace,
+                  }
+                : null,
+            club: clubInfo
+                ? {
+                      id: clubInfo.id,
+                      name: clubInfo.name,
+                      city: clubInfo.city ?? null,
+                  }
+                : null,
             recentGames,
             recentGamesHasMore,
             bestPartners,

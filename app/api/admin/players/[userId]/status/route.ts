@@ -3,6 +3,7 @@ import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { parsePlayerClubStatus } from '@/lib/playerClubStatus'
+import { requireUserInManagedClub } from '@/lib/admin/clubScope'
 
 type RouteParams = { params: Promise<{ userId: string }> }
 
@@ -44,6 +45,9 @@ export async function PATCH(request: NextRequest, ctx: RouteParams) {
             { status: 400 }
         )
     }
+
+    const userAccess = await requireUserInManagedClub(gate.actor, gate.supabase, userId)
+    if (!userAccess.ok) return userAccess.response
 
     const { supabase } = gate
 

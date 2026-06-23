@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     const broadcastsForAdminsEnabled = await getBroadcastsForAdminsEnabled(gate.supabase)
     return NextResponse.json({
         app_role: actor.app_role,
+        club_id: actor.club_id,
+        admin_club_id: actor.admin_club_id,
         user: {
             id: actor.id,
             telegram_id: actor.telegram_id,

@@ -11,12 +11,14 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
         return NextResponse.json({ error: 'Некорректный id события' }, { status: 400 })
     }
 
-    let body: { user_id?: unknown; telegram_id?: unknown }
+    let body: { user_id?: unknown; telegram_id?: unknown; confirm_cross_club?: unknown }
     try {
         body = await request.json()
     } catch {
         return NextResponse.json({ error: 'Нужен JSON в теле запроса' }, { status: 400 })
     }
+
+    const confirmCrossClub = body.confirm_cross_club === true
 
     const userIdRaw = body.user_id
     const telegramIdRaw = body.telegram_id
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
 
     const { data: userRow, error: userErr } = await supabase
         .from('clubtac_users')
-        .select('id, telegram_id, is_active')
+        .select('id, telegram_id, is_active, club_id')
         .eq('id', userId)
         .maybeSingle()
 
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
 
     const { data: eventRow, error: eventErr } = await supabase
         .from('clubtac_events')
-        .select('id, status')
+        .select('id, status, club_id')
         .eq('id', eventId)
         .maybeSingle()
 
@@ -69,6 +71,25 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
     const eventStatus = String((eventRow as { status?: string }).status ?? '')
     if (eventStatus === 'cancelled' || eventStatus === 'canceled') {
         return NextResponse.json({ error: 'Событие отменено' }, { status: 409 })
+    }
+
+    const userClubId = (userRow as { club_id?: string | null }).club_id ?? null
+    const eventClubId = (eventRow as { club_id?: string | null }).club_id ?? null
+    if (
+        userClubId &&
+        eventClubId &&
+        userClubId !== eventClubId &&
+        !confirmCrossClub
+    ) {
+        return NextResponse.json(
+            {
+                error: 'Требуется подтверждение записи в другой город',
+                requires_confirmation: true,
+                user_club: userClubId,
+                event_club: eventClubId,
+            },
+            { status: 409 }
+        )
     }
 
     const makeResult = await sendEventRegistrationViaMake({

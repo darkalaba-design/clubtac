@@ -53,6 +53,8 @@ function AdminAddressLine({ address, style }: { address: string; style?: CSSProp
 type SessionRes = {
     app_role: AppRole
     app_admin_ui: boolean
+    club_id?: string | null
+    admin_club_id?: string | null
     broadcasts_for_admins_enabled?: boolean
     can_manage_broadcasts?: boolean
     user: { id: number; telegram_id: number; first_name: string | null; username: string | null }
@@ -66,6 +68,7 @@ type AdminUserRow = {
     username: string | null
     nickname?: string | null
     app_role: AppRole
+    admin_club_id?: string | null
     created_at?: string | null
 }
 
@@ -281,6 +284,8 @@ export default function AdminPageClient() {
     const [creatingEvent, setCreatingEvent] = useState(false)
     const [newEventSuccess, setNewEventSuccess] = useState<string | null>(null)
     const [showNewEventForm, setShowNewEventForm] = useState(false)
+    const [promoteAdminTarget, setPromoteAdminTarget] = useState<AdminUserRow | null>(null)
+    const [promoteAdminClubId, setPromoteAdminClubId] = useState('')
 
     const loadLists = useCallback(async (role: AppRole) => {
         setErr(null)
@@ -366,6 +371,11 @@ export default function AdminPageClient() {
         if (!canBroadcasts && navTab === 'broadcasts') setNavTab('events')
     }, [phase, session, navTab])
 
+    useEffect(() => {
+        if (phase !== 'ready' || !session?.admin_club_id || session.app_role !== 'admin') return
+        setNewEvent((prev) => (prev.clubId ? prev : { ...prev, clubId: session.admin_club_id! }))
+    }, [phase, session?.admin_club_id, session?.app_role])
+
     const setBroadcastsForAdminsEnabled = async (enabled: boolean) => {
         setErr(null)
         const res = await adminFetch('/api/admin/settings/broadcasts-for-admins', {
@@ -386,18 +396,28 @@ export default function AdminPageClient() {
         )
     }
 
-    const setRole = async (targetId: number, app_role: 'admin' | 'user') => {
+    const setRole = async (targetId: number, app_role: 'admin' | 'user', admin_club_id?: string) => {
         setErr(null)
+        const body: { app_role: 'admin' | 'user'; admin_club_id?: string } = { app_role }
+        if (app_role === 'admin') {
+            if (!admin_club_id?.trim()) {
+                setErr('Выберите клуб управления для admin')
+                return
+            }
+            body.admin_club_id = admin_club_id.trim()
+        }
         const res = await adminFetch(`/api/admin/users/${targetId}/role`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ app_role }),
+            body: JSON.stringify(body),
         })
         const j = await res.json().catch(() => ({}))
         if (!res.ok) {
             setErr(j.error || res.statusText)
             return
         }
+        setPromoteAdminTarget(null)
+        setPromoteAdminClubId('')
         await loadLists('root')
     }
 
@@ -930,6 +950,11 @@ export default function AdminPageClient() {
 
     const role = session?.app_role
     const isRoot = role === 'root'
+    const managedClubId = !isRoot && role === 'admin' ? session?.admin_club_id ?? null : null
+    const managedClubName =
+        managedClubId && adminClubs.length > 0
+            ? adminClubs.find((c) => c.id === managedClubId)?.name ?? managedClubId
+            : managedClubId
     const canManageBroadcasts = session?.can_manage_broadcasts === true
 
     const fieldLabel: CSSProperties = { fontSize: '13px', fontWeight: 600, color: '#1D1D1B', marginBottom: '4px' }
@@ -1071,9 +1096,12 @@ export default function AdminPageClient() {
                             fontWeight: 600,
                             flexShrink: 0,
                             textTransform: 'uppercase',
+                            textAlign: 'right',
+                            maxWidth: '42%',
+                            lineHeight: 1.25,
                         }}
                     >
-                        {role === 'root' ? 'root' : 'admin'}
+                        {role === 'root' ? 'root' : managedClubName ? `admin · ${managedClubName}` : 'admin'}
                     </span>
                 </div>
             </header>
@@ -1154,13 +1182,19 @@ export default function AdminPageClient() {
                                     <div style={{ fontSize: '12px', color: '#6B6B69' }}>
                                         id {u.id} · tg {u.telegram_id} · @{u.username || '—'}
                                         {u.nickname?.trim() ? ` · ник: ${u.nickname}` : ''} · <strong>{u.app_role}</strong>
+                                        {u.app_role === 'admin' && u.admin_club_id
+                                            ? ` · клуб: ${adminClubs.find((c) => c.id === u.admin_club_id)?.name ?? u.admin_club_id}`
+                                            : ''}
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '6px' }}>
                                     {u.app_role !== 'admin' && u.app_role !== 'root' && (
                                         <button
                                             type="button"
-                                            onClick={() => setRole(u.id, 'admin')}
+                                            onClick={() => {
+                                                setPromoteAdminTarget(u)
+                                                setPromoteAdminClubId(adminClubs[0]?.id ?? '')
+                                            }}
                                             style={{
                                                 padding: '6px 10px',
                                                 borderRadius: '8px',
@@ -1252,6 +1286,7 @@ export default function AdminPageClient() {
                             value={newEvent.clubId}
                             onChange={(e) => setNewEvent((p) => ({ ...p, clubId: e.target.value }))}
                             required
+                            disabled={!!managedClubId}
                             style={{
                                 width: '100%',
                                 padding: '10px',
@@ -2090,6 +2125,7 @@ export default function AdminPageClient() {
                                                         setEventModalDraft((d) => (d ? { ...d, clubId: e.target.value } : d))
                                                     }
                                                     required
+                                                    disabled={!!managedClubId}
                                                     style={{
                                                         width: '100%',
                                                         padding: '10px',
@@ -2511,6 +2547,102 @@ export default function AdminPageClient() {
                     setPlayerModalPreviewName('')
                 }}
             />
+
+            {promoteAdminTarget ? (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1600,
+                        backgroundColor: 'rgba(29,29,27,0.45)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px',
+                    }}
+                >
+                    <div
+                        style={{
+                            width: '100%',
+                            maxWidth: '400px',
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: '16px',
+                            padding: '20px',
+                        }}
+                    >
+                        <h3 style={{ margin: '0 0 8px', fontSize: '17px' }}>Клуб управления</h3>
+                        <p style={{ margin: '0 0 14px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
+                            Назначить admin для{' '}
+                            <strong>
+                                {promoteAdminTarget.first_name || '—'} {promoteAdminTarget.last_name || ''}
+                            </strong>
+                            . Выберите клуб, которым будет управлять этот admin.
+                        </p>
+                        <div style={{ marginBottom: '14px' }}>
+                            <div style={fieldLabel}>Клуб управления</div>
+                            <select
+                                value={promoteAdminClubId}
+                                onChange={(e) => setPromoteAdminClubId(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #EBE8E0',
+                                    boxSizing: 'border-box',
+                                    fontSize: '15px',
+                                }}
+                            >
+                                <option value="">Выберите клуб…</option>
+                                {adminClubs.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPromoteAdminTarget(null)
+                                    setPromoteAdminClubId('')
+                                }}
+                                style={{
+                                    flex: 1,
+                                    padding: '11px',
+                                    borderRadius: '10px',
+                                    border: '1px solid #EBE8E0',
+                                    backgroundColor: '#FFFFFF',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    void setRole(promoteAdminTarget.id, 'admin', promoteAdminClubId)
+                                }
+                                style={{
+                                    flex: 1,
+                                    padding: '11px',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    backgroundColor: '#FFDF00',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    color: '#1D1D1B',
+                                }}
+                            >
+                                Назначить admin
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     )
 }

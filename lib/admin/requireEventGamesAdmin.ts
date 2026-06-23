@@ -3,6 +3,7 @@ import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { isUuid } from '@/lib/uuid'
+import { requireEventInManagedClub } from '@/lib/admin/clubScope'
 
 export async function requireEventGamesAdmin(request: NextRequest, eventId: string) {
     const gate = await requireActor(request)
@@ -24,6 +25,9 @@ export async function requireEventGamesAdmin(request: NextRequest, eventId: stri
             response: NextResponse.json({ error: 'Некорректный id события (ожидается UUID)' }, { status: 400 }),
         }
     }
+
+    const eventAccess = await requireEventInManagedClub(gate.actor, gate.supabase, eventId)
+    if (!eventAccess.ok) return { ok: false as const, response: eventAccess.response }
 
     return { ok: true as const, supabase: gate.supabase, actor: gate.actor }
 }

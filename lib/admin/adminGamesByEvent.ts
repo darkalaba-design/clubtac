@@ -24,9 +24,10 @@ type PlayerRow = {
 /** Все партии админки, сгруппированные по событиям (новые события сверху). */
 export async function fetchAdminGamesGroupedByEvent(
     supabase: SupabaseClient,
-    options?: { gamesLimit?: number }
+    options?: { gamesLimit?: number; managedClubId?: string | null }
 ): Promise<AdminGamesByEventGroup[]> {
     const gamesLimit = options?.gamesLimit ?? 500
+    const managedClubId = options?.managedClubId ?? null
 
     const { data: gameRows, error: gamesErr } = await supabase
         .from('clubtac_games')
@@ -53,7 +54,11 @@ export async function fetchAdminGamesGroupedByEvent(
             .select('game_id, user_id, team_number, score')
             .in('game_id', gameIds),
         eventIds.length > 0
-            ? supabase.from('clubtac_events').select('id, title, starts_at').in('id', eventIds)
+            ? (() => {
+                  let q = supabase.from('clubtac_events').select('id, title, starts_at, club_id').in('id', eventIds)
+                  if (managedClubId) q = q.eq('club_id', managedClubId)
+                  return q
+              })()
             : Promise.resolve({ data: [], error: null }),
     ])
 
@@ -129,6 +134,7 @@ export async function fetchAdminGamesGroupedByEvent(
     for (const g of games) {
         const eventId = g.event_id
         if (!eventId) continue
+        if (managedClubId && !eventById.has(eventId)) continue
         const summary = summariesByGameId.get(g.id)
         if (!summary) continue
         const list = gamesByEventId.get(eventId) ?? []
@@ -136,7 +142,9 @@ export async function fetchAdminGamesGroupedByEvent(
         gamesByEventId.set(eventId, list)
     }
 
-    const groups: AdminGamesByEventGroup[] = eventIds.map((eventId) => {
+    const groupedEventIds = managedClubId ? [...eventById.keys()] : eventIds
+
+    const groups: AdminGamesByEventGroup[] = groupedEventIds.map((eventId) => {
         const meta = eventById.get(eventId)
         const eventGames = gamesByEventId.get(eventId) ?? []
         eventGames.sort(

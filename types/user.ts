@@ -19,6 +19,10 @@ export interface User {
     referred_by_user_id?: number | null
     /** Статус в клубе: standard | vip | partner */
     status?: string | null
+    /** Домашний клуб (город приписки). null — нужен onboarding. */
+    club_id?: string | null
+    /** Клуб управления для admin (назначает root). */
+    admin_club_id?: string | null
     created_at?: string
     updated_at?: string
 }

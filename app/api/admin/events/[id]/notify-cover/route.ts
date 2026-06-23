@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
+import { requireEventInManagedClub } from '@/lib/admin/clubScope'
 import { notifyMakeEventImageWebhook } from '@/lib/admin/notifyMakeEventImageWebhook'
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -24,6 +25,10 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
     }
 
     const { supabase } = gate
+
+    const eventAccess = await requireEventInManagedClub(gate.actor, supabase, eventId)
+    if (!eventAccess.ok) return eventAccess.response
+
     const { data: ev, error } = await supabase
         .from('clubtac_events')
         .select('id, title, description, type')

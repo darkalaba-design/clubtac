@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
+import { assertAdminHasManagedClub, getActorManagedClubId } from '@/lib/admin/clubScope'
 
 /** Все активные пользователи clubtac_users для вкладки «Игроки» в админке. */
 export async function GET(request: NextRequest) {
@@ -15,6 +16,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Нужны права admin или root' }, { status: 403 })
     }
 
+    const adminClubErr = assertAdminHasManagedClub(gate.actor)
+    if (adminClubErr) return adminClubErr
+
     const limitRaw = request.nextUrl.searchParams.get('limit')
     let limit = 500
     if (limitRaw) {
@@ -22,15 +26,23 @@ export async function GET(request: NextRequest) {
         if (Number.isFinite(n)) limit = Math.min(1000, Math.max(1, n))
     }
 
-    const { supabase } = gate
-    const { data: users, error } = await supabase
+    const { supabase, actor } = gate
+    const managedClubId = getActorManagedClubId(actor)
+
+    let playersQuery = supabase
         .from('clubtac_users')
         .select(
-            'id, telegram_id, first_name, last_name, username, nickname, takoff, userpic, created_at, app_role, status'
+            'id, telegram_id, first_name, last_name, username, nickname, takoff, userpic, created_at, app_role, status, club_id'
         )
         .eq('is_active', true)
         .order('id', { ascending: false })
         .limit(limit)
+
+    if (managedClubId) {
+        playersQuery = playersQuery.eq('club_id', managedClubId)
+    }
+
+    const { data: users, error } = await playersQuery
 
     if (error) {
         console.error('GET /api/admin/players:', error)

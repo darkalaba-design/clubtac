@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
+import { requireEventInManagedClub } from '@/lib/admin/clubScope'
 import { isUuid } from '@/lib/uuid'
 import { type EventParticipantRow, walletOrderIdFromParticipant } from '@/lib/admin/eventParticipantWallet'
 
@@ -34,6 +35,9 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
     if (!isUuid(eventId)) {
         return NextResponse.json({ error: 'Некорректный id события (ожидается UUID)' }, { status: 400 })
     }
+
+    const eventAccess = await requireEventInManagedClub(gate.actor, gate.supabase, eventId)
+    if (!eventAccess.ok) return eventAccess.response
 
     let body: { user_id?: unknown; method?: unknown }
     try {

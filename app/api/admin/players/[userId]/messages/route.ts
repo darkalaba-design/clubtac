@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
+import { requireUserInManagedClub } from '@/lib/admin/clubScope'
 import {
     ADMIN_CHAT_MESSAGES_INITIAL,
     ADMIN_CHAT_MESSAGES_OLDER_PAGE,
@@ -81,21 +82,10 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
         return NextResponse.json({ error: 'Некорректный limit' }, { status: 400 })
     }
 
+    const userAccess = await requireUserInManagedClub(gate.actor, gate.supabase, userId)
+    if (!userAccess.ok) return userAccess.response
+
     const { supabase } = gate
-
-    const { data: userRow, error: userErr } = await supabase
-        .from('clubtac_users')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle()
-
-    if (userErr) {
-        console.error('GET messages user:', userErr)
-        return NextResponse.json({ error: userErr.message }, { status: 500 })
-    }
-    if (!userRow) {
-        return NextResponse.json({ error: 'Игрок не найден' }, { status: 404 })
-    }
 
     const fetchLimit = limit + 1
     let query = supabase
@@ -168,6 +158,9 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
     if (!messageText) {
         return NextResponse.json({ error: 'Пустое сообщение' }, { status: 400 })
     }
+
+    const userAccess = await requireUserInManagedClub(gate.actor, gate.supabase, userId)
+    if (!userAccess.ok) return userAccess.response
 
     const { supabase } = gate
 

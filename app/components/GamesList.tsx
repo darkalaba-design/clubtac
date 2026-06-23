@@ -86,16 +86,21 @@ interface Event {
     cover?: string | null
 }
 
-type GamesTab = 'announcements' | 'past'
+import { clubDisplayName } from '@/lib/clubs'
+
+type GamesTab = 'my' | 'all'
+
+const COMPLETED_PAGE_SIZE = 10
 
 export default function GamesList() {
     const { user } = useUser()
     const getMedalPrefix = useSoloLeaderMedalPrefix()
     const searchParams = useSearchParams()
-    const gamesTabFromUrl = (searchParams.get('gamesTab') as GamesTab | null)
-    const [activeTab, setActiveTab] = useState<GamesTab>(
-        gamesTabFromUrl === 'past' ? 'past' : 'announcements'
-    )
+    const gamesTabFromUrl = searchParams.get('eventsScope') ?? searchParams.get('gamesTab')
+    const [activeTab, setActiveTab] = useState<GamesTab>(() => {
+        if (gamesTabFromUrl === 'all' || gamesTabFromUrl === 'past') return 'all'
+        return 'my'
+    })
     const [games, setGames] = useState<Game[]>([])
     const [events, setEvents] = useState<Event[]>([])
     const [pastEvents, setPastEvents] = useState<Event[]>([])
@@ -119,6 +124,14 @@ export default function GamesList() {
     const [eventParticipants, setEventParticipants] = useState<Record<string, { payment_status: string; paylink?: string | null; created_at?: string | null }>>({})
     const [eventParticipantsCount, setEventParticipantsCount] = useState<Record<string, number>>({})
     const [clubNames, setClubNames] = useState<Record<string, string>>({})
+    const [showCompleted, setShowCompleted] = useState(false)
+    const [completedVisibleCount, setCompletedVisibleCount] = useState(COMPLETED_PAGE_SIZE)
+    const [crossClubConfirm, setCrossClubConfirm] = useState<{
+        eventId: string
+        eventClubId: string
+        userClubId: string
+    } | null>(null)
+    const [myClubLabel, setMyClubLabel] = useState('Мой город')
     /** @deprecated Состояние для зелёных Realtime-попапов; показ отключён (false && в рендере), можно вычистить */
     const [realtimeNotification, setRealtimeNotification] = useState<{
         show: boolean
@@ -126,14 +139,19 @@ export default function GamesList() {
         data?: any
     } | null>(null)
 
-    // Синхронизируем активный таб с URL (gamesTab) при изменении searchParams
     useEffect(() => {
-        if (gamesTabFromUrl === 'past') {
-            setActiveTab('past')
-        } else if (gamesTabFromUrl === 'announcements') {
-            setActiveTab('announcements')
+        if (gamesTabFromUrl === 'all' || gamesTabFromUrl === 'past') {
+            setActiveTab('all')
+        } else if (gamesTabFromUrl === 'my' || gamesTabFromUrl === 'announcements') {
+            setActiveTab('my')
         }
     }, [gamesTabFromUrl])
+
+    useEffect(() => {
+        if (!user?.club_id) return
+        const name = clubNames[user.club_id]
+        if (name) setMyClubLabel(name)
+    }, [user?.club_id, clubNames])
 
     // Загружаем прошедшие игры
     useEffect(() => {
@@ -258,14 +276,14 @@ export default function GamesList() {
                 const uniqueClubIds = [...new Set(filteredEvents.map(e => e.club_id).filter(Boolean))]
                 if (uniqueClubIds.length > 0) {
                     const { data: clubs, error: clubsError } = await supabase
-                        .from('clubtac_clubs')
-                        .select('id, name')
+                        .from('clubtac_clubs_public')
+                        .select('id, name, city')
                         .in('id', uniqueClubIds)
 
                     if (!clubsError && clubs) {
                         const clubsMap: Record<string, string> = {}
-                        clubs.forEach((club: any) => {
-                            clubsMap[club.id] = club.name
+                        clubs.forEach((club: { id: string; name?: string; city?: string | null }) => {
+                            clubsMap[club.id] = club.city?.trim() || club.name?.trim() || club.id
                         })
                         setClubNames(clubsMap)
                         console.log('Loaded club names:', clubsMap)
@@ -646,7 +664,7 @@ export default function GamesList() {
     }, {} as Record<string, { games: Game[], event: Event | null }>)
 
     // Функция для записи на событие
-    const handleRegisterForEvent = async (eventId: string) => {
+    const handleRegisterForEvent = async (eventId: string, confirmCrossClub = false) => {
         if (!user) {
             alert('Необходимо войти в систему')
             return
@@ -655,6 +673,21 @@ export default function GamesList() {
         const ev = events.find((e) => e.id === eventId)
         if (ev && (ev.status === 'cancelled' || ev.status === 'canceled')) return
 
+        if (
+            !confirmCrossClub &&
+            user.club_id &&
+            ev?.club_id &&
+            ev.club_id !== user.club_id
+        ) {
+            setCrossClubConfirm({
+                eventId,
+                eventClubId: ev.club_id,
+                userClubId: user.club_id,
+            })
+            return
+        }
+
+        setCrossClubConfirm(null)
         // Устанавливаем состояние загрузки
         setEventRegistrationStatus(prev => ({
             ...prev,
@@ -680,6 +713,7 @@ export default function GamesList() {
                     body: JSON.stringify({
                         user_id: user.id || null,
                         telegram_id: user.telegram_id || null,
+                        confirm_cross_club: confirmCrossClub || undefined,
                     }),
                     signal: controller.signal,
                 })
@@ -691,6 +725,23 @@ export default function GamesList() {
                     try {
                         const errJson = await response.json()
                         if (typeof errJson.error === 'string') errText = errJson.error
+                        if (errJson.requires_confirmation && ev?.club_id && user.club_id) {
+                            setCrossClubConfirm({
+                                eventId,
+                                eventClubId: ev.club_id,
+                                userClubId: user.club_id,
+                            })
+                            setEventRegistrationStatus((prev) => ({
+                                ...prev,
+                                [eventId]: {
+                                    loading: false,
+                                    success: false,
+                                    error: null,
+                                    response: null,
+                                },
+                            }))
+                            return
+                        }
                     } catch {
                         /* ignore */
                     }
@@ -824,6 +875,107 @@ export default function GamesList() {
     }
 
     // Рендер анонсов
+    const upcomingVisibleEvents =
+        activeTab === 'my' && user?.club_id
+            ? events.filter((e) => e.club_id === user.club_id)
+            : events
+
+    const renderCompletedSection = () => {
+        const slice = pastEvents.slice(0, completedVisibleCount)
+        const hasMore = pastEvents.length > completedVisibleCount
+
+        return (
+            <div style={{ marginTop: '20px', padding: '0 12px 12px' }}>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setShowCompleted((v) => !v)
+                        if (!showCompleted) setCompletedVisibleCount(COMPLETED_PAGE_SIZE)
+                    }}
+                    style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: '1px solid #EBE8E0',
+                        backgroundColor: '#FAFAF8',
+                        color: '#1D1D1B',
+                        fontWeight: 600,
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                    }}
+                >
+                    {showCompleted ? 'Скрыть завершённые' : 'Показать завершённые'}
+                    {!showCompleted && pastEvents.length > 0 ? ` (${pastEvents.length})` : ''}
+                </button>
+
+                {showCompleted ? (
+                    <div style={{ marginTop: '12px' }}>
+                        {pastEventsLoading ? (
+                            <p style={{ textAlign: 'center', color: '#6B6B69', fontSize: '14px' }}>Загрузка…</p>
+                        ) : pastEvents.length === 0 ? (
+                            <p style={{ textAlign: 'center', color: '#6B6B69', fontSize: '14px' }}>
+                                Завершённых событий пока нет
+                            </p>
+                        ) : (
+                            <>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {slice.map((event) => (
+                                        <div
+                                            key={event.id}
+                                            style={{
+                                                padding: '12px',
+                                                borderRadius: '8px',
+                                                border: '1px solid #EBE8E0',
+                                                backgroundColor: '#FFFFFF',
+                                            }}
+                                        >
+                                            <div style={{ fontWeight: 600, fontSize: '14px', color: '#1D1D1B' }}>
+                                                {event.title}
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
+                                                {formatEventDate(event.starts_at)}
+                                            </div>
+                                            {event.club_id ? (
+                                                <EventClubLine
+                                                    clubId={event.club_id}
+                                                    clubNames={clubNames}
+                                                    style={{ marginTop: '6px' }}
+                                                />
+                                            ) : null}
+                                        </div>
+                                    ))}
+                                </div>
+                                {hasMore ? (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setCompletedVisibleCount((n) => n + COMPLETED_PAGE_SIZE)
+                                        }
+                                        style={{
+                                            width: '100%',
+                                            marginTop: '10px',
+                                            padding: '10px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #EBE8E0',
+                                            backgroundColor: '#FFFFFF',
+                                            cursor: 'pointer',
+                                            fontWeight: 600,
+                                            fontSize: '13px',
+                                            color: '#1D1D1B',
+                                        }}
+                                    >
+                                        Показать ещё
+                                    </button>
+                                ) : null}
+                                <div style={{ marginTop: '16px' }}>{renderPastGames()}</div>
+                            </>
+                        )}
+                    </div>
+                ) : null}
+            </div>
+        )
+    }
+
     const renderAnnouncements = () => {
         if (eventsLoading) {
             return (
@@ -850,22 +1002,24 @@ export default function GamesList() {
             )
         }
 
-        if (events.length === 0) {
+        if (upcomingVisibleEvents.length === 0) {
             return (
                 <div style={{ padding: '12px' }}>
                     <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                        <p>Нет предстоящих событий</p>
-                        <p style={{ fontSize: '12px', color: '#6B6B69', marginTop: '8px' }}>
-                            Проверьте консоль браузера для отладочной информации
+                        <p>
+                            {activeTab === 'my'
+                                ? 'Нет предстоящих событий в вашем городе'
+                                : 'Нет предстоящих событий'}
                         </p>
                     </div>
+                    {renderCompletedSection()}
                 </div>
             )
         }
 
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {events.map((event) => (
+                {upcomingVisibleEvents.map((event) => (
                     <div
                         key={event.id}
                         style={{
@@ -1484,11 +1638,10 @@ export default function GamesList() {
                         </div>
                     </div>
                 ))}
+                {renderCompletedSection()}
             </div>
         )
     }
-
-    // Рендер прошедших игр
     const renderPastGames = () => {
         if (loading) {
             return (
@@ -1884,7 +2037,7 @@ export default function GamesList() {
                 }}
             >
                     <button
-                        onClick={() => setActiveTab('announcements')}
+                        onClick={() => setActiveTab('my')}
                     style={{
                         flex: 1,
                         padding: '12px',
@@ -1892,16 +2045,16 @@ export default function GamesList() {
                         background: 'transparent',
                         cursor: 'pointer',
                         fontSize: '14px',
-                        fontWeight: activeTab === 'announcements' ? 'bold' : 'normal',
-                        color: activeTab === 'announcements' ? '#1D1D1B' : '#6B6B69',
-                        borderBottom: activeTab === 'announcements' ? '2px solid #FFDF00' : '2px solid transparent',
+                        fontWeight: activeTab === 'my' ? 'bold' : 'normal',
+                        color: activeTab === 'my' ? '#1D1D1B' : '#6B6B69',
+                        borderBottom: activeTab === 'my' ? '2px solid #FFDF00' : '2px solid transparent',
                         marginBottom: '-2px',
                     }}
                 >
-                    Анонсы
+                    {myClubLabel}
                 </button>
                     <button
-                    onClick={() => setActiveTab('past')}
+                    onClick={() => setActiveTab('all')}
                     style={{
                         flex: 1,
                         padding: '12px',
@@ -1909,19 +2062,87 @@ export default function GamesList() {
                         background: 'transparent',
                         cursor: 'pointer',
                         fontSize: '14px',
-                        fontWeight: activeTab === 'past' ? 'bold' : 'normal',
-                        color: activeTab === 'past' ? '#1D1D1B' : '#6B6B69',
-                        borderBottom: activeTab === 'past' ? '2px solid #FFDF00' : '2px solid transparent',
+                        fontWeight: activeTab === 'all' ? 'bold' : 'normal',
+                        color: activeTab === 'all' ? '#1D1D1B' : '#6B6B69',
+                        borderBottom: activeTab === 'all' ? '2px solid #FFDF00' : '2px solid transparent',
                         marginBottom: '-2px',
                     }}
                 >
-                    Прошедшие игры
+                    Все клубы
                 </button>
             </div>
 
-            {/* Контент табов */}
-            {activeTab === 'announcements' && renderAnnouncements()}
-            {activeTab === 'past' && renderPastGames()}
+            {renderAnnouncements()}
+
+            {crossClubConfirm ? (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1500,
+                        backgroundColor: 'rgba(29,29,27,0.45)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px',
+                    }}
+                >
+                    <div
+                        style={{
+                            width: '100%',
+                            maxWidth: '380px',
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: '16px',
+                            padding: '20px',
+                        }}
+                    >
+                        <h3 style={{ margin: '0 0 10px', fontSize: '17px', color: '#1D1D1B' }}>
+                            Другой город
+                        </h3>
+                        <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
+                            Вы из {clubNames[crossClubConfirm.userClubId] || crossClubConfirm.userClubId}. Записаться
+                            на игру в {clubNames[crossClubConfirm.eventClubId] || crossClubConfirm.eventClubId}?
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setCrossClubConfirm(null)}
+                                style={{
+                                    flex: 1,
+                                    padding: '11px',
+                                    borderRadius: '10px',
+                                    border: '1px solid #EBE8E0',
+                                    backgroundColor: '#FFFFFF',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    void handleRegisterForEvent(crossClubConfirm.eventId, true)
+                                }
+                                style={{
+                                    flex: 1,
+                                    padding: '11px',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    backgroundColor: '#FFDF00',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    color: '#1D1D1B',
+                                }}
+                            >
+                                Да, записаться
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     )
 }

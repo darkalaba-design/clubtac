@@ -3,6 +3,7 @@ import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { formatParticipantDisplay } from '@/lib/admin/formatParticipantDisplay'
+import { assertAdminHasManagedClub, assertUserInManagedClub } from '@/lib/admin/clubScope'
 import {
     filterAdminPlayerWalletTransactionsForDisplay,
     splitUserFieldsForAdmin,
@@ -32,6 +33,9 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
         return NextResponse.json({ error: 'Нужны права admin или root' }, { status: 403 })
     }
 
+    const adminClubErr = assertAdminHasManagedClub(gate.actor)
+    if (adminClubErr) return adminClubErr
+
     const { userId: userIdRaw } = await ctx.params
     const userId = parseUserId(userIdRaw)
     if (userId == null) {
@@ -53,6 +57,12 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
     if (!userRow) {
         return NextResponse.json({ error: 'Игрок не найден' }, { status: 404 })
     }
+
+    const userClubDenied = assertUserInManagedClub(
+        gate.actor,
+        (userRow as { club_id?: string | null }).club_id
+    )
+    if (userClubDenied) return userClubDenied
 
     const user = userRow as Record<string, unknown>
     const { profile_fields, chat_fields, extra_fields } = splitUserFieldsForAdmin(user)

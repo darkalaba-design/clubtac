@@ -4,6 +4,7 @@ import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { fetchAdminGamesGroupedByEvent } from '@/lib/admin/adminGamesByEvent'
 import { isAppAdminGamesWriteImplemented } from '@/lib/admin/gamesWrite'
+import { assertAdminHasManagedClub, getActorManagedClubId } from '@/lib/admin/clubScope'
 
 /** Все партии по событиям (clubtac_games + clubtac_players). */
 export async function GET(request: NextRequest) {
@@ -17,6 +18,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Нужны права admin или root' }, { status: 403 })
     }
 
+    const adminClubErr = assertAdminHasManagedClub(gate.actor)
+    if (adminClubErr) return adminClubErr
+
     const limitRaw = request.nextUrl.searchParams.get('limit')
     let gamesLimit = 500
     if (limitRaw) {
@@ -24,10 +28,14 @@ export async function GET(request: NextRequest) {
         if (Number.isFinite(n)) gamesLimit = Math.min(1000, Math.max(1, n))
     }
 
-    const { supabase } = gate
+    const { supabase, actor } = gate
+    const managedClubId = getActorManagedClubId(actor)
 
     try {
-        const groups = await fetchAdminGamesGroupedByEvent(supabase, { gamesLimit })
+        const groups = await fetchAdminGamesGroupedByEvent(supabase, {
+            gamesLimit,
+            managedClubId,
+        })
         return NextResponse.json({
             groups,
             games_write_implemented: isAppAdminGamesWriteImplemented(),

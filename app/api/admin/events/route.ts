@@ -4,6 +4,11 @@ import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { notifyMakeEventImageWebhook } from '@/lib/admin/notifyMakeEventImageWebhook'
+import {
+    assertAdminHasManagedClub,
+    getActorManagedClubId,
+    resolveEventClubIdForCreate,
+} from '@/lib/admin/clubScope'
 
 const EVENT_SELECT =
     'id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover, players_limit'
@@ -33,8 +38,18 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Нужны права admin или root' }, { status: 403 })
     }
 
-    const { supabase } = gate
-    const { data, error } = await supabase.from('clubtac_events').select(EVENT_SELECT).order('starts_at', { ascending: false }).limit(300)
+    const adminClubErr = assertAdminHasManagedClub(gate.actor)
+    if (adminClubErr) return adminClubErr
+
+    const { supabase, actor } = gate
+    const managedClubId = getActorManagedClubId(actor)
+
+    let query = supabase.from('clubtac_events').select(EVENT_SELECT).order('starts_at', { ascending: false }).limit(300)
+    if (managedClubId) {
+        query = query.eq('club_id', managedClubId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
         console.error('GET /api/admin/events:', error)
@@ -93,6 +108,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Нужны права admin или root' }, { status: 403 })
     }
 
+    const adminClubErr = assertAdminHasManagedClub(gate.actor)
+    if (adminClubErr) return adminClubErr
+
     let body: Record<string, unknown>
     try {
         body = await request.json()
@@ -103,13 +121,17 @@ export async function POST(request: NextRequest) {
     const title = typeof body.title === 'string' ? body.title.trim() : ''
     const starts_at = typeof body.starts_at === 'string' ? body.starts_at.trim() : ''
     const address = typeof body.address === 'string' ? body.address.trim() : ''
-    const club_id = typeof body.club_id === 'string' ? body.club_id.trim() : ''
-    if (!title || !starts_at || !address || !club_id) {
+    const requestedClubId = typeof body.club_id === 'string' ? body.club_id.trim() : ''
+    if (!title || !starts_at || !address || !requestedClubId) {
         return NextResponse.json(
             { error: 'Обязательны поля: title, starts_at (ISO), address, club_id (id клуба из clubtac_clubs)' },
             { status: 400 }
         )
     }
+
+    const clubResolved = resolveEventClubIdForCreate(gate.actor, requestedClubId)
+    if (clubResolved instanceof NextResponse) return clubResolved
+    const club_id = clubResolved
 
     const type = parseEventType(body.type) ?? 'game'
     const status = parseEventStatus(body.status) ?? 'scheduled'

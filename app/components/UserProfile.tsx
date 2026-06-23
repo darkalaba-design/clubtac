@@ -15,6 +15,7 @@ import TeamsTabIcon from './TeamsTabIcon'
 import ProfileTabIcon from './ProfileTabIcon'
 import SettingsIcon from './SettingsIcon'
 import type { User } from '@/types/user'
+import type { ClubRow } from '@/lib/clubs'
 
 interface UserStats {
     user: User
@@ -54,6 +55,11 @@ interface UserStats {
         username?: string | null
         telegram_id: number
     } | null
+    club?: {
+        id: string
+        name: string
+        city?: string | null
+    } | null
 }
 
 /**
@@ -71,6 +77,9 @@ export default function UserProfile() {
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [settingsEntered, setSettingsEntered] = useState(false)
     const [showAppAdminLink, setShowAppAdminLink] = useState(false)
+    const [clubs, setClubs] = useState<ClubRow[]>([])
+    const [clubSaving, setClubSaving] = useState(false)
+    const [clubError, setClubError] = useState<string | null>(null)
 
     const sectionCard: React.CSSProperties = {
         backgroundColor: '#FFFFFF',
@@ -181,6 +190,63 @@ export default function UserProfile() {
         },
         [user, setUser]
     )
+
+    const handleClubChange = useCallback(
+        async (clubId: string) => {
+            if (!user || !clubId || clubId === user.club_id) return
+            const initData =
+                typeof window !== 'undefined'
+                    ? (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp
+                          ?.initData?.trim?.() || ''
+                    : ''
+            if (!initData) {
+                setClubError('Откройте приложение через Telegram')
+                return
+            }
+            setClubSaving(true)
+            setClubError(null)
+            try {
+                const res = await fetch('/api/user/club', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ initData, club_id: clubId }),
+                })
+                const payload = await res.json().catch(() => ({}))
+                if (!res.ok) {
+                    throw new Error(typeof payload.error === 'string' ? payload.error : res.statusText)
+                }
+                if (payload.user) {
+                    setUser(payload.user as User)
+                } else {
+                    setUser({ ...user, club_id: clubId } as User)
+                }
+            } catch (e) {
+                setClubError(e instanceof Error ? e.message : 'Не удалось сменить клуб')
+            } finally {
+                setClubSaving(false)
+            }
+        },
+        [user, setUser]
+    )
+
+    useEffect(() => {
+        if (!settingsOpen) return
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await fetch('/api/clubs')
+                const j = await res.json().catch(() => ({}))
+                if (!cancelled && res.ok) {
+                    setClubs((j.clubs as ClubRow[]) ?? [])
+                }
+            } catch {
+                /* ignore */
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [settingsOpen])
 
     useEffect(() => {
         if (!settingsOpen) return
@@ -392,6 +458,59 @@ export default function UserProfile() {
                         </p>
                     ) : (
                         <>
+                            <div
+                                style={{
+                                    border: '1px solid #EBE8E0',
+                                    borderRadius: '10px',
+                                    padding: '14px 14px',
+                                    backgroundColor: '#FAFAF8',
+                                    marginBottom: '16px',
+                                }}
+                            >
+                                <div style={{ fontSize: '15px', fontWeight: 700, color: '#1D1D1B', marginBottom: '8px' }}>
+                                    Мой клуб
+                                </div>
+                                <p style={{ margin: '0 0 10px', fontSize: '12px', lineHeight: 1.45, color: '#6B6B69' }}>
+                                    Город вашей приписки. Влияет на вкладку «Мой город» в событиях и клубный рейтинг.
+                                </p>
+                                <select
+                                    value={user.club_id ?? ''}
+                                    disabled={clubSaving || clubs.length === 0}
+                                    onChange={(e) => void handleClubChange(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #EBE8E0',
+                                        fontSize: '15px',
+                                        backgroundColor: '#FFFFFF',
+                                    }}
+                                >
+                                    {!user.club_id ? <option value="">Выберите клуб…</option> : null}
+                                    {clubs.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.city || c.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {clubSaving ? (
+                                    <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#6B6B69' }}>Сохранение…</p>
+                                ) : null}
+                                {clubError ? (
+                                    <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#B71C1C' }}>{clubError}</p>
+                                ) : null}
+                                {user.app_role === 'admin' && user.admin_club_id ? (
+                                    <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#6B6B69', lineHeight: 1.45 }}>
+                                        Управляете клубом:{' '}
+                                        <strong>
+                                            {clubs.find((c) => c.id === user.admin_club_id)?.name ??
+                                                stats?.club?.name ??
+                                                user.admin_club_id}
+                                        </strong>
+                                        . Меняет только root.
+                                    </p>
+                                ) : null}
+                            </div>
                             <p style={{ margin: '0 0 16px', fontSize: '15px', color: '#6B6B69' }}>
                                 Скрытие ника и фото в общих списках.
                             </p>

@@ -10,6 +10,7 @@ const outDir = path.join(rootDir, 'data', 'database-export')
 const TABLES = [
     'clubtac_users',
     'clubtac_clubs',
+    'clubtac_cities',
     'clubtac_events',
     'clubtac_event_participants',
     'clubtac_games',

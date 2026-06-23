@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
+import {
+    requireEventInManagedClub,
+    resolveEventClubIdForCreate,
+} from '@/lib/admin/clubScope'
 
 const EVENT_SELECT =
     'id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover, players_limit'
@@ -39,6 +43,9 @@ export async function GET(request: NextRequest, ctx: RouteParams) {
     }
 
     const { supabase } = gate
+
+    const eventAccess = await requireEventInManagedClub(gate.actor, supabase, eventId)
+    if (!eventAccess.ok) return eventAccess.response
 
     const { data: event, error: evErr } = await supabase
         .from('clubtac_events')
@@ -227,6 +234,16 @@ export async function PATCH(request: NextRequest, ctx: RouteParams) {
     }
 
     const { supabase } = gate
+
+    const eventAccess = await requireEventInManagedClub(gate.actor, supabase, eventId)
+    if (!eventAccess.ok) return eventAccess.response
+
+    if (patch.club_id !== undefined) {
+        const clubResolved = resolveEventClubIdForCreate(gate.actor, String(patch.club_id))
+        if (clubResolved instanceof NextResponse) return clubResolved
+        patch.club_id = clubResolved
+    }
+
     const { data, error } = await supabase.from('clubtac_events').update(patch).eq('id', eventId).select(EVENT_SELECT).maybeSingle()
 
     if (error) {

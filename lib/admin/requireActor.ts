@@ -11,6 +11,8 @@ export type AdminActorRow = {
     first_name: string | null
     username: string | null
     app_role: AppRole
+    club_id: string | null
+    admin_club_id: string | null
 }
 
 /**
@@ -47,7 +49,7 @@ export async function requireActor(
     const supabase = createServiceRoleClient()
     const { data: row, error } = await supabase
         .from('clubtac_users')
-        .select('id, telegram_id, first_name, username, app_role')
+        .select('id, telegram_id, first_name, username, app_role, club_id, admin_club_id')
         .eq('telegram_id', checked.parsed.userId)
         .maybeSingle()
 
@@ -70,6 +72,8 @@ export async function requireActor(
         first_name: (row as { first_name?: string | null }).first_name ?? null,
         username: (row as { username?: string | null }).username ?? null,
         app_role: role,
+        club_id: (row as { club_id?: string | null }).club_id ?? null,
+        admin_club_id: (row as { admin_club_id?: string | null }).admin_club_id ?? null,
     }
 
     return { ok: true, actor, supabase }

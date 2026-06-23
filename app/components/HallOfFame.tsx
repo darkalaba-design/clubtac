@@ -8,16 +8,20 @@ import { useUser } from '../contexts/UserContext'
 import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 import BrandStarIcon from './BrandStarIcon'
 
-type RankingSubTab = 'legacy' | 'elo'
+type RankingSubTab = 'global' | 'club' | 'legacy'
 
 export default function HallOfFame() {
     const [players, setPlayers] = useState<any[]>([])
     const [eloPlayers, setEloPlayers] = useState<any[]>([])
+    const [eloClubPlayers, setEloClubPlayers] = useState<any[]>([])
     const [loadingLegacy, setLoadingLegacy] = useState(true)
     const [loadingElo, setLoadingElo] = useState(true)
+    const [loadingEloClub, setLoadingEloClub] = useState(true)
     const [errorLegacy, setErrorLegacy] = useState<string | null>(null)
     const [errorElo, setErrorElo] = useState<string | null>(null)
-    const [activeSubTab, setActiveSubTab] = useState<RankingSubTab>('elo')
+    const [errorEloClub, setErrorEloClub] = useState<string | null>(null)
+    const [clubLabel, setClubLabel] = useState('Мой клуб')
+    const [activeSubTab, setActiveSubTab] = useState<RankingSubTab>('global')
 
     const { user } = useUser()
     const getMedalPrefix = useSoloLeaderMedalPrefix()
@@ -143,6 +147,92 @@ export default function HallOfFame() {
 
         loadElo()
     }, [])
+
+    useEffect(() => {
+        if (!user?.club_id) {
+            setEloClubPlayers([])
+            setLoadingEloClub(false)
+            return
+        }
+
+        const loadClubElo = async () => {
+            try {
+                const supabase = createClient()
+                const { data, error: queryError } = await supabase
+                    .from('clubtac_elo_leaderboard_by_club')
+                    .select('*')
+                    .eq('club_id', user.club_id)
+                    .order('club_place')
+
+                if (queryError) {
+                    console.error('Supabase elo club leaderboard error:', queryError)
+                    setErrorEloClub(queryError.message)
+                    setLoadingEloClub(false)
+                    return
+                }
+
+                const rows = data || []
+                const ids = [
+                    ...new Set(
+                        rows
+                            .map((p: any) => Number(p.user_id))
+                            .filter((id: number) => !Number.isNaN(id) && id > 0)
+                    ),
+                ]
+                let takoffByUserId: Record<number, boolean> = {}
+                if (ids.length > 0) {
+                    const { data: privRows } = await supabase
+                        .from('clubtac_users')
+                        .select('id, takoff')
+                        .in('id', ids)
+                    if (privRows) {
+                        takoffByUserId = Object.fromEntries(
+                            privRows.map((r: { id: number; takoff?: boolean | null }) => [r.id, !!r.takoff])
+                        )
+                    }
+                }
+
+                setEloClubPlayers(
+                    rows.map((p: any) => {
+                        const uid = Number(p.user_id)
+                        return {
+                            ...p,
+                            place: p.club_place ?? p.place,
+                            takoff: !!takoffByUserId[uid],
+                        }
+                    })
+                )
+            } catch (err) {
+                console.error('Error loading club Elo leaderboard:', err)
+                setErrorEloClub(err instanceof Error ? err.message : 'Unknown error')
+            } finally {
+                setLoadingEloClub(false)
+            }
+        }
+
+        void loadClubElo()
+    }, [user?.club_id])
+
+    useEffect(() => {
+        if (!user?.club_id) return
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await fetch('/api/clubs')
+                const j = await res.json().catch(() => ({}))
+                if (!cancelled && res.ok) {
+                    const clubs = (j.clubs as Array<{ id: string; name: string; city?: string | null }>) ?? []
+                    const mine = clubs.find((c) => c.id === user.club_id)
+                    if (mine) setClubLabel(mine.city?.trim() || mine.name)
+                }
+            } catch {
+                /* ignore */
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [user?.club_id])
 
     const renderPlayerRow = (
         player: any,
@@ -328,7 +418,7 @@ export default function HallOfFame() {
         >
             <button
                 type="button"
-                onClick={() => setActiveSubTab('elo')}
+                onClick={() => setActiveSubTab('global')}
                 style={{
                     flex: 1,
                     padding: '12px',
@@ -336,13 +426,33 @@ export default function HallOfFame() {
                     background: 'transparent',
                     cursor: 'pointer',
                     fontSize: '14px',
-                    fontWeight: activeSubTab === 'elo' ? 'bold' : 'normal',
-                    color: activeSubTab === 'elo' ? '#1D1D1B' : '#6B6B69',
-                    borderBottom: activeSubTab === 'elo' ? '2px solid #FFDF00' : '2px solid transparent',
+                    fontWeight: activeSubTab === 'global' ? 'bold' : 'normal',
+                    color: activeSubTab === 'global' ? '#1D1D1B' : '#6B6B69',
+                    borderBottom: activeSubTab === 'global' ? '2px solid #FFDF00' : '2px solid transparent',
                     marginBottom: '-2px',
                 }}
             >
-                Новый рейтинг
+                Общий
+            </button>
+            <button
+                type="button"
+                onClick={() => setActiveSubTab('club')}
+                disabled={!user?.club_id}
+                style={{
+                    flex: 1,
+                    padding: '12px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: user?.club_id ? 'pointer' : 'not-allowed',
+                    fontSize: '14px',
+                    fontWeight: activeSubTab === 'club' ? 'bold' : 'normal',
+                    color: activeSubTab === 'club' ? '#1D1D1B' : '#6B6B69',
+                    borderBottom: activeSubTab === 'club' ? '2px solid #FFDF00' : '2px solid transparent',
+                    marginBottom: '-2px',
+                    opacity: user?.club_id ? 1 : 0.5,
+                }}
+            >
+                {clubLabel}
             </button>
             <button
                 type="button"
@@ -366,9 +476,24 @@ export default function HallOfFame() {
         </div>
     )
 
-    const loading = activeSubTab === 'legacy' ? loadingLegacy : loadingElo
-    const error = activeSubTab === 'legacy' ? errorLegacy : errorElo
-    const list = activeSubTab === 'legacy' ? players : eloPlayers
+    const loading =
+        activeSubTab === 'legacy'
+            ? loadingLegacy
+            : activeSubTab === 'club'
+              ? loadingEloClub
+              : loadingElo
+    const error =
+        activeSubTab === 'legacy'
+            ? errorLegacy
+            : activeSubTab === 'club'
+              ? errorEloClub
+              : errorElo
+    const list =
+        activeSubTab === 'legacy'
+            ? players
+            : activeSubTab === 'club'
+              ? eloClubPlayers
+              : eloPlayers
 
     if (loading) {
         return (
@@ -415,7 +540,8 @@ export default function HallOfFame() {
     return (
         <div>
             {subTabBar}
-            {activeSubTab === 'elo' && renderRankingBoard(eloPlayers, resolveEloPoints, true)}
+            {activeSubTab === 'global' && renderRankingBoard(eloPlayers, resolveEloPoints, true)}
+            {activeSubTab === 'club' && renderRankingBoard(eloClubPlayers, resolveEloPoints, true)}
             {activeSubTab === 'legacy' && renderRankingBoard(players, resolveLegacyPoints, false)}
         </div>
     )

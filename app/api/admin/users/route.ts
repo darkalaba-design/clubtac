@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const { supabase } = gate
     const { data, error } = await supabase
         .from('clubtac_users')
-        .select('id, telegram_id, first_name, last_name, username, nickname, app_role, created_at')
+        .select('id, telegram_id, first_name, last_name, username, nickname, app_role, admin_club_id, created_at')
         .order('id', { ascending: false })
         .limit(limit)
 

@@ -13,12 +13,14 @@ import {
 } from '@/lib/admin/broadcasts'
 import { applyBroadcastDeliveryResult } from '@/lib/admin/applyBroadcastDeliveryResult'
 import { sendBroadcastViaMake } from '@/lib/admin/sendBroadcastViaMake'
+import { getActorManagedClubId } from '@/lib/admin/clubScope'
 
 /** Список рассылок и режим доставки. */
 export async function GET(request: NextRequest) {
     const access = await requireBroadcastAdmin(request)
     if (!access.ok) return access.response
     const { supabase } = access.gate
+    const managedClubId = getActorManagedClubId(access.gate.actor)
 
     const audienceRaw = request.nextUrl.searchParams.get('audience')
     if (audienceRaw) {
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
         if (audience === 'manual' && !userIds) {
             return NextResponse.json({ error: 'user_ids обязателен для audience=manual' }, { status: 400 })
         }
-        const count = await countBroadcastAudience(supabase, audience, userIds)
+        const count = await countBroadcastAudience(supabase, audience, userIds, managedClubId)
         return NextResponse.json({ audience, count, user_ids: userIds ?? undefined })
     }
 
@@ -63,6 +65,7 @@ export async function POST(request: NextRequest) {
     if (!access.ok) return access.response
     const { gate } = access
     const { supabase, actor } = gate
+    const managedClubId = getActorManagedClubId(actor)
 
     let body: { message?: unknown; audience?: unknown; user_ids?: unknown }
     try {
@@ -93,8 +96,8 @@ export async function POST(request: NextRequest) {
     try {
         users =
             audience === 'manual'
-                ? await resolveBroadcastManualAudience(supabase, userIds!)
-                : await resolveBroadcastAudience(supabase, audience)
+                ? await resolveBroadcastManualAudience(supabase, userIds!, managedClubId)
+                : await resolveBroadcastAudience(supabase, audience, managedClubId)
     } catch (e) {
         const msg = e instanceof Error ? e.message : 'Не удалось получить список получателей'
         return NextResponse.json({ error: msg }, { status: 500 })
