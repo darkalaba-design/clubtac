@@ -43,13 +43,17 @@ export async function POST(request: NextRequest, ctx: RouteParams) {
         return NextResponse.json({ error: 'Событие не найдено' }, { status: 404 })
     }
 
-    notifyMakeEventImageWebhook({
+    const result = await notifyMakeEventImageWebhook({
         id: ev.id as string,
         title: ev.title as string,
         description: (ev.description as string | null) ?? null,
         type: ev.type as string,
         imageVersion: 'board',
     })
+
+    if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 502 })
+    }
 
     return NextResponse.json({ ok: true })
 }

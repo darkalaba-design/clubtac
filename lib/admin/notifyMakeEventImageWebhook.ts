@@ -13,13 +13,16 @@ export type EventImageWebhookPayload = {
     imageVersion?: string
 }
 
-export function notifyMakeEventImageWebhook(event: EventImageWebhookPayload): void {
+export type EventImageWebhookResult = { ok: true } | { ok: false; error: string }
+
+export async function notifyMakeEventImageWebhook(
+    event: EventImageWebhookPayload
+): Promise<EventImageWebhookResult> {
     const url = getMakeEventCoverWebhookUrl()
     if (!url) {
-        console.error(
-            'notifyMakeEventImageWebhook: не задан CLUBTAC_MAKE_EVENT_COVER_WEBHOOK_URL'
-        )
-        return
+        const error = 'Не задан CLUBTAC_MAKE_EVENT_COVER_WEBHOOK_URL'
+        console.error(`notifyMakeEventImageWebhook: ${error}`)
+        return { ok: false, error }
     }
 
     const body = {
@@ -30,12 +33,23 @@ export function notifyMakeEventImageWebhook(event: EventImageWebhookPayload): vo
         image_version: event.imageVersion ?? 'board',
     }
 
-    void fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(20_000),
-    }).catch((err: unknown) => {
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(20_000),
+        })
+        if (!res.ok) {
+            const text = await res.text().catch(() => '')
+            const error = text.trim() || `Make webhook HTTP ${res.status}`
+            console.error('notifyMakeEventImageWebhook:', error)
+            return { ok: false, error }
+        }
+        return { ok: true }
+    } catch (err: unknown) {
+        const error = err instanceof Error ? err.message : 'Ошибка вызова Make webhook'
         console.error('notifyMakeEventImageWebhook:', err)
-    })
+        return { ok: false, error }
+    }
 }

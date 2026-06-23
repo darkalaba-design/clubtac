@@ -534,20 +534,20 @@ export default function GamesList() {
         }
     }, [user?.id, events, refreshParticipantStatuses, refreshParticipantCounts])
 
-    // Загружаем завершенные события для прошедших игр
+    // Загружаем прошедшие события (по дате; status finished часто не выставляется в БД)
     useEffect(() => {
         const loadPastEvents = async () => {
             try {
                 const supabase = createClient()
                 const now = new Date().toISOString()
 
-                // Загружаем завершенные события
-                const { data: finishedEvents, error: eventsError } = await supabase
+                const { data: rawPast, error: eventsError } = await supabase
                     .from('clubtac_events')
                     .select('id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, cover, players_limit')
-                    .eq('status', 'finished')
                     .lt('starts_at', now)
+                    .neq('status', 'hidden')
                     .order('starts_at', { ascending: false })
+                    .limit(200)
 
                 if (eventsError) {
                     console.error('Supabase past events error:', eventsError)
@@ -555,8 +555,50 @@ export default function GamesList() {
                     return
                 }
 
+                const finishedEvents = (rawPast || []).filter(
+                    (e) => e.status !== 'cancelled' && e.status !== 'canceled'
+                )
+
                 console.log('Loaded past events:', finishedEvents)
-                setPastEvents(finishedEvents || [])
+                setPastEvents(finishedEvents)
+
+                const uniqueClubIds = [...new Set(finishedEvents.map((e) => e.club_id).filter(Boolean))]
+                if (uniqueClubIds.length > 0) {
+                    const { data: clubs, error: clubsError } = await supabase
+                        .from('clubtac_clubs_public')
+                        .select('id, name, city')
+                        .in('id', uniqueClubIds)
+
+                    const clubRows =
+                        !clubsError && clubs
+                            ? clubs
+                            : (
+                                  await supabase
+                                      .from('clubtac_clubs')
+                                      .select('id, name, clubtac_cities(name)')
+                                      .in('id', uniqueClubIds)
+                              ).data
+
+                    if (clubRows?.length) {
+                        setClubNames((prev) => {
+                            const next = { ...prev }
+                            clubRows.forEach(
+                                (club: {
+                                    id: string
+                                    name?: string
+                                    city?: string | null
+                                    clubtac_cities?: { name?: string | null } | { name?: string | null }[] | null
+                                }) => {
+                                    const cityRef = club.clubtac_cities
+                                    const cityName = Array.isArray(cityRef) ? cityRef[0]?.name : cityRef?.name
+                                    next[club.id] =
+                                        club.city?.trim() || cityName?.trim() || club.name?.trim() || club.id
+                                }
+                            )
+                            return next
+                        })
+                    }
+                }
             } catch (err) {
                 console.error('Error loading past events:', err)
             } finally {
@@ -881,8 +923,12 @@ export default function GamesList() {
             : events
 
     const renderCompletedSection = () => {
-        const slice = pastEvents.slice(0, completedVisibleCount)
-        const hasMore = pastEvents.length > completedVisibleCount
+        const pastVisibleEvents =
+            activeTab === 'my' && user?.club_id
+                ? pastEvents.filter((e) => e.club_id === user.club_id)
+                : pastEvents
+        const slice = pastVisibleEvents.slice(0, completedVisibleCount)
+        const hasMore = pastVisibleEvents.length > completedVisibleCount
 
         return (
             <div style={{ marginTop: '20px', padding: '0 12px 12px' }}>
@@ -905,16 +951,20 @@ export default function GamesList() {
                     }}
                 >
                     {showCompleted ? 'Скрыть завершённые' : 'Показать завершённые'}
-                    {!showCompleted && pastEvents.length > 0 ? ` (${pastEvents.length})` : ''}
+                    {!showCompleted && pastVisibleEvents.length > 0
+                        ? ` (${pastVisibleEvents.length})`
+                        : ''}
                 </button>
 
                 {showCompleted ? (
                     <div style={{ marginTop: '12px' }}>
                         {pastEventsLoading ? (
                             <p style={{ textAlign: 'center', color: '#6B6B69', fontSize: '14px' }}>Загрузка…</p>
-                        ) : pastEvents.length === 0 ? (
+                        ) : pastVisibleEvents.length === 0 ? (
                             <p style={{ textAlign: 'center', color: '#6B6B69', fontSize: '14px' }}>
-                                Завершённых событий пока нет
+                                {activeTab === 'my'
+                                    ? 'Завершённых событий в вашем городе пока нет'
+                                    : 'Завершённых событий пока нет'}
                             </p>
                         ) : (
                             <>
@@ -1110,6 +1160,13 @@ export default function GamesList() {
                                 </div>
                             )}
                             {event.address && <EventAddressLine address={event.address} />}
+                            {event.club_id ? (
+                                <EventClubLine
+                                    clubId={event.club_id}
+                                    clubNames={clubNames}
+                                    style={{ marginBottom: '4px' }}
+                                />
+                            ) : null}
                             {event.duration_minutes && (
                                 <div style={{ fontSize: '14px', color: '#6B6B69', marginBottom: '4px' }}>
                                     ⏱️ Длительность: {event.duration_minutes} мин.
@@ -1244,20 +1301,12 @@ export default function GamesList() {
                                                 <div
                                                     style={{
                                                         whiteSpace: 'pre-wrap',
-                                                        marginBottom: event.club_id ? '12px' : 0,
                                                         color: '#1D1D1B',
                                                     }}
                                                 >
                                                     {event.description}
                                                 </div>
                                             ) : null}
-                                            {event.club_id && (
-                                                <EventClubLine
-                                                    clubId={event.club_id}
-                                                    clubNames={clubNames}
-                                                    style={{ marginTop: '4px' }}
-                                                />
-                                            )}
                                         </div>
                                     )}
                                 </div>

@@ -6,6 +6,7 @@ import {
     requireEventInManagedClub,
     resolveEventClubIdForCreate,
 } from '@/lib/admin/clubScope'
+import { notifyMakeEventImageWebhook } from '@/lib/admin/notifyMakeEventImageWebhook'
 
 const EVENT_SELECT =
     'id, title, starts_at, club_id, price, address, status, type, duration_minutes, template_id, created_at, description, cover, players_limit'
@@ -254,5 +255,19 @@ export async function PATCH(request: NextRequest, ctx: RouteParams) {
         return NextResponse.json({ error: 'Событие не найдено' }, { status: 404 })
     }
 
-    return NextResponse.json({ event: data })
+    const imageFieldsChanged =
+        patch.title !== undefined || patch.description !== undefined || patch.type !== undefined
+    let coverWebhook: { ok: boolean; error?: string } | undefined
+    if (!data.cover && imageFieldsChanged) {
+        const result = await notifyMakeEventImageWebhook({
+            id: data.id as string,
+            title: data.title as string,
+            description: (data.description as string | null) ?? null,
+            type: data.type as string,
+            imageVersion: 'board',
+        })
+        coverWebhook = result.ok ? { ok: true } : { ok: false, error: result.error }
+    }
+
+    return NextResponse.json({ event: data, ...(coverWebhook ? { cover_webhook: coverWebhook } : {}) })
 }

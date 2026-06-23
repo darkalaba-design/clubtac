@@ -202,15 +202,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    if (data) {
-        notifyMakeEventImageWebhook({
+    let coverWebhook: { ok: boolean; error?: string } = { ok: false }
+    if (data && !data.cover) {
+        const result = await notifyMakeEventImageWebhook({
             id: data.id as string,
             title: data.title as string,
             description: (data.description as string | null) ?? null,
             type: data.type as string,
             imageVersion: 'board',
         })
+        coverWebhook = result.ok ? { ok: true } : { ok: false, error: result.error }
     }
 
-    return NextResponse.json({ event: data }, { status: 201 })
+    return NextResponse.json({ event: data, cover_webhook: coverWebhook }, { status: 201 })
 }

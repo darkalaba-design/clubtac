@@ -106,3 +106,17 @@ export function eventStatusLabelRu(status: string): string {
             return status
     }
 }
+
+/** Событие уже прошло по дате начала (status в БД часто остаётся scheduled). */
+export function isEventStartedInPast(iso: string, nowMs = Date.now()): boolean {
+    const t = new Date(iso).getTime()
+    return Number.isFinite(t) && t < nowMs
+}
+
+/** Завершённое мероприятие для админки: явный finished или дата в прошлом (кроме отменённых/скрытых). */
+export function isAdminEventCompleted(ev: { status: string; starts_at: string }): boolean {
+    const st = ev.status
+    if (st === 'cancelled' || st === 'canceled' || st === 'hidden') return false
+    if (st === 'finished') return true
+    return isEventStartedInPast(ev.starts_at)
+}

@@ -11,6 +11,8 @@ import {
     formatEventModalDateTime,
     getEventTypeNameRu,
     eventStatusLabelRu,
+    isAdminEventCompleted,
+    isEventStartedInPast,
 } from '@/lib/admin/eventDisplay'
 import { EventParticipantAdminCard } from './EventParticipantAdminCard'
 import { EventAddParticipantPicker } from './EventAddParticipantPicker'
@@ -142,7 +144,19 @@ type EventRow = {
     participants_paid?: number
 }
 
-type AdminClubOption = { id: string; name: string }
+type AdminClubOption = { id: string; name: string; city?: string | null; slug?: string | null }
+
+function adminClubLabel(c: AdminClubOption): string {
+    const city = c.city?.trim()
+    if (city) return city
+    return c.name?.trim() || c.id
+}
+
+function adminUserRoleSortKey(role: AppRole): number {
+    if (role === 'root') return 0
+    if (role === 'admin') return 1
+    return 2
+}
 
 type EventParticipantRow = {
     id: string | number
@@ -421,6 +435,28 @@ export default function AdminPageClient() {
         await loadLists('root')
     }
 
+    const setAdminClub = async (targetId: number, admin_club_id: string) => {
+        if (!admin_club_id.trim()) return
+        setErr(null)
+        const res = await adminFetch(`/api/admin/users/${targetId}/admin-club`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_club_id: admin_club_id.trim() }),
+        })
+        const j = await res.json().catch(() => ({}))
+        if (!res.ok) {
+            setErr(j.error || res.statusText)
+            return
+        }
+        setAdminUsers((prev) =>
+            prev.map((u) =>
+                u.id === targetId
+                    ? { ...u, admin_club_id: (j.user as AdminUserRow | undefined)?.admin_club_id ?? admin_club_id }
+                    : u
+            )
+        )
+    }
+
     const submitNewEvent = async (e: React.FormEvent) => {
         e.preventDefault()
         setErr(null)
@@ -491,7 +527,14 @@ export default function AdminPageClient() {
             })
             if (session?.app_role) await loadLists(session.app_role)
             const createdTitle = (j as { event?: { title?: string } }).event?.title?.trim() ?? ''
-            setNewEventSuccess(createdTitle ? `Событие «${createdTitle}» создано.` : 'Событие создано.')
+            const coverWebhook = (j as { cover_webhook?: { ok: boolean; error?: string } }).cover_webhook
+            let successMsg = createdTitle ? `Событие «${createdTitle}» создано.` : 'Событие создано.'
+            if (coverWebhook?.ok) {
+                successMsg += ' Обложка генерируется автоматически — появится в течение минуты.'
+            } else if (coverWebhook && !coverWebhook.ok) {
+                successMsg += ` Генерация обложки не запустилась: ${coverWebhook.error}`
+            }
+            setNewEventSuccess(successMsg)
             setShowNewEventForm(false)
         } finally {
             creatingEventRef.current = false
@@ -882,14 +925,32 @@ export default function AdminPageClient() {
         setEventModalEditing(false)
         setEventModalDraft(null)
         if (j.event) setEventModalEvent(j.event as EventRow)
+        const coverWebhook = (j as { cover_webhook?: { ok: boolean; error?: string } }).cover_webhook
+        if (coverWebhook?.ok) {
+            setEventModalCoverMessage(
+                'Обложка генерируется автоматически — обычно появляется в течение минуты.'
+            )
+        } else if (coverWebhook && !coverWebhook.ok) {
+            setEventModalCoverMessage(`Не удалось запустить генерацию обложки: ${coverWebhook.error}`)
+        }
         await refetchEventModal(eventModalId)
+        if (coverWebhook?.ok) {
+            window.setTimeout(() => {
+                if (eventModalId) void refetchEventModal(eventModalId)
+            }, 4000)
+        }
         if (session?.app_role) await loadLists(session.app_role)
     }
 
-    const filteredAdminUsers = useMemo(
-        () => adminUsers.filter((u) => adminUserMatchesSearch(u, adminUsersSearch)),
-        [adminUsers, adminUsersSearch]
-    )
+    const filteredAdminUsers = useMemo(() => {
+        const matched = adminUsers.filter((u) => adminUserMatchesSearch(u, adminUsersSearch))
+        return [...matched].sort((a, b) => {
+            const ra = adminUserRoleSortKey(a.app_role)
+            const rb = adminUserRoleSortKey(b.app_role)
+            if (ra !== rb) return ra - rb
+            return b.id - a.id
+        })
+    }, [adminUsers, adminUsersSearch])
 
     const filteredAdminPlayers = useMemo(
         () => adminPlayers.filter((p) => adminPlayerMatchesSearch(p, adminPlayersSearch)),
@@ -1134,7 +1195,8 @@ export default function AdminPageClient() {
                 <section style={pageSection}>
                     <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>Администраторы</h2>
                     <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6B6B69' }}>
-                        Только root может выдавать и снимать роль admin (не root через API).
+                        Только root может выдавать и снимать роль admin. У admin задаётся город (клуб
+                        управления): он видит игроков этого клуба, события и переписку только с ними.
                     </p>
                     <div style={{ marginBottom: '14px' }}>
                         <div style={fieldLabel}>Поиск</div>
@@ -1183,11 +1245,41 @@ export default function AdminPageClient() {
                                         id {u.id} · tg {u.telegram_id} · @{u.username || '—'}
                                         {u.nickname?.trim() ? ` · ник: ${u.nickname}` : ''} · <strong>{u.app_role}</strong>
                                         {u.app_role === 'admin' && u.admin_club_id
-                                            ? ` · клуб: ${adminClubs.find((c) => c.id === u.admin_club_id)?.name ?? u.admin_club_id}`
+                                            ? ` · город: ${
+                                                  adminClubLabel(
+                                                      adminClubs.find((c) => c.id === u.admin_club_id) ?? {
+                                                          id: u.admin_club_id,
+                                                          name: u.admin_club_id,
+                                                      }
+                                                  )
+                                              }`
                                             : ''}
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '6px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                    {u.app_role === 'admin' && (
+                                        <select
+                                            value={u.admin_club_id ?? ''}
+                                            onChange={(e) => void setAdminClub(u.id, e.target.value)}
+                                            aria-label={`Город управления для ${u.first_name || u.id}`}
+                                            style={{
+                                                padding: '6px 8px',
+                                                borderRadius: '8px',
+                                                border: '1px solid #EBE8E0',
+                                                fontSize: '13px',
+                                                maxWidth: '160px',
+                                            }}
+                                        >
+                                            <option value="" disabled>
+                                                Город…
+                                            </option>
+                                            {adminClubs.map((c) => (
+                                                <option key={c.id} value={c.id}>
+                                                    {adminClubLabel(c)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
                                     {u.app_role !== 'admin' && u.app_role !== 'root' && (
                                         <button
                                             type="button"
@@ -1299,13 +1391,13 @@ export default function AdminPageClient() {
                             <option value="">Выберите клуб…</option>
                             {adminClubs.map((c) => (
                                 <option key={c.id} value={c.id}>
-                                    {c.name}
+                                    {adminClubLabel(c)}
                                 </option>
                             ))}
                         </select>
                         {adminClubs.length === 0 ? (
                             <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#B71C1C' }}>
-                                Список клубов не загрузился. Обновите страницу или проверьте таблицу <code>clubtac_clubs</code>.
+                                Список клубов не загрузился. Обновите страницу или проверьте <code>clubtac_clubs_public</code>.
                             </p>
                         ) : null}
                     </div>
@@ -1460,88 +1552,183 @@ export default function AdminPageClient() {
 
                 <div style={{ fontWeight: 600, marginBottom: '10px' }}>Список</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {events.map((ev) => (
-                        <button
-                            key={ev.id}
-                            type="button"
-                            onClick={() => openEventModal(ev.id)}
-                            style={{
-                                textAlign: 'left',
-                                padding: 0,
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                width: '100%',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    overflow: 'hidden',
-                                    borderRadius: '8px',
-                                    backgroundColor: '#FFFFFF',
-                                    boxShadow: '0px 3px 4.5px rgba(0, 0, 0, 0.12)',
-                                    borderTop:
-                                        ev.status === 'cancelled' || ev.status === 'canceled'
-                                            ? '2px solid #B71C1C'
-                                            : ev.status === 'hidden'
-                                              ? '2px dashed #9E9E9E'
-                                              : 'none',
-                                }}
-                            >
-                                {ev.cover?.trim() ? (
+                    {events.map((ev, index) => {
+                        const completed = isAdminEventCompleted(ev)
+                        const showPastDivider =
+                            completed &&
+                            (index === 0 || !isAdminEventCompleted(events[index - 1]!))
+                        const cancelled =
+                            ev.status === 'cancelled' || ev.status === 'canceled'
+                        const hidden = ev.status === 'hidden'
+
+                        return (
+                            <div key={ev.id}>
+                                {showPastDivider ? (
                                     <div
                                         style={{
-                                            width: '100%',
-                                            aspectRatio: '2 / 1',
-                                            maxHeight: 220,
-                                            backgroundColor: '#EBE8E0',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            margin: index === 0 ? '0 0 10px' : '16px 0 10px',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            color: '#6B6B69',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.04em',
                                         }}
                                     >
-                                        <img
-                                            src={ev.cover.trim()}
-                                            alt={ev.title ? `Обложка: ${ev.title}` : 'Обложка'}
-                                            style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover',
-                                                display: 'block',
-                                            }}
-                                        />
+                                        <span style={{ flex: 1, height: 1, backgroundColor: '#D8D6CE' }} />
+                                        <span>Завершённые</span>
+                                        <span style={{ flex: 1, height: 1, backgroundColor: '#D8D6CE' }} />
                                     </div>
                                 ) : null}
-                                <div style={{ padding: '12px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => openEventModal(ev.id)}
+                                    style={{
+                                        textAlign: 'left',
+                                        padding: 0,
+                                        border: 'none',
+                                        background: 'transparent',
+                                        cursor: 'pointer',
+                                        width: '100%',
+                                    }}
+                                >
                                     <div
                                         style={{
-                                            fontSize: '16px',
-                                            fontWeight: 700,
-                                            color: '#1D1D1B',
-                                            marginBottom: '8px',
-                                            lineHeight: 1.3,
+                                            overflow: 'hidden',
+                                            borderRadius: '8px',
+                                            backgroundColor: completed ? '#F3F2EE' : '#FFFFFF',
+                                            boxShadow: completed
+                                                ? 'none'
+                                                : '0px 3px 4.5px rgba(0, 0, 0, 0.12)',
+                                            border: completed ? '1px solid #D8D6CE' : 'none',
+                                            borderTop: cancelled
+                                                ? '2px solid #B71C1C'
+                                                : hidden
+                                                  ? '2px dashed #9E9E9E'
+                                                  : completed
+                                                    ? '2px solid #9E9E9E'
+                                                    : 'none',
+                                            opacity: completed ? 0.92 : 1,
                                         }}
                                     >
-                                        {ev.title}
-                                    </div>
-                                    <AdminAddressLine address={ev.address} style={{ marginBottom: '6px' }} />
-                                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1D1D1B', marginBottom: '4px' }}>
-                                        {formatEventCardDayMonthAndTime(ev.starts_at)}
-                                    </div>
-                                    <div style={{ fontSize: '13px', color: '#6B6B69', lineHeight: 1.4 }}>
-                                        Записались: {ev.participants_registered ?? 0} · Оплатили: {ev.participants_paid ?? 0}
-                                    </div>
-                                    {(ev.status === 'cancelled' || ev.status === 'canceled') && (
-                                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#B71C1C', fontWeight: 600 }}>
-                                            Отменено
+                                        {ev.cover?.trim() ? (
+                                            <div
+                                                style={{
+                                                    width: '100%',
+                                                    aspectRatio: '2 / 1',
+                                                    maxHeight: 220,
+                                                    backgroundColor: '#EBE8E0',
+                                                }}
+                                            >
+                                                <img
+                                                    src={ev.cover.trim()}
+                                                    alt={ev.title ? `Обложка: ${ev.title}` : 'Обложка'}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'cover',
+                                                        display: 'block',
+                                                        filter: completed ? 'grayscale(0.35)' : 'none',
+                                                    }}
+                                                />
+                                            </div>
+                                        ) : null}
+                                        <div style={{ padding: '12px' }}>
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'flex-start',
+                                                    justifyContent: 'space-between',
+                                                    gap: '8px',
+                                                    marginBottom: '8px',
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        fontSize: '16px',
+                                                        fontWeight: 700,
+                                                        color: completed ? '#6B6B69' : '#1D1D1B',
+                                                        lineHeight: 1.3,
+                                                        minWidth: 0,
+                                                    }}
+                                                >
+                                                    {ev.title}
+                                                </div>
+                                                {completed ? (
+                                                    <span
+                                                        style={{
+                                                            flexShrink: 0,
+                                                            fontSize: '11px',
+                                                            fontWeight: 600,
+                                                            color: '#616161',
+                                                            backgroundColor: '#E8E7E2',
+                                                            padding: '3px 8px',
+                                                            borderRadius: '6px',
+                                                        }}
+                                                    >
+                                                        Завершено
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                            <AdminAddressLine
+                                                address={ev.address}
+                                                style={{
+                                                    marginBottom: '6px',
+                                                    color: completed ? '#8A8A87' : undefined,
+                                                }}
+                                            />
+                                            <div
+                                                style={{
+                                                    fontSize: '14px',
+                                                    fontWeight: 600,
+                                                    color: completed ? '#8A8A87' : '#1D1D1B',
+                                                    marginBottom: '4px',
+                                                }}
+                                            >
+                                                {formatEventCardDayMonthAndTime(ev.starts_at)}
+                                            </div>
+                                            <div
+                                                style={{
+                                                    fontSize: '13px',
+                                                    color: completed ? '#9E9E9B' : '#6B6B69',
+                                                    lineHeight: 1.4,
+                                                }}
+                                            >
+                                                Записались: {ev.participants_registered ?? 0} · Оплатили:{' '}
+                                                {ev.participants_paid ?? 0}
+                                            </div>
+                                            {cancelled && (
+                                                <div
+                                                    style={{
+                                                        marginTop: '8px',
+                                                        fontSize: '12px',
+                                                        color: '#B71C1C',
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    Отменено
+                                                </div>
+                                            )}
+                                            {hidden && (
+                                                <div
+                                                    style={{
+                                                        marginTop: '8px',
+                                                        fontSize: '12px',
+                                                        color: '#616161',
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    Скрыто (не в общем списке приложения)
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                    {ev.status === 'hidden' && (
-                                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#616161', fontWeight: 600 }}>
-                                            Скрыто (не в общем списке приложения)
-                                        </div>
-                                    )}
-                                </div>
+                                    </div>
+                                </button>
                             </div>
-                        </button>
-                    ))}
+                        )
+                    })}
                 </div>
             </section>
             )}
@@ -1708,8 +1895,36 @@ export default function AdminPageClient() {
                     <p style={{ margin: 0, fontSize: '14px', color: '#6B6B69' }}>Партий пока нет.</p>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {gamesByEvent.map((group) => (
+                        {gamesByEvent.map((group, index) => {
+                            const groupPast = group.starts_at
+                                ? isEventStartedInPast(group.starts_at)
+                                : false
+                            const showPastDivider =
+                                groupPast &&
+                                (index === 0 ||
+                                    !isEventStartedInPast(gamesByEvent[index - 1]!.starts_at ?? ''))
+
+                            return (
                             <div key={group.event_id}>
+                                {showPastDivider ? (
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            margin: index === 0 ? '0 0 10px' : '16px 0 10px',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            color: '#6B6B69',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.04em',
+                                        }}
+                                    >
+                                        <span style={{ flex: 1, height: 1, backgroundColor: '#D8D6CE' }} />
+                                        <span>Завершённые события</span>
+                                        <span style={{ flex: 1, height: 1, backgroundColor: '#D8D6CE' }} />
+                                    </div>
+                                ) : null}
                                 <button
                                     type="button"
                                     onClick={() => openEventModal(group.event_id, { tab: 'games' })}
@@ -1728,14 +1943,36 @@ export default function AdminPageClient() {
                                         style={{
                                             fontSize: '15px',
                                             fontWeight: 700,
-                                            color: '#1D1D1B',
+                                            color: groupPast ? '#6B6B69' : '#1D1D1B',
                                             lineHeight: 1.35,
                                         }}
                                     >
                                         {group.event_title?.trim() || `Событие ${group.event_id}`}
+                                        {groupPast ? (
+                                            <span
+                                                style={{
+                                                    marginLeft: '8px',
+                                                    fontSize: '11px',
+                                                    fontWeight: 600,
+                                                    color: '#616161',
+                                                    backgroundColor: '#E8E7E2',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '6px',
+                                                    verticalAlign: 'middle',
+                                                }}
+                                            >
+                                                завершено
+                                            </span>
+                                        ) : null}
                                     </div>
                                     {group.starts_at ? (
-                                        <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '2px' }}>
+                                        <div
+                                            style={{
+                                                fontSize: '12px',
+                                                color: groupPast ? '#9E9E9B' : '#6B6B69',
+                                                marginTop: '2px',
+                                            }}
+                                        >
                                             {formatEventCardDayMonthAndTime(group.starts_at)}
                                         </div>
                                     ) : null}
@@ -1745,7 +1982,8 @@ export default function AdminPageClient() {
                                         border: '1px solid #EBE8E0',
                                         borderRadius: '8px',
                                         overflow: 'hidden',
-                                        backgroundColor: '#FFFFFF',
+                                        backgroundColor: groupPast ? '#F3F2EE' : '#FFFFFF',
+                                        opacity: groupPast ? 0.95 : 1,
                                     }}
                                 >
                                     {group.games.map((game, index) => (
@@ -1763,7 +2001,8 @@ export default function AdminPageClient() {
                                     ))}
                                 </div>
                             </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 )}
             </section>
@@ -2142,7 +2381,7 @@ export default function AdminPageClient() {
                                                     ) : null}
                                                     {adminClubs.map((c) => (
                                                         <option key={c.id} value={c.id}>
-                                                            {c.name}
+                                                            {adminClubLabel(c)}
                                                         </option>
                                                     ))}
                                                 </select>
@@ -2182,8 +2421,9 @@ export default function AdminPageClient() {
                                                             lineHeight: 1.45,
                                                         }}
                                                     >
-                                                        Обложки пока нет. Нажмите «Изменить обложку», чтобы снова отправить данные
-                                                        события в генератор (Make).
+                                                        Обложки пока нет. При создании и сохранении события она
+                                                        генерируется автоматически. Кнопка ниже — чтобы запросить
+                                                        заново.
                                                     </p>
                                                 )}
                                                 <button
@@ -2429,8 +2669,9 @@ export default function AdminPageClient() {
                                                         lineHeight: 1.45,
                                                     }}
                                                 >
-                                                    Обложки пока нет (например, Make ещё не успел сгенерировать). В режиме
-                                                    «Редактировать» можно отправить запрос на генерацию ещё раз.
+                                                    Обложки пока нет — она генерируется автоматически при создании
+                                                    события. Обычно появляется в течение минуты. В режиме
+                                                    «Редактировать» можно запросить генерацию ещё раз.
                                                 </div>
                                             )}
 
@@ -2572,16 +2813,16 @@ export default function AdminPageClient() {
                             padding: '20px',
                         }}
                     >
-                        <h3 style={{ margin: '0 0 8px', fontSize: '17px' }}>Клуб управления</h3>
+                        <h3 style={{ margin: '0 0 8px', fontSize: '17px' }}>Город управления</h3>
                         <p style={{ margin: '0 0 14px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
                             Назначить admin для{' '}
                             <strong>
                                 {promoteAdminTarget.first_name || '—'} {promoteAdminTarget.last_name || ''}
                             </strong>
-                            . Выберите клуб, которым будет управлять этот admin.
+                            . Выберите город (клуб), игроками которого он сможет управлять.
                         </p>
                         <div style={{ marginBottom: '14px' }}>
-                            <div style={fieldLabel}>Клуб управления</div>
+                            <div style={fieldLabel}>Город</div>
                             <select
                                 value={promoteAdminClubId}
                                 onChange={(e) => setPromoteAdminClubId(e.target.value)}
@@ -2594,10 +2835,10 @@ export default function AdminPageClient() {
                                     fontSize: '15px',
                                 }}
                             >
-                                <option value="">Выберите клуб…</option>
+                                <option value="">Выберите город…</option>
                                 {adminClubs.map((c) => (
                                     <option key={c.id} value={c.id}>
-                                        {c.name}
+                                        {adminClubLabel(c)}
                                     </option>
                                 ))}
                             </select>
