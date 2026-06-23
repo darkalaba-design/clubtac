@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
     let playersQuery = supabase
         .from('clubtac_users')
         .select(
-            'id, telegram_id, first_name, last_name, username, nickname, takoff, userpic, created_at, app_role, status, club_id'
+            'id, telegram_id, first_name, last_name, username, nickname, takoff, userpic, created_at, app_role, status, club_id',
+            { count: 'exact' }
         )
         .eq('is_active', true)
         .order('id', { ascending: false })
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
         playersQuery = playersQuery.eq('club_id', managedClubId)
     }
 
-    const { data: users, error } = await playersQuery
+    const { data: users, error, count } = await playersQuery
 
     if (error) {
         console.error('GET /api/admin/players:', error)
@@ -113,5 +114,10 @@ export async function GET(request: NextRequest) {
         }
     )
 
-    return NextResponse.json({ players })
+    return NextResponse.json({
+        players,
+        total: count ?? players.length,
+        loaded: players.length,
+        truncated: players.length < (count ?? players.length),
+    })
 }

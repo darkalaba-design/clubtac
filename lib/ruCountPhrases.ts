@@ -15,6 +15,11 @@ function formatWithNoun(n: number, one: string, few: string, many: string): stri
     return `${k} ${many}`
 }
 
+/** «7 участников», «1 участник», «3 участника» */
+export function formatParticipantsRu(n: number): string {
+    return formatWithNoun(n, 'участник', 'участника', 'участников')
+}
+
 /** «7 игр», «1 игра», «3 игры» */
 export function formatGamesRu(n: number): string {
     return formatWithNoun(n, 'игра', 'игры', 'игр')

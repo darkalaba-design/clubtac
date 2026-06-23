@@ -28,7 +28,7 @@ import AccessTabIcon from '../components/AccessTabIcon'
 import BroadcastsTabIcon from '../components/BroadcastsTabIcon'
 import PlayersTabIcon from '../components/PlayersTabIcon'
 import { displayPublicNickname } from '@/lib/takoff'
-import { adminFetch } from '@/lib/admin/adminFetch'
+import { formatParticipantsRu } from '@/lib/ruCountPhrases'
 import { AdminPlayerModal } from './AdminPlayerModal'
 import { AdminPlayerStatusChips } from './AdminPlayerStatusChips'
 import { AdminBroadcastsTab } from './AdminBroadcastsTab'
@@ -258,11 +258,15 @@ export default function AdminPageClient() {
 
     const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([])
     const [adminUsersSearch, setAdminUsersSearch] = useState('')
+    const [adminUsersTotal, setAdminUsersTotal] = useState<number | null>(null)
+    const [adminUsersTruncated, setAdminUsersTruncated] = useState(false)
     const [adminClubs, setAdminClubs] = useState<AdminClubOption[]>([])
     const [events, setEvents] = useState<EventRow[]>([])
     const [gamesByEvent, setGamesByEvent] = useState<AdminGamesByEventGroup[]>([])
     const [adminPlayers, setAdminPlayers] = useState<AdminPlayerRow[]>([])
     const [adminPlayersSearch, setAdminPlayersSearch] = useState('')
+    const [adminPlayersTotal, setAdminPlayersTotal] = useState<number | null>(null)
+    const [adminPlayersTruncated, setAdminPlayersTruncated] = useState(false)
     const [playerModalUserId, setPlayerModalUserId] = useState<number | null>(null)
     const [playerModalPreviewName, setPlayerModalPreviewName] = useState<string>('')
 
@@ -301,16 +305,27 @@ export default function AdminPageClient() {
     const [promoteAdminTarget, setPromoteAdminTarget] = useState<AdminUserRow | null>(null)
     const [promoteAdminClubId, setPromoteAdminClubId] = useState('')
 
+    const fetchAdminUsers = useCallback(async (search?: string) => {
+        const qs = new URLSearchParams({ limit: '5000' })
+        const q = search?.trim()
+        if (q) qs.set('q', q)
+        const ur = await adminFetch(`/api/admin/users?${qs}`)
+        const uj = await ur.json().catch(() => ({}))
+        if (!ur.ok) throw new Error(typeof uj.error === 'string' ? uj.error : ur.statusText)
+        setAdminUsers((uj.users as AdminUserRow[]) || [])
+        setAdminUsersTotal(typeof uj.total === 'number' ? uj.total : null)
+        setAdminUsersTruncated(uj.truncated === true)
+    }, [])
+
     const loadLists = useCallback(async (role: AppRole) => {
         setErr(null)
         try {
             if (role === 'root') {
-                const ur = await adminFetch('/api/admin/users?limit=200')
-                const uj = await ur.json().catch(() => ({}))
-                if (!ur.ok) throw new Error(uj.error || ur.statusText)
-                setAdminUsers(uj.users || [])
+                await fetchAdminUsers()
             } else {
                 setAdminUsers([])
+                setAdminUsersTotal(null)
+                setAdminUsersTruncated(false)
             }
 
             if (role === 'admin' || role === 'root') {
@@ -318,7 +333,7 @@ export default function AdminPageClient() {
                     adminFetch('/api/admin/events'),
                     adminFetch('/api/admin/clubs'),
                     adminFetch('/api/admin/games?limit=500'),
-                    adminFetch('/api/admin/players?limit=500'),
+                    adminFetch('/api/admin/players?limit=2000'),
                 ])
                 const ej = await er.json().catch(() => ({}))
                 const cj = await cr.json().catch(() => ({}))
@@ -332,16 +347,20 @@ export default function AdminPageClient() {
                 setGamesByEvent((gj.groups as AdminGamesByEventGroup[]) || [])
                 if (!pr.ok) throw new Error(typeof pj.error === 'string' ? pj.error : pr.statusText)
                 setAdminPlayers((pj.players as AdminPlayerRow[]) || [])
+                setAdminPlayersTotal(typeof pj.total === 'number' ? pj.total : null)
+                setAdminPlayersTruncated(pj.truncated === true)
             } else {
                 setEvents([])
                 setGamesByEvent([])
                 setAdminClubs([])
                 setAdminPlayers([])
+                setAdminPlayersTotal(null)
+                setAdminPlayersTruncated(false)
             }
         } catch (e) {
             setErr(e instanceof Error ? e.message : 'Ошибка загрузки')
         }
-    }, [])
+    }, [fetchAdminUsers])
 
     useEffect(() => {
         const run = async () => {
@@ -384,6 +403,17 @@ export default function AdminPageClient() {
         if (session.app_role !== 'root' && navTab === 'admins') setNavTab('events')
         if (!canBroadcasts && navTab === 'broadcasts') setNavTab('events')
     }, [phase, session, navTab])
+
+    useEffect(() => {
+        if (phase !== 'ready' || session?.app_role !== 'root' || navTab !== 'admins') return
+        const delay = adminUsersSearch.trim() ? 300 : 0
+        const t = window.setTimeout(() => {
+            void fetchAdminUsers(adminUsersSearch).catch((e) => {
+                setErr(e instanceof Error ? e.message : 'Ошибка поиска пользователей')
+            })
+        }, delay)
+        return () => clearTimeout(t)
+    }, [adminUsersSearch, navTab, phase, session?.app_role, fetchAdminUsers])
 
     useEffect(() => {
         if (phase !== 'ready' || !session?.admin_club_id || session.app_role !== 'admin') return
@@ -1193,13 +1223,15 @@ export default function AdminPageClient() {
 
             {navTab === 'admins' && isRoot && (
                 <section style={pageSection}>
-                    <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>Администраторы</h2>
-                    <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6B6B69' }}>
-                        Только root может выдавать и снимать роль admin. У admin задаётся город (клуб
-                        управления): он видит игроков этого клуба, события и переписку только с ними.
+                    <h2 style={{ margin: '0 0 4px', fontSize: '17px' }}>Администраторы</h2>
+                    <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#6B6B69' }}>
+                        {formatParticipantsRu(adminUsersTotal ?? adminUsers.length)}
+                        {adminUsersTruncated && !adminUsersSearch.trim()
+                            ? ` · в списке ${adminUsers.length}`
+                            : ''}
+                        {adminUsersSearch.trim() ? ` · найдено ${adminUsers.length}` : ''}
                     </p>
                     <div style={{ marginBottom: '14px' }}>
-                        <div style={fieldLabel}>Поиск</div>
                         <input
                             type="search"
                             value={adminUsersSearch}
@@ -1735,13 +1767,12 @@ export default function AdminPageClient() {
 
             {navTab === 'players' && (
                 <section style={pageSection}>
-                    <h2 style={{ margin: '0 0 12px', fontSize: '17px' }}>Игроки</h2>
-                    <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6B6B69' }}>
-                        Все зарегистрированные пользователи с активным аккаунтом. Рейтинг и число игр — если есть в
-                        таблице Elo.
+                    <h2 style={{ margin: '0 0 4px', fontSize: '17px' }}>Игроки</h2>
+                    <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#6B6B69' }}>
+                        {formatParticipantsRu(adminPlayersTotal ?? adminPlayers.length)}
+                        {adminPlayersTruncated ? ` · в списке ${adminPlayers.length}` : ''}
                     </p>
                     <div style={{ marginBottom: '14px' }}>
-                        <div style={fieldLabel}>Поиск</div>
                         <input
                             type="search"
                             value={adminPlayersSearch}
