@@ -116,7 +116,7 @@ export default function GamesList() {
         error: string | null
         response: any
     }>>({})
-    const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
+    const [expandedPastEventIds, setExpandedPastEventIds] = useState<Set<string>>(new Set())
     const [expandedDescriptionIds, setExpandedDescriptionIds] = useState<Set<string>>(new Set())
     const [expandedParticipantListIds, setExpandedParticipantListIds] = useState<Set<string>>(new Set())
     const [eventParticipantsList, setEventParticipantsList] = useState<Record<string, { user_id: number; first_name?: string | null; last_name?: string | null; username?: string | null; nickname?: string | null }[]>>({})
@@ -609,20 +609,6 @@ export default function GamesList() {
         loadPastEvents()
     }, [])
 
-    // Форматирование даты для прошедших игр
-    const formatDate = (dateString: string) => {
-        try {
-            const date = new Date(dateString)
-            return date.toLocaleDateString('ru-RU', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-            })
-        } catch {
-            return dateString
-        }
-    }
-
     // Форматирование даты для анонсов (27 января, ВТ. 16:00) — day+month вместе, чтобы месяц был в род. падеже
     const formatEventDate = (dateString: string) => {
         try {
@@ -676,34 +662,164 @@ export default function GamesList() {
         return toDateOnly(eventDate) === toDateOnly(now) && eventDate.getTime() > now.getTime()
     }
 
-    // Функция для поиска события по дате игры
-    const findEventByGameDate = (gameDate: string): Event | null => {
-        const gameDateObj = new Date(gameDate)
-        const gameDateOnly = new Date(gameDateObj.getFullYear(), gameDateObj.getMonth(), gameDateObj.getDate())
+    const getGamesForPastEvent = (event: Event): Game[] =>
+        games.filter((game) => toDateOnly(new Date(game.created_at)) === toDateOnly(new Date(event.starts_at)))
 
-        return pastEvents.find(event => {
-            const eventDateObj = new Date(event.starts_at)
-            const eventDateOnly = new Date(eventDateObj.getFullYear(), eventDateObj.getMonth(), eventDateObj.getDate())
-            return eventDateOnly.getTime() === gameDateOnly.getTime()
-        }) || null
+    const togglePastEvent = (eventId: string) => {
+        setExpandedPastEventIds((prev) => {
+            const next = new Set(prev)
+            if (next.has(eventId)) next.delete(eventId)
+            else next.add(eventId)
+            return next
+        })
     }
 
-    // Группировка игр по датам с информацией о событиях
-    const gamesByDate = games.reduce((acc, game) => {
-        const date = formatDate(game.created_at)
-        if (!acc[date]) {
-            acc[date] = {
-                games: [],
-                event: null
-            }
-        }
-        acc[date].games.push(game)
-        // Находим событие для этой даты (берем первое найденное)
-        if (!acc[date].event) {
-            acc[date].event = findEventByGameDate(game.created_at)
-        }
-        return acc
-    }, {} as Record<string, { games: Game[], event: Event | null }>)
+    const renderPastGameRow = (game: Game, index: number) => {
+        const team1Won = game.score_1 > game.score_2
+        return (
+            <div key={game.game_id}>
+                {index > 0 ? <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} /> : null}
+                <div
+                    style={{
+                        padding: '10px 12px',
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto 1fr',
+                        alignItems: 'center',
+                        gap: '12px',
+                    }}
+                >
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
+                            {playerIdMap[game.player_1_1] ? (
+                                <Link
+                                    href={`/player/${playerIdMap[game.player_1_1]}`}
+                                    className="link-player"
+                                    style={{
+                                        color: '#1D1D1B',
+                                        textDecoration: 'none',
+                                        fontWeight: '500',
+                                        fontSize: '14px',
+                                        lineHeight: '14px',
+                                    }}
+                                >
+                                    {getMedalPrefix(playerIdMap[game.player_1_1])}
+                                    {game.player_1_1}
+                                </Link>
+                            ) : (
+                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>
+                                    {game.player_1_1}
+                                </span>
+                            )}
+                        </div>
+                        <div style={{ lineHeight: '14px' }}>
+                            {playerIdMap[game.player_1_2] ? (
+                                <Link
+                                    href={`/player/${playerIdMap[game.player_1_2]}`}
+                                    className="link-player"
+                                    style={{
+                                        color: '#1D1D1B',
+                                        textDecoration: 'none',
+                                        fontWeight: '500',
+                                        fontSize: '14px',
+                                        lineHeight: '14px',
+                                    }}
+                                >
+                                    {getMedalPrefix(playerIdMap[game.player_1_2])}
+                                    {game.player_1_2}
+                                </Link>
+                            ) : (
+                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>
+                                    {game.player_1_2}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <div
+                        style={{
+                            textAlign: 'center',
+                            fontSize: '32px',
+                            fontWeight: 'bold',
+                            lineHeight: '1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '2px',
+                        }}
+                    >
+                        <span
+                            style={{
+                                color: team1Won ? '#1B5E20' : '#6B6B69',
+                                backgroundColor: team1Won ? '#E8F5E9' : '#FFFEF7',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                minWidth: '32px',
+                            }}
+                        >
+                            {game.score_1}
+                        </span>
+                        <span style={{ color: '#6B6B69', fontSize: '24px' }}>:</span>
+                        <span
+                            style={{
+                                color: !team1Won ? '#1B5E20' : '#6B6B69',
+                                backgroundColor: !team1Won ? '#E8F5E9' : '#FFFEF7',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                minWidth: '32px',
+                            }}
+                        >
+                            {game.score_2}
+                        </span>
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                        <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
+                            {playerIdMap[game.player_2_1] ? (
+                                <Link
+                                    href={`/player/${playerIdMap[game.player_2_1]}`}
+                                    className="link-player"
+                                    style={{
+                                        color: '#1D1D1B',
+                                        textDecoration: 'none',
+                                        fontWeight: '500',
+                                        fontSize: '14px',
+                                        lineHeight: '14px',
+                                    }}
+                                >
+                                    {getMedalPrefix(playerIdMap[game.player_2_1])}
+                                    {game.player_2_1}
+                                </Link>
+                            ) : (
+                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>
+                                    {game.player_2_1}
+                                </span>
+                            )}
+                        </div>
+                        <div style={{ lineHeight: '14px' }}>
+                            {playerIdMap[game.player_2_2] ? (
+                                <Link
+                                    href={`/player/${playerIdMap[game.player_2_2]}`}
+                                    className="link-player"
+                                    style={{
+                                        color: '#1D1D1B',
+                                        textDecoration: 'none',
+                                        fontWeight: '500',
+                                        fontSize: '14px',
+                                        lineHeight: '14px',
+                                    }}
+                                >
+                                    {getMedalPrefix(playerIdMap[game.player_2_2])}
+                                    {game.player_2_2}
+                                </Link>
+                            ) : (
+                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>
+                                    {game.player_2_2}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     // Функция для записи на событие
     const handleRegisterForEvent = async (eventId: string, confirmCrossClub = false) => {
@@ -969,31 +1085,109 @@ export default function GamesList() {
                         ) : (
                             <>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {slice.map((event) => (
-                                        <div
-                                            key={event.id}
-                                            style={{
-                                                padding: '12px',
-                                                borderRadius: '8px',
-                                                border: '1px solid #EBE8E0',
-                                                backgroundColor: '#FFFFFF',
-                                            }}
-                                        >
-                                            <div style={{ fontWeight: 600, fontSize: '14px', color: '#1D1D1B' }}>
-                                                {event.title}
+                                    {slice.map((event) => {
+                                        const isExpanded = expandedPastEventIds.has(event.id)
+                                        const eventGames = getGamesForPastEvent(event)
+                                        return (
+                                            <div
+                                                key={event.id}
+                                                style={{
+                                                    borderRadius: '8px',
+                                                    border: '1px solid #EBE8E0',
+                                                    backgroundColor: '#FFFFFF',
+                                                    overflow: 'hidden',
+                                                }}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    onClick={() => togglePastEvent(event.id)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '12px',
+                                                        border: 'none',
+                                                        background: isExpanded ? '#FFFEF7' : '#FFFFFF',
+                                                        cursor: 'pointer',
+                                                        textAlign: 'left',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'flex-start',
+                                                        gap: '8px',
+                                                    }}
+                                                >
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div
+                                                            style={{
+                                                                fontWeight: 600,
+                                                                fontSize: '14px',
+                                                                color: '#1D1D1B',
+                                                            }}
+                                                        >
+                                                            {event.title}
+                                                        </div>
+                                                        <div
+                                                            style={{
+                                                                fontSize: '12px',
+                                                                color: '#6B6B69',
+                                                                marginTop: '4px',
+                                                            }}
+                                                        >
+                                                            {formatEventDate(event.starts_at)}
+                                                        </div>
+                                                        {event.club_id ? (
+                                                            <EventClubLine
+                                                                clubId={event.club_id}
+                                                                clubNames={clubNames}
+                                                                style={{ marginTop: '6px' }}
+                                                            />
+                                                        ) : null}
+                                                        {eventGames.length > 0 ? (
+                                                            <div
+                                                                style={{
+                                                                    fontSize: '12px',
+                                                                    color: '#6B6B69',
+                                                                    marginTop: '6px',
+                                                                }}
+                                                            >
+                                                                {formatGamesRu(eventGames.length)}
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                    <ExpandChevronIcon open={isExpanded} size={20} />
+                                                </button>
+                                                {isExpanded ? (
+                                                    <div style={{ borderTop: '1px solid #EBE8E0' }}>
+                                                        {loading ? (
+                                                            <p
+                                                                style={{
+                                                                    margin: 0,
+                                                                    padding: '12px',
+                                                                    fontSize: '13px',
+                                                                    color: '#6B6B69',
+                                                                }}
+                                                            >
+                                                                Загрузка партий…
+                                                            </p>
+                                                        ) : eventGames.length > 0 ? (
+                                                            eventGames.map((game, index) =>
+                                                                renderPastGameRow(game, index)
+                                                            )
+                                                        ) : (
+                                                            <p
+                                                                style={{
+                                                                    margin: 0,
+                                                                    padding: '12px',
+                                                                    fontSize: '13px',
+                                                                    color: '#6B6B69',
+                                                                }}
+                                                            >
+                                                                Партий пока нет
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ) : null}
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '4px' }}>
-                                                {formatEventDate(event.starts_at)}
-                                            </div>
-                                            {event.club_id ? (
-                                                <EventClubLine
-                                                    clubId={event.club_id}
-                                                    clubNames={clubNames}
-                                                    style={{ marginTop: '6px' }}
-                                                />
-                                            ) : null}
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                                 {hasMore ? (
                                     <button
@@ -1017,7 +1211,6 @@ export default function GamesList() {
                                         Показать ещё
                                     </button>
                                 ) : null}
-                                <div style={{ marginTop: '16px' }}>{renderPastGames()}</div>
                             </>
                         )}
                     </div>
@@ -1688,327 +1881,6 @@ export default function GamesList() {
                     </div>
                 ))}
                 {renderCompletedSection()}
-            </div>
-        )
-    }
-    const renderPastGames = () => {
-        if (loading) {
-            return (
-                <div style={{ padding: '12px', textAlign: 'center' }}>
-                    <p>Загрузка...</p>
-                </div>
-            )
-        }
-
-        if (error) {
-            return (
-                <div style={{ padding: '12px' }}>
-                    <div
-                        style={{
-                            backgroundColor: '#FFF9E6',
-                            borderRadius: '8px',
-                            padding: '16px',
-                            border: '1px solid #FFE950',
-                        }}
-                    >
-                        <p style={{ margin: 0, color: '#1D1D1B' }}>Ошибка: {error}</p>
-                    </div>
-                </div>
-            )
-        }
-
-        if (games.length === 0) {
-            return (
-                <div style={{ padding: '12px', textAlign: 'center' }}>
-                    <p>Нет данных</p>
-                </div>
-            )
-        }
-
-        const toggleDate = (date: string) => {
-            setExpandedDates(prev => {
-                const newSet = new Set(prev)
-                if (newSet.has(date)) {
-                    newSet.delete(date)
-                } else {
-                    newSet.add(date)
-                }
-                return newSet
-            })
-        }
-
-        return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {Object.entries(gamesByDate).map(([date, dateData]) => {
-                    const isExpanded = expandedDates.has(date)
-                    const event = dateData.event
-                    const dateGames = dateData.games
-                    return (
-                        <div
-                            key={date}
-                            style={{
-                                backgroundColor: '#FFFFFF',
-                                borderRadius: '8px',
-                                boxShadow: '0 2px 16px rgba(29,29,27,0.06)',
-                                overflow: 'hidden',
-                            }}
-                        >
-                            {event?.cover?.trim() ? (
-                                <div
-                                    style={{
-                                        width: '100%',
-                                        aspectRatio: '2 / 1',
-                                        maxHeight: 160,
-                                        backgroundColor: '#EBE8E0',
-                                    }}
-                                >
-                                    <img
-                                        src={event.cover.trim()}
-                                        alt={event.title ? `Обложка: ${event.title}` : 'Обложка мероприятия'}
-                                        style={{
-                                            width: '100%',
-                                            height: '100%',
-                                            objectFit: 'cover',
-                                            display: 'block',
-                                            pointerEvents: 'none',
-                                        }}
-                                    />
-                                </div>
-                            ) : null}
-                            {/* Заголовок карточки (кликабельный) */}
-                            <div
-                                onClick={() => toggleDate(date)}
-                                style={{
-                                    padding: '16px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'flex-start',
-                                    backgroundColor: isExpanded ? '#FFFEF7' : '#FFFFFF',
-                                    transition: 'background-color 0.2s',
-                                }}
-                            >
-                                <div style={{ flex: 1 }}>
-                                    {event && event.starts_at ? (
-                                        <div
-                                            style={{
-                                                fontSize: '14px',
-                                                fontWeight: 'bold',
-                                                marginBottom: '8px',
-                                                color: '#1D1D1B',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                gap: '8px',
-                                                flexWrap: 'wrap',
-                                            }}
-                                        >
-                                            <span style={{ minWidth: 0 }}>{formatEventDate(event.starts_at)}</span>
-                                            {event.type ? (
-                                                <span
-                                                    style={{
-                                                        fontSize: '12px',
-                                                        color: '#6B6B69',
-                                                        fontWeight: 'normal',
-                                                        flexShrink: 0,
-                                                        marginLeft: 'auto',
-                                                    }}
-                                                >
-                                                    {getEventTypeName(event.type)}
-                                                </span>
-                                            ) : null}
-                                        </div>
-                                    ) : (
-                                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#1D1D1B' }}>
-                                            {date}
-                                        </div>
-                                    )}
-                                    {event && event.title && (
-                                        <div style={{ fontSize: '22px', fontWeight: '600', lineHeight: '1.25', marginBottom: '8px', color: '#1D1D1B' }}>
-                                            {event.title}
-                                        </div>
-                                    )}
-                                    {event && event.address && <EventAddressLine address={event.address} />}
-                                    {event && event.club_id && (
-                                        <EventClubLine
-                                            clubId={event.club_id}
-                                            clubNames={clubNames}
-                                            style={{ marginBottom: '4px' }}
-                                        />
-                                    )}
-                                    <div style={{ fontSize: '12px', color: '#6B6B69', marginTop: '8px' }}>
-                                        {formatGamesRu(dateGames.length)}
-                                    </div>
-                                </div>
-                                <div
-                                    style={{
-                                        marginLeft: '12px',
-                                        flexShrink: 0,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                    }}
-                                >
-                                    <ExpandChevronIcon open={isExpanded} size={24} />
-                                </div>
-                            </div>
-
-                            {/* Раскрывающийся контент с играми */}
-                            {isExpanded && (
-                                <div style={{ borderTop: '1px solid #EBE8E0' }}>
-                                    {dateGames.map((game, index) => {
-                                        const team1Won = game.score_1 > game.score_2
-                                        return (
-                                            <div key={game.game_id}>
-                                                {index > 0 && (
-                                                    <div style={{ height: '1px', backgroundColor: '#EBE8E0' }} />
-                                                )}
-                                                <div
-                                                    style={{
-                                                        padding: '10px 12px',
-                                                        display: 'grid',
-                                                        gridTemplateColumns: '1fr auto 1fr',
-                                                        alignItems: 'center',
-                                                        gap: '12px',
-                                                    }}
-                                                >
-                                                    {/* Левая команда */}
-                                                    <div style={{ textAlign: 'right' }}>
-                                                        <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
-                                                            {playerIdMap[game.player_1_1] ? (
-                                                                <Link
-                                                                    href={`/player/${playerIdMap[game.player_1_1]}`}
-                                                                    className="link-player"
-                                                                    style={{
-                                                                        color: '#1D1D1B',
-                                                                        textDecoration: 'none',
-                                                                        fontWeight: '500',
-                                                                        fontSize: '14px',
-                                                                        verticalAlign: 'top',
-                                                                        lineHeight: '14px',
-                                                                    }}
-                                                                >
-                                                                    {getMedalPrefix(playerIdMap[game.player_1_1])}
-                                                                    {game.player_1_1}
-                                                                </Link>
-                                                            ) : (
-                                                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_1_1}</span>
-                                                            )}
-                                                        </div>
-                                                        <div style={{ lineHeight: '14px', verticalAlign: 'bottom' }}>
-                                                            {playerIdMap[game.player_1_2] ? (
-                                                                <Link
-                                                                    href={`/player/${playerIdMap[game.player_1_2]}`}
-                                                                    className="link-player"
-                                                                    style={{
-                                                                        color: '#1D1D1B',
-                                                                        textDecoration: 'none',
-                                                                        fontWeight: '500',
-                                                                        fontSize: '14px',
-                                                                        verticalAlign: 'top',
-                                                                        lineHeight: '14px',
-                                                                    }}
-                                                                >
-                                                                    {getMedalPrefix(playerIdMap[game.player_1_2])}
-                                                                    {game.player_1_2}
-                                                                </Link>
-                                                            ) : (
-                                                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_1_2}</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Счет по центру */}
-                                                    <div
-                                                        style={{
-                                                            textAlign: 'center',
-                                                            fontSize: '32px',
-                                                            fontWeight: 'bold',
-                                                            lineHeight: '1',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '2px',
-                                                        }}
-                                                    >
-                                                        <span
-                                                            style={{
-                                                                color: team1Won ? '#1B5E20' : '#6B6B69',
-                                                                backgroundColor: team1Won ? '#E8F5E9' : '#FFFEF7',
-                                                                padding: '4px 8px',
-                                                                borderRadius: '6px',
-                                                                minWidth: '32px',
-                                                            }}
-                                                        >
-                                                            {game.score_1}
-                                                        </span>
-                                                        <span style={{ color: '#6B6B69', fontSize: '24px' }}>:</span>
-                                                        <span
-                                                            style={{
-                                                                color: !team1Won ? '#1B5E20' : '#6B6B69',
-                                                                backgroundColor: !team1Won ? '#E8F5E9' : '#FFFEF7',
-                                                                padding: '4px 8px',
-                                                                borderRadius: '6px',
-                                                                minWidth: '32px',
-                                                            }}
-                                                        >
-                                                            {game.score_2}
-                                                        </span>
-                                                    </div>
-
-                                                    {/* Правая команда */}
-                                                    <div style={{ textAlign: 'left' }}>
-                                                        <div style={{ marginBottom: '4px', lineHeight: '14px' }}>
-                                                            {playerIdMap[game.player_2_1] ? (
-                                                                <Link
-                                                                    href={`/player/${playerIdMap[game.player_2_1]}`}
-                                                                    className="link-player"
-                                                                    style={{
-                                                                        color: '#1D1D1B',
-                                                                        textDecoration: 'none',
-                                                                        fontWeight: '500',
-                                                                        fontSize: '14px',
-                                                                        verticalAlign: 'top',
-                                                                        lineHeight: '14px',
-                                                                    }}
-                                                                >
-                                                                    {getMedalPrefix(playerIdMap[game.player_2_1])}
-                                                                    {game.player_2_1}
-                                                                </Link>
-                                                            ) : (
-                                                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_2_1}</span>
-                                                            )}
-                                                        </div>
-                                                        <div style={{ lineHeight: '14px', verticalAlign: 'bottom' }}>
-                                                            {playerIdMap[game.player_2_2] ? (
-                                                                <Link
-                                                                    href={`/player/${playerIdMap[game.player_2_2]}`}
-                                                                    className="link-player"
-                                                                    style={{
-                                                                        color: '#1D1D1B',
-                                                                        textDecoration: 'none',
-                                                                        fontWeight: '500',
-                                                                        fontSize: '14px',
-                                                                        verticalAlign: 'top',
-                                                                        lineHeight: '14px',
-                                                                    }}
-                                                                >
-                                                                    {getMedalPrefix(playerIdMap[game.player_2_2])}
-                                                                    {game.player_2_2}
-                                                                </Link>
-                                                            ) : (
-                                                                <span style={{ fontWeight: '500', fontSize: '14px', lineHeight: '14px' }}>{game.player_2_2}</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    )
-                })}
             </div>
         )
     }
