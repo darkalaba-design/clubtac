@@ -8,87 +8,25 @@ import { useUser } from '../contexts/UserContext'
 import { useSoloLeaderMedalPrefix } from '../contexts/SoloLeaderRanksContext'
 import BrandStarIcon from './BrandStarIcon'
 
-type RankingSubTab = 'global' | 'club' | 'legacy'
+type RankingSubTab = 'global' | 'club'
 
 export default function HallOfFame() {
-    const [players, setPlayers] = useState<any[]>([])
     const [eloPlayers, setEloPlayers] = useState<any[]>([])
     const [eloClubPlayers, setEloClubPlayers] = useState<any[]>([])
-    const [loadingLegacy, setLoadingLegacy] = useState(true)
     const [loadingElo, setLoadingElo] = useState(true)
     const [loadingEloClub, setLoadingEloClub] = useState(true)
-    const [errorLegacy, setErrorLegacy] = useState<string | null>(null)
     const [errorElo, setErrorElo] = useState<string | null>(null)
     const [errorEloClub, setErrorEloClub] = useState<string | null>(null)
     const [clubLabel, setClubLabel] = useState('Мой клуб')
-    const [activeSubTab, setActiveSubTab] = useState<RankingSubTab>('global')
+    const [activeSubTab, setActiveSubTab] = useState<RankingSubTab>('club')
 
     const { user } = useUser()
     const getMedalPrefix = useSoloLeaderMedalPrefix()
 
     useEffect(() => {
-        const load = async () => {
-            try {
-                const supabase = createClient()
-                const { data, error: queryError } = await supabase
-                    .from('clubtac_players_hall_of_fame_v3')
-                    .select('*')
-                    .order('place')
-
-                if (queryError) {
-                    console.error('Supabase error:', queryError)
-                    setErrorLegacy(queryError.message)
-                    setLoadingLegacy(false)
-                    return
-                }
-
-                const filtered = (data || []).filter((player: any) => {
-                    const gamesPlayed =
-                        player.games_played ??
-                        (player as any).games ??
-                        (player as any).total_games
-                    return gamesPlayed && Number(gamesPlayed) > 0
-                })
-
-                const ids = [
-                    ...new Set(
-                        filtered
-                            .map((p: any) => Number(p.user_id))
-                            .filter((id: number) => !Number.isNaN(id) && id > 0)
-                    ),
-                ]
-                let takoffByUserId: Record<number, boolean> = {}
-                if (ids.length > 0) {
-                    const { data: privRows } = await supabase
-                        .from('clubtac_users')
-                        .select('id, takoff')
-                        .in('id', ids)
-                    if (privRows) {
-                        takoffByUserId = Object.fromEntries(
-                            privRows.map((r: { id: number; takoff?: boolean | null }) => [r.id, !!r.takoff])
-                        )
-                    }
-                }
-
-                setPlayers(
-                    filtered.map((p: any) => {
-                        const uid = Number(p.user_id)
-                        return {
-                            ...p,
-                            takoff: !!takoffByUserId[uid],
-                        }
-                    })
-                )
-            } catch (err) {
-                console.error('Error loading players:', err)
-                setErrorLegacy(err instanceof Error ? err.message : 'Unknown error')
-            } finally {
-                setLoadingLegacy(false)
-            }
-        }
-
-        load()
-    }, [])
+        if (user?.club_id) setActiveSubTab('club')
+        else setActiveSubTab('global')
+    }, [user?.club_id])
 
     useEffect(() => {
         const loadElo = async () => {
@@ -397,11 +335,6 @@ export default function HallOfFame() {
         )
     }
 
-    const resolveLegacyPoints = (player: any) => {
-        const v = player.points ?? player.total_points ?? player.rating
-        return v != null && v !== '' ? Number(v) : null
-    }
-
     const resolveEloPoints = (player: any) => {
         const v = player.rating
         return v != null && v !== '' ? Number(v) : null
@@ -416,24 +349,6 @@ export default function HallOfFame() {
                 marginBottom: '16px',
             }}
         >
-            <button
-                type="button"
-                onClick={() => setActiveSubTab('global')}
-                style={{
-                    flex: 1,
-                    padding: '12px',
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: activeSubTab === 'global' ? 'bold' : 'normal',
-                    color: activeSubTab === 'global' ? '#1D1D1B' : '#6B6B69',
-                    borderBottom: activeSubTab === 'global' ? '2px solid #FFDF00' : '2px solid transparent',
-                    marginBottom: '-2px',
-                }}
-            >
-                Общий
-            </button>
             <button
                 type="button"
                 onClick={() => setActiveSubTab('club')}
@@ -456,7 +371,7 @@ export default function HallOfFame() {
             </button>
             <button
                 type="button"
-                onClick={() => setActiveSubTab('legacy')}
+                onClick={() => setActiveSubTab('global')}
                 style={{
                     flex: 1,
                     padding: '12px',
@@ -464,36 +379,20 @@ export default function HallOfFame() {
                     background: 'transparent',
                     cursor: 'pointer',
                     fontSize: '14px',
-                    fontWeight: activeSubTab === 'legacy' ? 'bold' : 'normal',
-                    color: activeSubTab === 'legacy' ? '#1D1D1B' : '#6B6B69',
-                    borderBottom:
-                        activeSubTab === 'legacy' ? '2px solid #FFDF00' : '2px solid transparent',
+                    fontWeight: activeSubTab === 'global' ? 'bold' : 'normal',
+                    color: activeSubTab === 'global' ? '#1D1D1B' : '#6B6B69',
+                    borderBottom: activeSubTab === 'global' ? '2px solid #FFDF00' : '2px solid transparent',
                     marginBottom: '-2px',
                 }}
             >
-                Старый рейтинг
+                Общий
             </button>
         </div>
     )
 
-    const loading =
-        activeSubTab === 'legacy'
-            ? loadingLegacy
-            : activeSubTab === 'club'
-              ? loadingEloClub
-              : loadingElo
-    const error =
-        activeSubTab === 'legacy'
-            ? errorLegacy
-            : activeSubTab === 'club'
-              ? errorEloClub
-              : errorElo
-    const list =
-        activeSubTab === 'legacy'
-            ? players
-            : activeSubTab === 'club'
-              ? eloClubPlayers
-              : eloPlayers
+    const loading = activeSubTab === 'club' ? loadingEloClub : loadingElo
+    const error = activeSubTab === 'club' ? errorEloClub : errorElo
+    const list = activeSubTab === 'club' ? eloClubPlayers : eloPlayers
 
     if (loading) {
         return (
@@ -540,9 +439,7 @@ export default function HallOfFame() {
     return (
         <div>
             {subTabBar}
-            {activeSubTab === 'global' && renderRankingBoard(eloPlayers, resolveEloPoints, true)}
-            {activeSubTab === 'club' && renderRankingBoard(eloClubPlayers, resolveEloPoints, true)}
-            {activeSubTab === 'legacy' && renderRankingBoard(players, resolveLegacyPoints, false)}
+            {renderRankingBoard(list, resolveEloPoints, true)}
         </div>
     )
 }
