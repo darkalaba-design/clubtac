@@ -3,6 +3,7 @@ import { requireActor } from '@/lib/admin/requireActor'
 import { canManageEvents } from '@/lib/admin/appRole'
 import { denyIfOutsideAppAdminAllowlist } from '@/lib/admin/allowlist'
 import { assertAdminHasManagedClub, getActorManagedClubId } from '@/lib/admin/clubScope'
+import { computePlayerTotalSpent } from '@/lib/admin/adminPlayerFinance'
 
 /** Все активные пользователи clubtac_users для вкладки «Игроки» в админке. */
 export async function GET(request: NextRequest) {
@@ -80,6 +81,26 @@ export async function GET(request: NextRequest) {
         }
     }
 
+    let spentByUserId: Record<number, number> = {}
+    if (ids.length > 0) {
+        const { data: walletRows, error: walletErr } = await supabase
+            .from('clubtac_wallet_transactions')
+            .select('user_id, amount')
+            .in('user_id', ids)
+            .lt('amount', 0)
+
+        if (walletErr) {
+            console.error('GET /api/admin/players wallet:', walletErr)
+        } else {
+            for (const row of walletRows ?? []) {
+                const uid = Number((row as { user_id: number }).user_id)
+                if (!Number.isFinite(uid)) continue
+                const chunk = computePlayerTotalSpent([row as { amount: unknown }])
+                spentByUserId[uid] = (spentByUserId[uid] ?? 0) + chunk
+            }
+        }
+    }
+
     const players = rows.map(
         (u: {
             id: number
@@ -110,6 +131,7 @@ export async function GET(request: NextRequest) {
                 rating: elo?.rating ?? null,
                 games_played: elo?.games_played ?? null,
                 place: elo?.place ?? null,
+                total_spent: spentByUserId[u.id] ?? 0,
             }
         }
     )

@@ -29,10 +29,17 @@ import BroadcastsTabIcon from '../components/BroadcastsTabIcon'
 import PlayersTabIcon from '../components/PlayersTabIcon'
 import { displayPublicNickname } from '@/lib/takoff'
 import { adminFetch } from '@/lib/admin/adminFetch'
+import {
+    formatAdminPlayerMoney,
+    matchesAdminPlayersSpendFilter,
+    type AdminPlayersSpendFilter,
+} from '@/lib/admin/adminPlayerFinance'
 import { formatParticipantsRu } from '@/lib/ruCountPhrases'
 import { AdminPlayerModal } from './AdminPlayerModal'
 import { AdminPlayerStatusChips } from './AdminPlayerStatusChips'
 import { AdminBroadcastsTab } from './AdminBroadcastsTab'
+import { AdminBotTab } from './AdminBotTab'
+import BotTabIcon from './BotTabIcon'
 
 function AdminAddressLine({ address, style }: { address: string; style?: CSSProperties }) {
     return (
@@ -121,6 +128,7 @@ function adminPlayerMatchesSearch(p: AdminPlayerRow, rawQuery: string): boolean 
         String(p.user_id),
         p.telegram_id != null ? String(p.telegram_id) : '',
         p.place != null ? String(p.place) : '',
+        p.total_spent != null && p.total_spent > 0 ? String(p.total_spent) : '',
     ]
     return chunks.some((c) => c.length > 0 && c.includes(q))
 }
@@ -229,7 +237,7 @@ function eventToModalDraft(ev: EventRow): EventModalDraft {
     }
 }
 
-type AdminNavTab = 'events' | 'games' | 'players' | 'broadcasts' | 'admins'
+type AdminNavTab = 'events' | 'games' | 'players' | 'broadcasts' | 'admins' | 'bot'
 type EventModalTab = 'participants' | 'games' | 'details'
 
 type AdminPlayerRow = {
@@ -246,6 +254,7 @@ type AdminPlayerRow = {
     userpic?: string | null
     app_role?: string
     status?: string | null
+    total_spent?: number
 }
 
 const ADMIN_SCROLL_PT = 'calc(52px + env(safe-area-inset-top, 0px))'
@@ -266,6 +275,7 @@ export default function AdminPageClient() {
     const [gamesByEvent, setGamesByEvent] = useState<AdminGamesByEventGroup[]>([])
     const [adminPlayers, setAdminPlayers] = useState<AdminPlayerRow[]>([])
     const [adminPlayersSearch, setAdminPlayersSearch] = useState('')
+    const [adminPlayersSpendFilter, setAdminPlayersSpendFilter] = useState<AdminPlayersSpendFilter>('all')
     const [adminPlayersTotal, setAdminPlayersTotal] = useState<number | null>(null)
     const [adminPlayersTruncated, setAdminPlayersTruncated] = useState(false)
     const [playerModalUserId, setPlayerModalUserId] = useState<number | null>(null)
@@ -401,7 +411,7 @@ export default function AdminPageClient() {
     useEffect(() => {
         if (phase !== 'ready' || !session) return
         const canBroadcasts = session.can_manage_broadcasts === true
-        if (session.app_role !== 'root' && navTab === 'admins') setNavTab('events')
+        if (session.app_role !== 'root' && (navTab === 'admins' || navTab === 'bot')) setNavTab('events')
         if (!canBroadcasts && navTab === 'broadcasts') setNavTab('events')
     }, [phase, session, navTab])
 
@@ -983,10 +993,17 @@ export default function AdminPageClient() {
         })
     }, [adminUsers, adminUsersSearch])
 
-    const filteredAdminPlayers = useMemo(
-        () => adminPlayers.filter((p) => adminPlayerMatchesSearch(p, adminPlayersSearch)),
-        [adminPlayers, adminPlayersSearch]
-    )
+    const filteredAdminPlayers = useMemo(() => {
+        const matched = adminPlayers.filter(
+            (p) =>
+                adminPlayerMatchesSearch(p, adminPlayersSearch) &&
+                matchesAdminPlayersSpendFilter(p.total_spent, adminPlayersSpendFilter)
+        )
+        if (adminPlayersSpendFilter === 'spent') {
+            return [...matched].sort((a, b) => (b.total_spent ?? 0) - (a.total_spent ?? 0))
+        }
+        return matched
+    }, [adminPlayers, adminPlayersSearch, adminPlayersSpendFilter])
 
     const eventModalActiveParticipantUserIds = useMemo(
         () => eventModalParticipants.map((p) => p.user_id),
@@ -1219,6 +1236,12 @@ export default function AdminPageClient() {
                         broadcastsForAdminsEnabled={session?.broadcasts_for_admins_enabled === true}
                         onBroadcastsForAdminsChange={isRoot ? setBroadcastsForAdminsEnabled : undefined}
                     />
+                </section>
+            )}
+
+            {navTab === 'bot' && isRoot && (
+                <section style={pageSection}>
+                    <AdminBotTab onError={setErr} />
                 </section>
             )}
 
@@ -1773,7 +1796,7 @@ export default function AdminPageClient() {
                         {formatParticipantsRu(adminPlayersTotal ?? adminPlayers.length)}
                         {adminPlayersTruncated ? ` · в списке ${adminPlayers.length}` : ''}
                     </p>
-                    <div style={{ marginBottom: '14px' }}>
+                    <div style={{ marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <input
                             type="search"
                             value={adminPlayersSearch}
@@ -1789,6 +1812,26 @@ export default function AdminPageClient() {
                                 fontSize: '15px',
                             }}
                         />
+                        <select
+                            value={adminPlayersSpendFilter}
+                            onChange={(e) =>
+                                setAdminPlayersSpendFilter(e.target.value as AdminPlayersSpendFilter)
+                            }
+                            aria-label="Фильтр по тратам"
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid #EBE8E0',
+                                boxSizing: 'border-box',
+                                fontSize: '15px',
+                                backgroundColor: '#FFFFFF',
+                            }}
+                        >
+                            <option value="all">Все игроки</option>
+                            <option value="spent">Платили (есть траты)</option>
+                            <option value="none">Не платили</option>
+                        </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {filteredAdminPlayers.length === 0 ? (
@@ -1906,6 +1949,9 @@ export default function AdminPageClient() {
                                                 {rating != null ? ` · ⭐ ${rating}` : ''}
                                                 {games != null && Number(games) > 0
                                                     ? ` · ${games} игр`
+                                                    : ''}
+                                                {(p.total_spent ?? 0) > 0
+                                                    ? ` · 💳 ${formatAdminPlayerMoney(p.total_spent ?? 0)}`
                                                     : ''}
                                             </div>
                                         </div>
@@ -2076,6 +2122,7 @@ export default function AdminPageClient() {
                           )
                         : null}
                     {isRoot ? navBtn('admins', <AccessTabIcon active={navTab === 'admins'} size={24} />, 'Доступ') : null}
+                    {isRoot ? navBtn('bot', <BotTabIcon active={navTab === 'bot'} size={24} />, 'Бот') : null}
                 </div>
             </nav>
 

@@ -153,6 +153,53 @@ export default function GamesList() {
         if (name) setMyClubLabel(name)
     }, [user?.club_id, clubNames])
 
+    // Все города для подписей (модалка кросс-клубной записи, вкладки и т.д.)
+    useEffect(() => {
+        const loadAllClubLabels = async () => {
+            try {
+                const supabase = createClient()
+                const { data, error } = await supabase.from('clubtac_clubs_public').select('id, name, city')
+
+                let rows: { id: string; name?: string | null; city?: string | null }[] = []
+                if (!error && data?.length) {
+                    rows = data
+                } else {
+                    const { data: fallback } = await supabase
+                        .from('clubtac_clubs')
+                        .select('id, name, clubtac_cities(name)')
+                    rows = (fallback ?? []).map(
+                        (club: {
+                            id: string
+                            name?: string | null
+                            clubtac_cities?: { name?: string | null } | { name?: string | null }[] | null
+                        }) => {
+                            const cityRef = club.clubtac_cities
+                            const cityName = Array.isArray(cityRef) ? cityRef[0]?.name : cityRef?.name
+                            return { id: club.id, name: club.name, city: cityName ?? null }
+                        }
+                    )
+                }
+
+                if (rows.length === 0) return
+
+                setClubNames((prev) => {
+                    const next = { ...prev }
+                    rows.forEach((club) => {
+                        next[club.id] = clubDisplayName({
+                            name: club.name ?? '',
+                            city: club.city ?? null,
+                        })
+                    })
+                    return next
+                })
+            } catch (err) {
+                console.error('Error loading club labels:', err)
+            }
+        }
+
+        void loadAllClubLabels()
+    }, [])
+
     // Загружаем прошедшие игры
     useEffect(() => {
         const load = async () => {
@@ -281,12 +328,17 @@ export default function GamesList() {
                         .in('id', uniqueClubIds)
 
                     if (!clubsError && clubs) {
-                        const clubsMap: Record<string, string> = {}
-                        clubs.forEach((club: { id: string; name?: string; city?: string | null }) => {
-                            clubsMap[club.id] = club.city?.trim() || club.name?.trim() || club.id
+                        setClubNames((prev) => {
+                            const next = { ...prev }
+                            clubs.forEach((club: { id: string; name?: string; city?: string | null }) => {
+                                next[club.id] = clubDisplayName({
+                                    name: club.name ?? '',
+                                    city: club.city ?? null,
+                                })
+                            })
+                            return next
                         })
-                        setClubNames(clubsMap)
-                        console.log('Loaded club names:', clubsMap)
+                        console.log('Loaded club names from events')
                     }
                 }
             } catch (err) {
@@ -589,10 +641,16 @@ export default function GamesList() {
                                     city?: string | null
                                     clubtac_cities?: { name?: string | null } | { name?: string | null }[] | null
                                 }) => {
-                                    const cityRef = club.clubtac_cities
-                                    const cityName = Array.isArray(cityRef) ? cityRef[0]?.name : cityRef?.name
                                     next[club.id] =
-                                        club.city?.trim() || cityName?.trim() || club.name?.trim() || club.id
+                                        clubDisplayName({
+                                            name: club.name ?? '',
+                                            city:
+                                                club.city?.trim() ||
+                                                (Array.isArray(club.clubtac_cities)
+                                                    ? club.clubtac_cities[0]?.name
+                                                    : club.clubtac_cities?.name) ||
+                                                null,
+                                        }) || club.id
                                 }
                             )
                             return next
@@ -2023,8 +2081,9 @@ export default function GamesList() {
                             Другой город
                         </h3>
                         <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#6B6B69', lineHeight: 1.45 }}>
-                            Вы из {clubNames[crossClubConfirm.userClubId] || crossClubConfirm.userClubId}. Записаться
-                            на игру в {clubNames[crossClubConfirm.eventClubId] || crossClubConfirm.eventClubId}?
+                            Вы из{' '}
+                            {clubNames[crossClubConfirm.userClubId] || myClubLabel || 'вашего города'}. Записаться на
+                            игру в {clubNames[crossClubConfirm.eventClubId] || 'другом городе'}?
                         </p>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button
