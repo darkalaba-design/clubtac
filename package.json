@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:export": "node scripts/export-database.mjs"
+    "db:export": "node scripts/export-database.mjs",
+    "db:export:incremental": "node scripts/export-database.mjs --incremental"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
